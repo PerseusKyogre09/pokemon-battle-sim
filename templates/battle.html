@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Battle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: lightblue;
+            text-align: center;
+        }
+
+        .battle-screen {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60vh;
+            background-color: #ffffff;
+            border: 5px solid #000;
+            width: 600px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .pokemon-section {
+            text-align: center;
+        }
+
+        .pokemon {
+            width: 150px;
+        }
+
+        .health-bar-container {
+            width: 200px;
+            height: 20px;
+            background-color: #ccc;
+            border: 2px solid black;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .health-bar {
+            height: 100%;
+            background-color: green;
+            width: 100%;  /*full HP by default*/
+            transition: width 0.3s ease;
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .battle-log {
+            background-color: #F5F5F5;
+            border: 1px solid #ddd;
+            height: 120px;
+            overflow-y: auto;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .move-buttons {
+            margin-top: 20px;
+        }
+
+        .move-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            background-color: #ffcc00;
+            border: 2px solid #000;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .move-button:hover {
+            background-color: #ffff99;
+        }
+    </style>
+    <script>
+        function updateHealthBar(elementId, currentHp, maxHp) {
+            const healthBar = document.getElementById(elementId);
+            const healthPercentage = (currentHp / maxHp) * 100;
+            healthBar.style.width = healthPercentage + '%';
+            if (healthPercentage > 50) {
+                healthBar.style.backgroundColor = 'green';
+            } else if (healthPercentage > 20) {
+                healthBar.style.backgroundColor = 'yellow';
+            } else {
+                healthBar.style.backgroundColor = 'red';
+            }
+        }
+
+        async function makeMove(move) {
+            const response = await fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ move: move })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // HP and battle log
+                document.getElementById("player-hp-text").innerText = `Player HP: ${data.player_hp}`;
+                document.getElementById("opponent-hp-text").innerText = `Opponent HP: ${data.opponent_hp}`;
+                updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
+                updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+
+                // sounds
+                document.getElementById('hit-sound').play();
+
+                // shaking effect
+                document.querySelector("#opponent").classList.add('shake');
+                setTimeout(() => document.querySelector("#opponent").classList.remove('shake'), 500);
+
+                // battle log
+                const logElement = document.getElementById("battle-log");
+                logElement.innerHTML = '';  // clear previous log
+                data.battle_log.forEach(log => {
+                    const li = document.createElement("li");
+                    li.textContent = log;
+                    logElement.appendChild(li);
+                });
+
+                // check if game is over
+                if (data.is_game_over) {
+                    setTimeout(() => {
+                        alert(data.battle_result);
+                    }, 500);
+                }
+            } else {
+                alert(data.error);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="battle-screen">
+        <div class="pokemon-section">
+            <img id="player" src="{{ player_sprite }}" class="pokemon" alt="Player Pokémon">
+            <div class="health-bar-container">
+                <div id="player-health-bar" class="health-bar"></div>
+            </div>
+            <p id="player-hp-text">Player HP: {{ player_hp }}</p>
+        </div>
+        <div class="pokemon-section">
+            <img id="opponent" src="{{ opponent_sprite }}" class="pokemon" alt="Opponent Pokémon">
+            <div class="health-bar-container">
+                <div id="opponent-health-bar" class="health-bar"></div>
+            </div>
+            <p id="opponent-hp-text">Opponent HP: {{ opponent_hp }}</p>
+        </div>
+    </div>
+
+    <div class="move-buttons">
+        <h3>Select a Move:</h3>
+        {% for move in player_moves %}
+            <button class="move-button" onclick="makeMove('{{ move.name }}')">{{ move.name | capitalize }}</button>
+        {% endfor %}
+    </div>
+
+    <div id="battle-log" class="battle-log">
+        <h4>Battle Log</h4>
+        <ul></ul>
+    </div>
+
+    <!--audio files for later. have to figure out if storing locally or playing any sound of nintendo is legal or not-->
+    <audio id="hit-sound" src="{{ url_for('static', filename='hit-sound.mp3') }}" preload="auto"></audio>
+    <audio id="battle-music" src="{{ url_for('static', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio> 
+</body>
+</html>
