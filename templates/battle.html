@@ -183,8 +183,8 @@
         <ul></ul>
     </div>
 
-    <!--audio files for later. have to figure out if storing locally or playing any sound of nintendo is legal or not-->
-    <audio id="hit-sound" src="{{ url_for('static', filename='hit-sound.mp3') }}" preload="auto"></audio>
-    <audio id="battle-music" src="{{ url_for('static', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio> 
+    <!-- Audio files for sound effects -->
+    <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto"></audio>
+    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio> 
 </body>
 </html>

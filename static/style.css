@@ -85,7 +85,7 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/*game over. i have this added for future, for now there is no gameover screen */
+/* Game Over Screen */
 #gameover-screen {
     background-color: #ffcccb;
     padding: 50px;
@@ -94,30 +94,6 @@ button:disabled {
     margin-top: 50px;
 }
 
-#gameover-screen.win {
-    background-color: #d4edda;
-}
-
-#gameover-screen h1 {
-    color: #333;
-}
-
-#gameover-screen p {
-    font-size: 20px;
-    margin: 20px 0;
-}
-
-a {
-    display: inline-block;
-    margin-top: 20px;
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
-
-a:hover {
-    background-color: #0056b3;
+#gameover-screen h2 {
+    color: red;
 }

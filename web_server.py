@@ -1,9 +1,13 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from game import Game
 import requests
 
 app = Flask(__name__)
 game = None
+
+@app.route('/music/<path:filename>')
+def music(filename):
+    return send_from_directory(app.root_path + '/music', filename)
 
 def get_pokemon_data(pokemon_name):
     url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}' #pokeapi for pokemon data
