@@ -44,6 +44,10 @@ A simple Pokémon battle game built using Flask for the back-end and HTML, CSS, 
 3. Watch as the battle unfolds, with real-time health bar updates, animations, and sound effects.
 4. When the battle ends, an alert will display the result (win or lose).
 
+## Screenshots
+![IMG1](https://imgur.com/YZu6hfR.png)
+![IMG2](https://imgur.com/Jaa1stT.png)
+
 ## Features To Be Added
 - Pokémon type advantages (e.g., water beats fire).
 - Smarter AI for opponent actions.
