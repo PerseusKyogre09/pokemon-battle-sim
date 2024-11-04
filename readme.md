@@ -17,7 +17,7 @@ A simple Pokémon battle game built using Flask for the back-end and HTML, CSS, 
    - The opponent shakes when hit by an attack, giving the game a visual response to damage.
    - A hit sound effect plays whenever a Pokémon takes damage.
    - Background music plays during the battle and loops continuously.
-   **NOTICE**: You are to include a file named music in the root directory to store the music folders. And rename accordingly in `templates/battle.html`.
+   - **NOTICE**: You are to include a file named music in the root directory to store the music folders. And rename accordingly in `templates/battle.html`.
 5. **Game Over Conditions**
    - The game ends when either the player’s or the opponent’s HP reaches 0.
    - The game declares whether the player has won or lost based on the final HP status of the Pokémon.
