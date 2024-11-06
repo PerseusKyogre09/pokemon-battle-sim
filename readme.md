@@ -1,5 +1,6 @@
 # Pokémon Battle Game
 A simple Pokémon battle game built using Flask for the back-end and HTML, CSS, and JavaScript for the front-end. The game uses PokeAPI to fetch Pokémon data and simulate a turn-based battle system with real-time animations, sound effects, and health bars.
+[**PLAY HERE**](https://perseus.pythonanywhere.com/)
 
 ## Features
 1. **Pokémon Data from PokeAPI**
