@@ -1,4 +1,6 @@
 #Secrets
-/music/
-/pkmn/
-/__pycache__/
+music/
+pkmn/
+__pycache__/
+*.pyc
+.env
