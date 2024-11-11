@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 from game import Game
 import requests
 
@@ -67,22 +67,21 @@ def move():
     global game
 
     if game is None or game.player_pokemon is None or game.opponent_pokemon is None:
-        return jsonify({"error": "Battle not initialized! Please start the game first."}), 400 #failsafe
+        return jsonify({"error": "Battle not initialized! Please start the game first."}), 400
 
     move_name = request.json.get('move')
-
     game.process_turn(move_name)
 
     player_hp = game.player_pokemon.current_hp
     opponent_hp = game.opponent_pokemon.current_hp
     battle_log = [f"Player used {move_name}. Opponent used its move."]
 
-    #check if game over
     is_game_over = game.battle_over
+    result = game.get_battle_result() if is_game_over else None
+
     if is_game_over:
-        result = game.get_battle_result()
-    else:
-        result = None
+        # Redirect to the game over page with result message
+        return redirect(url_for('game_over', result_message=result))
 
     return jsonify({
         "player_hp": player_hp,
@@ -93,6 +92,11 @@ def move():
         "is_game_over": is_game_over,
         "battle_result": result
     })
+
+@app.route('/gameover')
+def game_over():
+    result_message = request.args.get('result_message', 'Game Over')
+    return render_template('gameover.html', result_message=result_message)
 
 
 if __name__ == '__main__':

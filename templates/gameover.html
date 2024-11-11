@@ -3,12 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Game Over</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .message {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .restart-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #ff4444;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .restart-button:hover {
+            background-color: #ff6666;
+        }
+    </style>
 </head>
 <body>
-    <h1>Game Over!</h1>
-    <p>{{ result }}</p>
-    <a href="{{ url_for('index') }}">Play Again</a>
+    <div class="message">{{ result_message }}</div>
+    <button class="restart-button" onclick="window.location.href='/start'">Restart Game</button>
+
+    <!-- Victory jingle audio -->
+    <audio id="victory-jingle" src="{{ url_for('music', filename='victory-jingle.mp3') }}" autoplay loop></audio>
 </body>
 </html>
