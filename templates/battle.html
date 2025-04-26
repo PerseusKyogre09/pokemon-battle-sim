@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle</title>
+<<<<<<< HEAD
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -162,19 +163,44 @@
     <div class="battle-screen">
         <div class="pokemon-section">
             <img id="player" src="{{ player_sprite }}" class="pokemon" alt="Player Pokémon">
+=======
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/battle.css') }}">
+</head>
+<body>
+    <div class="battle-screen">
+        <div class="pokemon-section player-pokemon">
+            <img id="player" src="{{ player_sprite }}" alt="Player Pokémon" style="width: 100%; height: 100%;">
+        </div>
+        <div class="pokemon-section opponent-pokemon">
+            <img id="opponent" src="{{ opponent_sprite }}" alt="Opponent Pokémon" style="width: 100%; height: 100%;">
+        </div>
+
+        <!-- Player health bar position-->
+        <div class="player-health-bar">
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
             <div class="health-bar-container">
                 <div id="player-health-bar" class="health-bar"></div>
             </div>
             <p id="player-hp-text">Player HP: {{ player_hp }}</p>
         </div>
+<<<<<<< HEAD
         <div class="pokemon-section">
             <img id="opponent" src="{{ opponent_sprite }}" class="pokemon" alt="Opponent Pokémon">
+=======
+
+        <!-- Opponent health bar position -->
+        <div class="opponent-health-bar">
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
             <div class="health-bar-container">
                 <div id="opponent-health-bar" class="health-bar"></div>
             </div>
             <p id="opponent-hp-text">Opponent HP: {{ opponent_hp }}</p>
         </div>
+<<<<<<< HEAD
     </div>
+=======
+    </div>    
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
 
     <div class="move-buttons">
         <h3>Select a Move:</h3>
@@ -188,7 +214,13 @@
         <ul></ul>
     </div>
 
+<<<<<<< HEAD
     <audio id="hit-sound" src="{{ url_for('static', filename='hit-sound.mp3') }}" preload="auto"></audio>
     <audio id="battle-music" src="{{ url_for('static', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio>
+=======
+    <script src="{{ url_for('static', filename='js/battle.js') }}"></script>
+    <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto"></audio>
+    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio>
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Game Over</title>
 </head>
@@ -10,5 +11,16 @@
     <h1>Game Over!</h1>
     <p>{{ result }}</p>
     <a href="{{ url_for('index') }}">Play Again</a>
+=======
+    <title>Game Over</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gameover.css') }}">
+</head>
+<body>
+    <div class="message">{{ result_message }}</div>
+    <button class="restart-button" onclick="window.location.href='/start'">Restart Game</button>
+
+    <!-- Victory jingle audio -->
+    <audio id="victory-jingle" src="{{ url_for('music', filename='victory-jingle.mp3') }}" autoplay loop></audio>
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
 </body>
 </html>

@@ -1,0 +1,126 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: lightblue;
+    text-align: center;
+}
+
+.battle-screen {
+    position: relative;
+    height: 60vh;
+    background: url('../images/battle-background.jpeg') no-repeat center center;
+    background-size: cover;
+    border: 5px solid #000;
+    width: 600px;
+    margin: 20px auto;
+}
+
+.pokemon-section {
+    position: absolute;
+    text-align: center;
+    transform: translate(var(--x-position), var(--y-position));
+}
+
+.player-pokemon {
+    --x-position: 50px;
+    --y-position: 270px;
+    width: 300px;
+    height: auto;
+}
+
+.opponent-pokemon {
+    --x-position: 400px;
+    --y-position: 100px;
+    width: 160px;
+    height: auto;
+}
+
+.player-health-bar, .opponent-health-bar {
+    position: absolute;
+    width: 180px;
+}
+
+.player-health-bar {
+    transform: translate(400px, 300px);
+}
+
+.opponent-health-bar {
+    transform: translate(50px, 100px);
+}
+
+.health-bar-container {
+    width: 100%;
+    height: 20px;
+    background-color: #ccc;
+    border: 2px solid black;
+    position: relative;
+    margin-bottom: 5px;
+}
+
+.health-bar {
+    height: 100%;
+    background-color: green;
+    transition: width 0.3s ease;
+}
+
+/* Bold and styled HP text */
+#player-hp-text, #opponent-hp-text {
+    font-weight: bold;
+    color: #000000;
+    font-size: 16px;
+    margin-top: 5px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.move-buttons {
+    margin-top: 20px;
+}
+
+/* Enhanced move button styling */
+.move-button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #ffcc00;
+    border: 2px solid #000;
+    color: #333;
+    cursor: pointer;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.move-button:hover {
+    background-color: #ffdd55;
+    color: #000;
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+}
+
+.battle-log {
+    background-color: #F5F5F5;
+    border: 1px solid #ddd;
+    height: 120px;
+    overflow-y: auto;
+    padding: 10px;
+    text-align: left;
+    margin-top: 20px;
+}
+
+.shake {
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0% { transform: translate(400px, 100px) rotate(0deg); }
+    10% { transform: translate(399px, 98px) rotate(-1deg); }
+    20% { transform: translate(397px, 100px) rotate(1deg); }
+    30% { transform: translate(397px, 102px) rotate(0deg); }
+    40% { transform: translate(401px, 99px) rotate(1deg); }
+    50% { transform: translate(399px, 102px) rotate(-1deg); }
+    60% { transform: translate(397px, 101px) rotate(0deg); }
+    70% { transform: translate(403px, 101px) rotate(-1deg); }
+    80% { transform: translate(399px, 99px) rotate(1deg); }
+    90% { transform: translate(401px, 102px) rotate(0deg); }
+    100% { transform: translate(401px, 98px) rotate(-1deg); }
+}

@@ -14,7 +14,11 @@ class Battle:
                 self.battle_log.append(f"{move_name} has no PP left!")
 
     def opponent_attack(self):
+<<<<<<< HEAD
         move_name, move = next(iter(self.opponent_pokemon.moves.items()))  # Simple opponent AI, always uses first move
+=======
+        move_name, move = next(iter(self.opponent_pokemon.moves.items())) #for now AI uses first move
+>>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
         damage = move.use_move()
         self.player_pokemon.current_hp -= damage
         self.battle_log.append(f"{self.opponent_pokemon.name} used {move_name}! It dealt {damage} damage.")
