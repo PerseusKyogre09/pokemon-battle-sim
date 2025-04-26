@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, Response
 from game import Game
 import requests
 
@@ -8,6 +8,36 @@ game = None
 @app.route('/music/<path:filename>')
 def music(filename):
     return send_from_directory(app.root_path + '/music', filename)
+
+@app.route('/static/sounds/<path:filename>')
+def sounds(filename):
+    return send_from_directory(app.root_path + '/static/sounds', filename)
+
+@app.route('/pokemon/cry/<pokemon_name>')
+def pokemon_cry(pokemon_name):
+    try:
+        # Fetch Pokémon data from the PokéAPI
+        response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}')
+        if response.status_code == 200:
+            pokemon_data = response.json()
+            
+            # Get the cry URL from the response
+            if 'cries' in pokemon_data and 'latest' in pokemon_data['cries']:
+                cry_url = pokemon_data['cries']['latest']
+                
+                # Fetch the cry audio file
+                cry_response = requests.get(cry_url)
+                if cry_response.status_code == 200:
+                    # Return the audio file with the correct content type
+                    return Response(cry_response.content, mimetype='audio/ogg')
+            
+            # Fallback to a default cry if the specific one isn't available
+            return send_from_directory('music', 'nidorino.ogg')
+        else:
+            return send_from_directory('music', 'nidorino.ogg')
+    except Exception as e:
+        print(f"Error fetching Pokémon cry: {e}")
+        return send_from_directory('music', 'nidorino.ogg')
 
 def get_pokemon_data(pokemon_name):
     url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}' #pokeapi for pokemon data
@@ -59,7 +89,9 @@ def start_game():
                            player_moves=player_moves,  # Pass moves to the template
                            opponent_hp=game.opponent_pokemon.current_hp,
                            player_hp=game.player_pokemon.current_hp,
-                           battle_log=[])
+                           battle_log=[],
+                           player_data=player_data,
+                           opponent_data=opponent_data)
 
 #for using moves
 @app.route('/move', methods=['POST'])

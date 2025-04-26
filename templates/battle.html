@@ -39,25 +39,112 @@
         .faint-animation {
             animation: faint 1.5s ease-in forwards;
         }
+        
+        /* Pokeball throw animations */
+        @keyframes throwAnimationPlayer {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(100px, -100px) scale(1.2) rotate(180deg);
+            }
+            100% {
+                transform: translate(200px, 0) scale(1) rotate(360deg);
+            }
+        }
+        
+        .throw-animation-player {
+            animation: throwAnimationPlayer 1s ease-out forwards;
+        }
+        
+        @keyframes throwAnimationOpponent {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(-100px, -100px) scale(1.2) rotate(180deg);
+            }
+            100% {
+                transform: translate(-200px, 0) scale(1) rotate(360deg);
+            }
+        }
+        
+        .throw-animation-opponent {
+            animation: throwAnimationOpponent 1s ease-out forwards;
+        }
+        
+        /* Flash effect */
+        .flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: white;
+            opacity: 0.8;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        /* Hide elements initially */
+        .hidden-element {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        /* Pokémon appear animation */
+        @keyframes appearPokemon {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .appear-animation {
+            animation: appearPokemon 0.8s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans">
     <div class="container mx-auto px-4 py-8">
         <!-- Battle screen -->
-        <div class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl" style="background-image: url('{{ url_for('static', filename='images/battle-background.jpeg') }}'); background-size: cover; background-position: center;">
+        <div id="battle-screen" class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl" 
+             style="background-image: url('{{ url_for('static', filename='images/battle-background.jpeg') }}'); 
+                    background-size: cover; 
+                    background-position: center;">
             
-            <!-- Player pokemon -->
+            <!-- Flash element for pokeball opening -->
+            <div id="flash-element" class="hidden"></div>
+            
+            <!-- Pokeballs -->
+            <div class="absolute left-12 bottom-16">
+                <img id="player-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Player Pokeball" class="w-16 h-16 hidden-element">
+            </div>
+            
+            <div class="absolute right-20 top-16">
+                <img id="opponent-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Opponent Pokeball" class="w-16 h-16 hidden-element">
+            </div>
+            
+            <!-- Player pokemon - visible by default -->
             <div class="absolute left-12 bottom-16">
                 <img id="player" src="{{ player_sprite }}" alt="Player Pokémon" class="w-64 h-auto">
             </div>
             
-            <!-- Opponent pokemon -->
+            <!-- Opponent pokemon - visible by default -->
             <div class="absolute right-20 top-16">
                 <img id="opponent" src="{{ opponent_sprite }}" alt="Opponent Pokémon" class="w-40 h-auto">
             </div>
             
-            <!-- Player health bar -->
-            <div class="absolute right-12 bottom-20 w-48">
+            <!-- Player health bar - visible by default -->
+            <div class="absolute right-12 bottom-20 w-48" id="player-health-container">
                 <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
                     <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
                         <div id="player-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
@@ -66,8 +153,8 @@
                 </div>
             </div>
             
-            <!-- Opponent health bar -->
-            <div class="absolute left-12 top-12 w-48">
+            <!-- Opponent health bar - visible by default -->
+            <div class="absolute left-12 top-12 w-48" id="opponent-health-container">
                 <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
                     <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
                         <div id="opponent-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
@@ -77,7 +164,7 @@
             </div>
         </div>
         
-        <!-- Move buttons -->
+        <!-- Move buttons - visible by default -->
         <div class="max-w-3xl mx-auto mb-6">
             <h3 class="text-xl font-bold text-center mb-4 text-yellow-400">Select a Move:</h3>
             <div class="flex flex-wrap justify-center gap-3">
@@ -99,8 +186,17 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/battle.js') }}"></script>
+    
+    <!-- Audio elements -->
     <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto"></audio>
     <audio id="faint-sound" src="{{ url_for('music', filename='cry/nidorino.ogg') }}" preload="auto"></audio>
-    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio>
+    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop></audio>
+    <audio id="pokeball-sound" src="{{ url_for('music', filename='pokeball-throw.mp3') }}" preload="auto"></audio>
+    
+    <!-- Pokémon cry audio elements -->
+    <audio id="player-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
+    <audio id="opponent-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
+    <audio id="player-faint-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
+    <audio id="opponent-faint-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
 </body>
 </html>
