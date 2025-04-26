@@ -5,121 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        'shake': 'shake 0.5s ease-in-out',
-                    },
-                    keyframes: {
-                        shake: {
-                            '0%, 100%': { transform: 'translateX(0)' },
-                            '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
-                            '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Faint animation - Pokémon slides down and fades out */
-        @keyframes faint {
-            0% {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(300px);
-                opacity: 0;
-            }
-        }
-        
-        .faint-animation {
-            animation: faint 1.5s ease-in forwards;
-        }
-        
-        /* Pokeball throw animations */
-        @keyframes throwAnimationPlayer {
-            0% {
-                transform: translate(0, 0) scale(1);
-            }
-            50% {
-                transform: translate(100px, -100px) scale(1.2) rotate(180deg);
-            }
-            100% {
-                transform: translate(200px, 0) scale(1) rotate(360deg);
-            }
-        }
-        
-        .throw-animation-player {
-            animation: throwAnimationPlayer 1s ease-out forwards;
-        }
-        
-        @keyframes throwAnimationOpponent {
-            0% {
-                transform: translate(0, 0) scale(1);
-            }
-            50% {
-                transform: translate(-100px, -100px) scale(1.2) rotate(180deg);
-            }
-            100% {
-                transform: translate(-200px, 0) scale(1) rotate(360deg);
-            }
-        }
-        
-        .throw-animation-opponent {
-            animation: throwAnimationOpponent 1s ease-out forwards;
-        }
-        
-        /* Flash effect */
-        .flash {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: white;
-            opacity: 0.8;
-            z-index: 10;
-            pointer-events: none;
-        }
-        
-        /* Hide elements initially */
-        .hidden-element {
-            opacity: 0;
-            visibility: hidden;
-        }
-        
-        /* Pokémon appear animation */
-        @keyframes appearPokemon {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 0.7;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        
-        .appear-animation {
-            animation: appearPokemon 0.8s ease-out forwards;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/battle.css') }}">
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans">
     <div class="container mx-auto px-4 py-8">
         <!-- Battle screen -->
-        <div id="battle-screen" class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl" 
-             style="background-image: url('{{ url_for('static', filename='images/battle-background.jpeg') }}'); 
-                    background-size: cover; 
-                    background-position: center;">
+        <div id="battle-screen" class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl">
             
             <!-- Flash element for pokeball opening -->
             <div id="flash-element" class="hidden"></div>
@@ -164,8 +55,36 @@
             </div>
         </div>
         
-        <!-- Move buttons - visible by default -->
-        <div class="max-w-3xl mx-auto mb-6">
+        <!-- Battle Controls Panel - New design based on the image -->
+        <div class="battle-controls max-w-3xl mx-auto mb-6">
+            <!-- Battle log header -->
+            <h3 id="battle-log-text" class="battle-log-text">Battle started! Choose your move.</h3>
+            
+            <!-- Move buttons in a grid layout -->
+            <div class="move-grid">
+                {% for move in player_moves %}
+                    {% if loop.index <= 4 %}
+                        <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button">
+                            {{ move.name | capitalize }}
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Action icons -->
+            <div class="action-icons">
+                <div class="action-icon" onclick="usePotion()">
+                    <img src="{{ url_for('static', filename='images/potion.png') }}" alt="Potion">
+                </div>
+                
+                <div class="action-icon" onclick="forfeitBattle()">
+                    <img src="{{ url_for('static', filename='images/forfeit.png') }}" alt="Forfeit">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Original Move buttons - hidden now -->
+        <div class="max-w-3xl mx-auto mb-6 hidden">
             <h3 class="text-xl font-bold text-center mb-4 text-yellow-400">Select a Move:</h3>
             <div class="flex flex-wrap justify-center gap-3">
                 {% for move in player_moves %}
@@ -177,7 +96,7 @@
         </div>
         
         <!-- Battle log -->
-        <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg">
+        <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg hidden">
             <h4 class="text-lg font-bold mb-2 text-yellow-400">Battle Log</h4>
             <div id="battle-log" class="h-48 overflow-y-auto text-gray-300 text-sm px-2">
                 <ul class="space-y-1"></ul>

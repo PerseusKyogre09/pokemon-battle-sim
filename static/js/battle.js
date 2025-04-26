@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Disable move buttons until animation completes
     moveButtons.forEach(button => {
         button.disabled = true;
-        button.style.opacity = 0;
+        button.style.opacity = 0.5;
     });
     
     // Start the battle sequence with animations
@@ -190,6 +190,7 @@ function updateHealthBar(elementId, currentHp, maxHp) {
 }
 
 function addLogMessage(message) {
+    // Update the battle log in the original location (for compatibility)
     const ul = battleLogEl.querySelector("ul");
     const li = document.createElement("li");
     li.textContent = message;
@@ -198,6 +199,12 @@ function addLogMessage(message) {
     
     // Auto-scroll to the bottom
     battleLogEl.scrollTop = battleLogEl.scrollHeight;
+    
+    // Update the battle log text in the new battle controls panel
+    const battleLogText = document.getElementById("battle-log-text");
+    if (battleLogText) {
+        battleLogText.textContent = message;
+    }
 }
 
 function disableMoveButtons(disabled) {
@@ -378,5 +385,59 @@ async function makeMove(move) {
             isTurnInProgress = false;
             disableMoveButtons(false);
         }, 500);
+    }
+}
+
+// Function to use a potion to heal the player's Pokémon
+function usePotion() {
+    // Prevent using potion if battle hasn't started or a turn is in progress
+    if (!battleStarted || isTurnInProgress) return;
+    
+    // Get current player HP
+    const playerHpText = document.getElementById("player-hp-text").innerText;
+    const currentHp = parseInt(playerHpText.match(/\d+/)[0]);
+    
+    // Get player max HP (this should be stored somewhere, for now we'll use 100)
+    const maxHp = 100; // This should be replaced with the actual max HP
+    
+    // Don't use potion if HP is already full
+    if (currentHp >= maxHp) {
+        addLogMessage("Your Pokémon's HP is already full!");
+        return;
+    }
+    
+    // Calculate new HP (heal by 20 points, but don't exceed max)
+    const healAmount = 20;
+    const newHp = Math.min(currentHp + healAmount, maxHp);
+    
+    // Update HP display
+    document.getElementById("player-hp-text").innerText = `Player HP: ${newHp}`;
+    updateHealthBar('player-health-bar', newHp, maxHp);
+    
+    // Add message to battle log
+    addLogMessage(`You used a Potion! Your Pokémon recovered ${newHp - currentHp} HP.`);
+    
+    // Play healing sound (if available)
+    const healSound = document.getElementById('hit-sound');
+    if (healSound) {
+        healSound.play();
+    }
+}
+
+// Function to forfeit the battle
+function forfeitBattle() {
+    // Prevent forfeit if battle hasn't started or a turn is in progress
+    if (!battleStarted || isTurnInProgress) return;
+    
+    // Confirm forfeit
+    if (confirm("Are you sure you want to forfeit the battle?")) {
+        // Add message to battle log
+        addLogMessage("You forfeited the battle!");
+        
+        // Wait a moment before redirecting
+        setTimeout(() => {
+            // Redirect to game over page
+            window.location.href = "/game_over?result=forfeit";
+        }, 2000);
     }
 }
