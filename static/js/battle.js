@@ -286,7 +286,8 @@ async function makeMove(move) {
     
     try {
         // Player's turn - log the move
-        addLogMessage(`You used ${move}!`);
+        const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
+        addLogMessage(`${capitalize(playerPokemonName)} used ${move}!`);
         
         // Get data from server about the move result
         const response = await fetch('/move', {
@@ -312,17 +313,18 @@ async function makeMove(move) {
         await new Promise(resolve => setTimeout(resolve, 800));
         
         // Update opponent's HP to show the damage from player's move
-        document.getElementById("opponent-hp-text").innerText = `Opponent HP: ${data.opponent_hp}`;
+        const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
+        document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentPokemonName)} HP: ${data.opponent_hp}`;
         updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
         
         // Check if opponent is defeated
         if (data.opponent_hp <= 0) {
             // Show HP as 0 explicitly
-            document.getElementById("opponent-hp-text").innerText = `Opponent HP: 0`;
+            document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentPokemonName)} HP: 0`;
             updateHealthBar('opponent-health-bar', 0, data.opponent_max_hp);
             
             // Add faint message to battle log
-            addLogMessage("The opponent's Pokémon fainted!");
+            addLogMessage(`Opponent ${capitalize(opponentPokemonName)} fainted!`);
             
             // Play the faint animation with distorted cry
             await animateFaint(false);
@@ -343,7 +345,7 @@ async function makeMove(move) {
         
         // Opponent's turn
         if (data.opponent_move) {
-            addLogMessage(`Opponent used ${data.opponent_move}!`);
+            addLogMessage(`Opponent ${capitalize(opponentPokemonName)} used ${data.opponent_move}!`);
             
             // Execute opponent's attack animation
             animateAttack(false);
@@ -352,17 +354,17 @@ async function makeMove(move) {
             await new Promise(resolve => setTimeout(resolve, 800));
             
             // Update player's HP to show damage from opponent's move
-            document.getElementById("player-hp-text").innerText = `Player HP: ${data.player_hp}`;
+            document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: ${data.player_hp}`;
             updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
             
             // Check if player is defeated
             if (data.player_hp <= 0) {
                 // Show HP as 0 explicitly
-                document.getElementById("player-hp-text").innerText = `Player HP: 0`;
+                document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: 0`;
                 updateHealthBar('player-health-bar', 0, data.player_max_hp);
                 
                 // Add faint message to battle log
-                addLogMessage("Your Pokémon fainted!");
+                addLogMessage(`${capitalize(playerPokemonName)} fainted!`);
                 
                 // Play the faint animation with distorted cry
                 await animateFaint(true);
@@ -411,11 +413,12 @@ function usePotion() {
     const newHp = Math.min(currentHp + healAmount, maxHp);
     
     // Update HP display
-    document.getElementById("player-hp-text").innerText = `Player HP: ${newHp}`;
+    const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
+    document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: ${newHp}`;
     updateHealthBar('player-health-bar', newHp, maxHp);
     
     // Add message to battle log
-    addLogMessage(`You used a Potion! Your Pokémon recovered ${newHp - currentHp} HP.`);
+    addLogMessage(`You used a Potion! ${capitalize(playerPokemonName)} recovered ${newHp - currentHp} HP.`);
     
     // Play healing sound (if available)
     const healSound = document.getElementById('hit-sound');
@@ -440,4 +443,9 @@ function forfeitBattle() {
             window.location.href = "/game_over?result=forfeit";
         }, 2000);
     }
+}
+
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }

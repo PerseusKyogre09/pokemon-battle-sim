@@ -40,7 +40,7 @@
                     <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
                         <div id="player-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
                     </div>
-                    <p id="player-hp-text" class="text-sm font-bold text-gray-200">Player HP: {{ player_hp }}</p>
+                    <p id="player-hp-text" class="text-sm font-bold text-gray-200">{{ player_data.name|capitalize }} HP: {{ player_hp }}</p>
                 </div>
             </div>
             
@@ -50,7 +50,7 @@
                     <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
                         <div id="opponent-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
                     </div>
-                    <p id="opponent-hp-text" class="text-sm font-bold text-gray-200">Opponent HP: {{ opponent_hp }}</p>
+                    <p id="opponent-hp-text" class="text-sm font-bold text-gray-200">Opponent {{ opponent_data.name|capitalize }} HP: {{ opponent_hp }}</p>
                 </div>
             </div>
         </div>

@@ -55,7 +55,7 @@ class Game:
 
     def get_battle_result(self):
         if self.player_pokemon.is_fainted():
-            return "You lost!"
+            return f"Your {self.player_pokemon.name.capitalize()} fainted! Opponent's {self.opponent_pokemon.name.capitalize()} wins!"
         elif self.opponent_pokemon.is_fainted():
-            return "You won!"
+            return f"Opponent's {self.opponent_pokemon.name.capitalize()} fainted! Your {self.player_pokemon.name.capitalize()} wins!"
         return "The battle is ongoing."
