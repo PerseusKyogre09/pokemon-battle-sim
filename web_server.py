@@ -127,12 +127,19 @@ def move():
         "is_game_over": is_game_over,
         "battle_result": result,
         "opponent_move": opponent_move_name,
-        "game_over_url": url_for('game_over', result_message=result) if is_game_over else None
+        "game_over_url": url_for('game_over_with_underscore', result_message=result) if is_game_over else None
     })
 
-@app.route('/gameover')
-def game_over():
-    result_message = request.args.get('result_message', 'Game Over')
+@app.route('/game_over')
+def game_over_with_underscore():
+    result = request.args.get('result', None)
+    if result == 'forfeit':
+        result_message = 'You forfeited!'
+    elif result:
+        # Optionally handle other result codes here
+        result_message = result.replace('_', ' ').capitalize() + '!'
+    else:
+        result_message = 'Game Over'
     return render_template('gameover.html', result_message=result_message)
 
 

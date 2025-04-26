@@ -1,7 +1,8 @@
 #Secrets
+#Secrets
+.pycache/
+*.pyc
 music/
 pkmn/
-__pycache__/
-*.pyc
 .env
 .venv
