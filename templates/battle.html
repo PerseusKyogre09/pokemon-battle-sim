@@ -4,223 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle</title>
-<<<<<<< HEAD
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: lightblue;
-            text-align: center;
-        }
-
-        .battle-screen {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60vh;
-            background-color: #ffffff;
-            border: 5px solid #000;
-            width: 600px;
-            margin: 20px auto;
-            position: relative;
-        }
-
-        .pokemon-section {
-            text-align: center;
-        }
-
-        .pokemon {
-            width: 150px;
-        }
-
-        .health-bar-container {
-            width: 200px;
-            height: 20px;
-            background-color: #ccc;
-            border: 2px solid black;
-            margin-top: 10px;
-            position: relative;
-        }
-
-        .health-bar {
-            height: 100%;
-            background-color: green;
-            width: 100%;  /* Full HP by default */
-            transition: width 0.3s ease;
-        }
-
-        .shake {
-            animation: shake 0.5s;
-        }
-
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-
-        .battle-log {
-            background-color: #F5F5F5;
-            border: 1px solid #ddd;
-            height: 120px;
-            overflow-y: auto;
-            padding: 10px;
-            text-align: left;
-        }
-
-        .move-buttons {
-            margin-top: 20px;
-        }
-
-        .move-button {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
-            background-color: #ffcc00;
-            border: 2px solid #000;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .move-button:hover {
-            background-color: #ffff99;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Function to update the health bar width based on percentage
-        function updateHealthBar(elementId, currentHp, maxHp) {
-            const healthBar = document.getElementById(elementId);
-            const healthPercentage = (currentHp / maxHp) * 100;
-            healthBar.style.width = healthPercentage + '%';
-
-            // Change color based on health percentage
-            if (healthPercentage > 50) {
-                healthBar.style.backgroundColor = 'green';
-            } else if (healthPercentage > 20) {
-                healthBar.style.backgroundColor = 'yellow';
-            } else {
-                healthBar.style.backgroundColor = 'red';
-            }
-        }
-
-        async function makeMove(move) {
-            const response = await fetch('/move', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ move: move })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                // Update HPs and battle log
-                document.getElementById("player-hp-text").innerText = `Player HP: ${data.player_hp}`;
-                document.getElementById("opponent-hp-text").innerText = `Opponent HP: ${data.opponent_hp}`;
-
-                // Update health bars
-                updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
-                updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
-
-                // Play hit sound
-                document.getElementById('hit-sound').play();
-
-                // Add shake effect to opponent when hit
-                document.querySelector("#opponent").classList.add('shake');
-                setTimeout(() => document.querySelector("#opponent").classList.remove('shake'), 500);
-
-                // Update battle log
-                const logElement = document.getElementById("battle-log");
-                logElement.innerHTML = '';  // Clear previous log
-                data.battle_log.forEach(log => {
-                    const li = document.createElement("li");
-                    li.textContent = log;
-                    logElement.appendChild(li);
-                });
-
-                // Check if game is over
-                if (data.is_game_over) {
-                    setTimeout(() => {
-                        alert(data.battle_result);  // Show result after game ends
-                    }, 500);
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'shake': 'shake 0.5s ease-in-out',
+                    },
+                    keyframes: {
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
+                            '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
+                        }
+                    }
                 }
-            } else {
-                alert(data.error);
             }
         }
     </script>
+    <style>
+        /* Faint animation - Pokémon slides down and fades out */
+        @keyframes faint {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(300px);
+                opacity: 0;
+            }
+        }
+        
+        .faint-animation {
+            animation: faint 1.5s ease-in forwards;
+        }
+    </style>
 </head>
-<body>
-    <div class="battle-screen">
-        <div class="pokemon-section">
-            <img id="player" src="{{ player_sprite }}" class="pokemon" alt="Player Pokémon">
-=======
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/battle.css') }}">
-</head>
-<body>
-    <div class="battle-screen">
-        <div class="pokemon-section player-pokemon">
-            <img id="player" src="{{ player_sprite }}" alt="Player Pokémon" style="width: 100%; height: 100%;">
-        </div>
-        <div class="pokemon-section opponent-pokemon">
-            <img id="opponent" src="{{ opponent_sprite }}" alt="Opponent Pokémon" style="width: 100%; height: 100%;">
-        </div>
-
-        <!-- Player health bar position-->
-        <div class="player-health-bar">
->>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
-            <div class="health-bar-container">
-                <div id="player-health-bar" class="health-bar"></div>
+<body class="bg-gray-900 text-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Battle screen -->
+        <div class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl" style="background-image: url('{{ url_for('static', filename='images/battle-background.jpeg') }}'); background-size: cover; background-position: center;">
+            
+            <!-- Player pokemon -->
+            <div class="absolute left-12 bottom-16">
+                <img id="player" src="{{ player_sprite }}" alt="Player Pokémon" class="w-64 h-auto">
             </div>
-            <p id="player-hp-text">Player HP: {{ player_hp }}</p>
-        </div>
-<<<<<<< HEAD
-        <div class="pokemon-section">
-            <img id="opponent" src="{{ opponent_sprite }}" class="pokemon" alt="Opponent Pokémon">
-=======
-
-        <!-- Opponent health bar position -->
-        <div class="opponent-health-bar">
->>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
-            <div class="health-bar-container">
-                <div id="opponent-health-bar" class="health-bar"></div>
+            
+            <!-- Opponent pokemon -->
+            <div class="absolute right-20 top-16">
+                <img id="opponent" src="{{ opponent_sprite }}" alt="Opponent Pokémon" class="w-40 h-auto">
             </div>
-            <p id="opponent-hp-text">Opponent HP: {{ opponent_hp }}</p>
+            
+            <!-- Player health bar -->
+            <div class="absolute right-12 bottom-20 w-48">
+                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
+                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div id="player-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+                    </div>
+                    <p id="player-hp-text" class="text-sm font-bold text-gray-200">Player HP: {{ player_hp }}</p>
+                </div>
+            </div>
+            
+            <!-- Opponent health bar -->
+            <div class="absolute left-12 top-12 w-48">
+                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
+                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
+                        <div id="opponent-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+                    </div>
+                    <p id="opponent-hp-text" class="text-sm font-bold text-gray-200">Opponent HP: {{ opponent_hp }}</p>
+                </div>
+            </div>
         </div>
-<<<<<<< HEAD
+        
+        <!-- Move buttons -->
+        <div class="max-w-3xl mx-auto mb-6">
+            <h3 class="text-xl font-bold text-center mb-4 text-yellow-400">Select a Move:</h3>
+            <div class="flex flex-wrap justify-center gap-3">
+                {% for move in player_moves %}
+                    <button onclick="makeMove('{{ move.name }}')" class="move-button bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 transform hover:scale-105">
+                        {{ move.name | capitalize }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Battle log -->
+        <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg">
+            <h4 class="text-lg font-bold mb-2 text-yellow-400">Battle Log</h4>
+            <div id="battle-log" class="h-48 overflow-y-auto text-gray-300 text-sm px-2">
+                <ul class="space-y-1"></ul>
+            </div>
+        </div>
     </div>
-=======
-    </div>    
->>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
 
-    <div class="move-buttons">
-        <h3>Select a Move:</h3>
-        {% for move in player_moves %}
-            <button class="move-button" onclick="makeMove('{{ move.name }}')">{{ move.name | capitalize }}</button>
-        {% endfor %}
-    </div>
-
-    <div id="battle-log" class="battle-log">
-        <h4>Battle Log</h4>
-        <ul></ul>
-    </div>
-
-<<<<<<< HEAD
-    <audio id="hit-sound" src="{{ url_for('static', filename='hit-sound.mp3') }}" preload="auto"></audio>
-    <audio id="battle-music" src="{{ url_for('static', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio>
-=======
     <script src="{{ url_for('static', filename='js/battle.js') }}"></script>
     <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto"></audio>
+    <audio id="faint-sound" src="{{ url_for('music', filename='cry/nidorino.ogg') }}" preload="auto"></audio>
     <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop autoplay></audio>
->>>>>>> 24696daa70a40374ab8723bf813fdcce65ebd396
 </body>
 </html>
