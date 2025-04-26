@@ -1,0 +1,17 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Battle Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Pokémon Battle Simulator</h1>
+        <p>Choose your Pokémon and face off against a random opponent!</p>
+        <a href="/start" class="start-btn">Start Battle</a>
+    </div>
+</body>
+</html>
