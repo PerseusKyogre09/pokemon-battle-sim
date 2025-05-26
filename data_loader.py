@@ -1,8 +1,3 @@
-"""
-Data loader for Pokemon battle system using TypeScript dataset files.
-Parses moves.ts, learnsets.ts, and typechart.ts files.
-"""
-
 import re
 import json
 from typing import Dict, Any, List, Optional
@@ -15,24 +10,19 @@ class DataLoader:
         self._load_all_data()
     
     def _load_all_data(self):
-        """Load all data from TypeScript files on initialization."""
         self._load_moves()
         self._load_learnsets()
         self._load_typechart()
     
     def _parse_ts_object(self, content: str, object_name: str) -> Dict[str, Any]:
-        """Parse a TypeScript object export into a Python dictionary."""
-        # Find the object definition
-        pattern = rf'export const {object_name}[^=]*=\s*{{(.*)}};?\s*$'
+        # Find the object
         match = re.search(pattern, content, re.DOTALL | re.MULTILINE)
         
         if not match:
             return {}
         
         object_content = match.group(1)
-        
         # Convert TypeScript object to JSON-like format
-        # This is a simplified parser - may need refinement for complex cases
         try:
             # Replace TypeScript-specific syntax
             object_content = re.sub(r'(\w+):', r'"\1":', object_content)  # Quote keys
@@ -43,16 +33,16 @@ class DataLoader:
             
             # Wrap in braces and parse
             json_content = '{' + object_content + '}'
-            return eval(json_content)  # Using eval for simplicity - in production, use proper JSON parser
+            return eval(json_content)
         except:
-            # Fallback to manual parsing for complex structures
+            # Fallback to manual parsing
             return self._manual_parse_object(object_content)
     
     def _manual_parse_object(self, content: str) -> Dict[str, Any]:
         """Manual parsing for complex TypeScript objects."""
         result = {}
         
-        # Split by top-level entries (this is a simplified approach)
+        # Split by top-level entries
         entries = re.findall(r'(\w+):\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)},?', content)
         
         for key, value in entries:
@@ -86,7 +76,7 @@ class DataLoader:
             with open('datasets/moves.ts', 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Extract move data using regex patterns
+            # Regex patterns
             move_pattern = r'(\w+):\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)}'
             moves = re.findall(move_pattern, content)
             
