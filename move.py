@@ -25,3 +25,12 @@ class Move:
             return base_damage
         else:
             return 0
+            
+    def to_dict(self):
+        """Convert the Move object to a dictionary for JSON serialization."""
+        return {
+            'name': self.name,
+            'power': self.power,
+            'pp': self.pp,
+            'type': self.type
+        }

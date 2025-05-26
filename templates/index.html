@@ -5,19 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
     <div class="container mx-auto px-4 flex flex-col items-center justify-center min-h-screen">
-        <h1 class="text-4xl font-bold text-yellow-400 mb-6">Pokémon Battle Simulator</h1>
+        <h1 class="text-4xl font-bold mb-8 text-yellow-400 text-center">Pokémon Battle Simulator</h1>
         <div class="bg-gray-800 p-8 rounded-xl shadow-lg max-w-lg w-full">
-            <p class="text-xl mb-8 text-center">Choose your Pokémon and face off against a random opponent!</p>
-            <div class="flex justify-center">
-                <a href="/start" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105 shadow-md">Start Battle</a>
+            <p class="text-xl mb-6 text-center">Choose your Pokémon and face off against a random opponent!</p>
+            
+            <form id="pokemon-form" action="{{ url_for('start_game') }}" method="POST" class="space-y-6">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="pokemon-input" 
+                        name="pokemon" 
+                        placeholder="Search for a Pokémon..." 
+                        autocomplete="off"
+                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                        required>
+                    <div id="suggestions" class="absolute z-10 w-full mt-1 bg-gray-700 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                        <!-- Suggestions will be added here -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button 
+                        type="submit" 
+                        class="px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg shadow-md transition duration-300 transform hover:scale-105"
+                        id="start-button">
+                        Start Battle
+                    </button>
+                </div>
+            </form>
+            
+            <div id="selected-pokemon" class="mt-6 hidden">
+                <div class="flex items-center justify-center space-x-4">
+                    <div class="relative">
+                        <img id="selected-sprite" src="" alt="Selected Pokémon" class="w-24 h-24 object-contain">
+                    </div>
+                    <div>
+                        <h3 id="selected-name" class="text-xl font-bold capitalize"></h3>
+                        <p id="selected-types" class="text-sm text-gray-300"></p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="mt-6 text-gray-400 text-sm">
-            <p>Created with Tailwind CSS</p>
-        </div>
     </div>
+
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>

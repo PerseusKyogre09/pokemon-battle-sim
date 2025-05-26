@@ -165,8 +165,14 @@ def fetch_sets_direct(pokemon_name: str, format_name: str, debug: bool = True) -
         # First try exact match, then case-insensitive, then partial match
         pokemon_key = None
         
+        # Special case for Urshifu forms
+        if 'urshifu' in pokemon_name.lower():
+            if 'rapid' in pokemon_name.lower():
+                pokemon_key = 'Urshifu-Rapid-Strike'
+            else:
+                pokemon_key = 'Urshifu'  # Default to single-strike form
         # Try exact match first
-        if pokemon_name in stats_data:
+        elif pokemon_name in stats_data:
             pokemon_key = pokemon_name
         else:
             # Try case-insensitive match

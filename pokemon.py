@@ -6,11 +6,14 @@ class Pokemon:
         self.name = name
         self.type = type_
         self.sprite_url = sprite_url
+        self.sprite = sprite_url  # Add sprite alias for backward compatibility
         self.level = level
         self.max_hp = int(((stats[0]['base_stat'] * 2) * self.level / 100) + self.level + 10)
         self.current_hp = self.max_hp
         self.attack = int(((stats[1]['base_stat'] * 2) * self.level / 100) + 5)
         self.defense = int(((stats[2]['base_stat'] * 2) * self.level / 100) + 5)
+        self.special_attack = int(((stats[3]['base_stat'] * 2) * self.level / 100) + 5)
+        self.special_defense = int(((stats[4]['base_stat'] * 2) * self.level / 100) + 5)
         self.speed = int(((stats[5]['base_stat'] * 2) * self.level / 100) + 5)
         
         # Use dataset moves if no moves provided
@@ -38,3 +41,21 @@ class Pokemon:
 
     def is_fainted(self):
         return self.current_hp <= 0
+        
+    def to_dict(self):
+        """Convert the Pokemon object to a dictionary for JSON serialization."""
+        return {
+            'name': self.name,
+            'type': self.type,
+            'sprite_url': self.sprite_url,
+            'sprite': self.sprite_url,  # Keep both for backward compatibility
+            'level': self.level,
+            'current_hp': self.current_hp,
+            'max_hp': self.max_hp,
+            'attack': self.attack,
+            'defense': self.defense,
+            'special_attack': self.special_attack,
+            'special_defense': self.special_defense,
+            'speed': self.speed,
+            'moves': {name: move.to_dict() for name, move in self.moves.items()}
+        }

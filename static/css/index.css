@@ -1,0 +1,39 @@
+/* Custom scrollbar for suggestions */
+#suggestions::-webkit-scrollbar {
+    width: 8px;
+}
+
+#suggestions::-webkit-scrollbar-track {
+    background: #374151;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+
+#suggestions::-webkit-scrollbar-thumb {
+    background: #4B5563;
+    border-radius: 4px;
+}
+
+#suggestions::-webkit-scrollbar-thumb:hover {
+    background: #6B7280;
+}
+
+/* Type badges */
+.type-badge {
+    @apply inline-block px-2 py-1 rounded-full text-xs font-semibold text-white mr-1 mb-1;
+}
+
+/* Animation for selected Pokémon */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#selected-pokemon {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Make sure the suggestions dropdown appears above other elements */
+.relative {
+    position: relative;
+    z-index: 10;
+}

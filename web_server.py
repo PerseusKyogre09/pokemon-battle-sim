@@ -126,32 +126,80 @@ def get_pokemon_moves(pokemon_data):
     
     return selected_moves
 
-@app.route('/')
+# Start webpage with Pokémon selection
+@app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
-#start webpage
-@app.route('/start')
+# Handle Pokémon search
+@app.route('/search-pokemon')
+def search_pokemon():
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify([])
+    
+    try:
+        # Try exact match first
+        response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{query}')
+        if response.status_code == 200:
+            pokemon = response.json()
+            return jsonify([{
+                'name': pokemon['name'],
+                'sprite': pokemon['sprites']['front_default'],
+                'types': [t['type']['name'] for t in pokemon['types']]
+            }])
+    except:
+        pass
+    
+    # If no exact match, try search
+    try:
+        response = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1000')
+        if response.status_code == 200:
+            data = response.json()
+            matches = [p for p in data['results'] if query in p['name']][:5]
+            return jsonify([{'name': p['name']} for p in matches])
+    except Exception as e:
+        print(f"Error searching Pokémon: {e}")
+    
+    return jsonify([])
+
+# Start the battle with selected Pokémon
+@app.route('/start', methods=['POST'])
 def start_game():
     global game
-
-    player_data = get_pokemon_data('mewtwo')
-    opponent_data = get_pokemon_data('conkeldurr')
-    player_moves = get_pokemon_moves(player_data)
-    opponent_moves = get_pokemon_moves(opponent_data)
-
-    game = Game()
-    game.start_battle(player_data, opponent_data, player_moves, opponent_moves)
-
-    return render_template('battle.html', 
-                           player_sprite=player_data['sprites']['front_default'], 
-                           opponent_sprite=opponent_data['sprites']['front_default'], 
-                           player_moves=player_moves,  # Pass moves to the template
-                           opponent_hp=game.opponent_pokemon.current_hp,
-                           player_hp=game.player_pokemon.current_hp,
-                           battle_log=[],
-                           player_data=player_data,
-                           opponent_data=opponent_data)
+    
+    try:
+        player_pokemon = request.form.get('pokemon', 'pikachu').lower()
+        
+        # Get Pokémon data
+        player_data = get_pokemon_data(player_pokemon)
+        opponent_data = get_pokemon_data('charizard')  # Default opponent
+        
+        # Get moves for both Pokémon
+        player_moves = get_pokemon_moves(player_data)
+        opponent_moves = get_pokemon_moves(opponent_data)
+        
+        # Initialize the game
+        game = Game()
+        game.start_battle(player_data, opponent_data, player_moves, opponent_moves)
+        
+        # Prepare data for the battle template
+        battle_data = {
+            'player_data': game.player_pokemon.to_dict(),
+            'opponent_data': game.opponent_pokemon.to_dict(),
+            'player_sprite': game.player_pokemon.sprite_url,
+            'opponent_sprite': game.opponent_pokemon.sprite_url,
+            'player_hp': game.player_pokemon.current_hp,
+            'opponent_hp': game.opponent_pokemon.current_hp,
+            'player_moves': [{'name': name, 'power': move.power, 'type': move.type} 
+                           for name, move in game.player_pokemon.moves.items()]
+        }
+        
+        return render_template('battle.html', **battle_data)
+        
+    except Exception as e:
+        print(f"Error starting battle: {e}")
+        return render_template('index.html', error="Failed to start battle. Please try a different Pokémon.")
 
 #for using moves
 @app.route('/move', methods=['POST'])
