@@ -1,8 +1,102 @@
-#Secrets
-#Secrets
-.pycache/
-*.pyc
-music/
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
 pkmn/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
 .env
-.venv
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Flask instance folder
+instance/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Audio files (keep only specific ones)
+music/
+!music/nidorino.ogg
+!music/battle_music.mp3
+
+# Large dataset files
+*.json
+*.csv
+*.xlsx
+*.pkl
+*.pickle
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Compiled files
+*.js.map
+*.d.ts
+
+# Node modules
+/node_modules/

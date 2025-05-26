@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, Response
 from game import Game
+from data_loader import data_loader
 import requests
 
 app = Flask(__name__)
@@ -48,6 +49,24 @@ def get_pokemon_data(pokemon_name):
         raise Exception(f'Pokémon {pokemon_name} not found!')
 
 def get_pokemon_moves(pokemon_data):
+    pokemon_name = pokemon_data['name'].lower()
+    
+    # First try to get moves from our TypeScript dataset
+    dataset_moves = data_loader.get_pokemon_moves(pokemon_name, 4)
+    
+    if dataset_moves:
+        selected_moves = []
+        for move_name in dataset_moves:
+            move_power = data_loader.get_move_power(move_name)
+            move_type = data_loader.get_move_type(move_name)
+            selected_moves.append({
+                'name': move_name,
+                'power': move_power,
+                'type': move_type
+            })
+        return selected_moves
+    
+    # Fallback to PokeAPI if dataset doesn't have the Pokemon
     moves = pokemon_data['moves'][:4]  #gets first 4 move in the database
     selected_moves = []
 
@@ -59,9 +78,11 @@ def get_pokemon_moves(pokemon_data):
         if move_response.status_code == 200:
             move_data = move_response.json()
             move_power = move_data.get('power', 50)  #failsafe if move isnt in the database (for now so webpage doesnt crash)
+            move_type = move_data.get('type', {}).get('name', 'Normal')
             selected_moves.append({
                 'name': move_name,
-                'power': move_power
+                'power': move_power,
+                'type': move_type
             })
     
     return selected_moves

@@ -5,7 +5,6 @@ class Game:
         self.player_pokemon = None
         self.opponent_pokemon = None
         self.battle_over = False
-
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
         self.player_pokemon = Pokemon(player_data['name'], player_data['types'][0]['type']['name'], player_data['sprites']['front_default'], player_data['stats'], player_moves)
         self.opponent_pokemon = Pokemon(opponent_data['name'], opponent_data['types'][0]['type']['name'], opponent_data['sprites']['front_default'], opponent_data['stats'], opponent_moves)
@@ -22,7 +21,7 @@ class Game:
         # Determine who goes first based on speed
         if self.player_pokemon.speed >= self.opponent_pokemon.speed:
             # Player goes first
-            player_damage = player_move.use_move()
+            player_damage = player_move.use_move(self.player_pokemon, self.opponent_pokemon)
             self.opponent_pokemon.take_damage(player_damage)
                 
             # Check if opponent fainted
@@ -31,11 +30,11 @@ class Game:
                 return
             
             # Opponent goes second
-            opponent_damage = opponent_move.use_move()
+            opponent_damage = opponent_move.use_move(self.opponent_pokemon, self.player_pokemon)
             self.player_pokemon.take_damage(opponent_damage)
         else:
             # Opponent goes first
-            opponent_damage = opponent_move.use_move()
+            opponent_damage = opponent_move.use_move(self.opponent_pokemon, self.player_pokemon)
             self.player_pokemon.take_damage(opponent_damage)
                 
             # Check if player fainted
@@ -44,7 +43,7 @@ class Game:
                 return
             
             # Player goes second
-            player_damage = player_move.use_move()
+            player_damage = player_move.use_move(self.player_pokemon, self.opponent_pokemon)
             self.opponent_pokemon.take_damage(player_damage)
 
         # Check if battle is over
