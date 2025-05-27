@@ -76,30 +76,42 @@ class DataLoader:
             with open('datasets/moves.ts', 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Regex patterns
-            move_pattern = r'(\w+):\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)}'
-            moves = re.findall(move_pattern, content)
+            # Find all move entries
+            move_entries = re.finditer(r'(\w+):\s*{\s*num:\s*(\d+).*?type:\s*"(\w+)"', content, re.DOTALL)
             
-            for move_name, move_data in moves:
-                move_info = {}
+            for match in move_entries:
+                move_name = match.group(1).lower()
+                move_num = int(match.group(2))
+                move_type = match.group(3)
                 
-                # Parse individual properties
-                props = re.findall(r'(\w+):\s*([^,}\n]+)', move_data)
-                for prop_name, prop_value in props:
-                    prop_value = prop_value.strip().rstrip(',')
-                    
-                    if prop_value.isdigit():
-                        move_info[prop_name] = int(prop_value)
-                    elif prop_value == 'true':
-                        move_info[prop_name] = True
-                    elif prop_value == 'false':
-                        move_info[prop_name] = False
-                    elif prop_value == 'null':
-                        move_info[prop_name] = None
-                    else:
-                        move_info[prop_name] = prop_value.strip('"\'')
+                # Extract other properties with a more targeted approach
+                move_data = match.group(0)
                 
-                self.moves_data[move_name] = move_info
+                # Get base power (default to 50 if not found)
+                power_match = re.search(r'basePower\s*:\s*(\d+)', move_data)
+                base_power = int(power_match.group(1)) if power_match else 50
+                
+                # Get PP (default to 10 if not found)
+                pp_match = re.search(r'pp\s*:\s*(\d+)', move_data)
+                pp = int(pp_match.group(1)) if pp_match else 10
+                
+                # Get accuracy (default to 100 if not found)
+                accuracy_match = re.search(r'accuracy\s*:\s*(\d+)', move_data)
+                accuracy = int(accuracy_match.group(1)) if accuracy_match else 100
+                
+                # Get category (Physical, Special, or Status)
+                category_match = re.search(r'category\s*:\s*"(\w+)"', move_data)
+                category = category_match.group(1) if category_match else 'Physical'
+                
+                self.moves_data[move_name] = {
+                    'name': move_name,
+                    'type': move_type,
+                    'basePower': base_power,
+                    'pp': pp,
+                    'accuracy': accuracy,
+                    'category': category,
+                    'num': move_num
+                }
                 
         except FileNotFoundError:
             print("Warning: moves.ts file not found")

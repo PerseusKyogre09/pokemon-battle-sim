@@ -564,3 +564,9 @@ function capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+function handleTypeIconError(imgElement, moveType) {
+    console.warn('Could not load image for type:', moveType);
+    imgElement.onerror = null; // Prevent infinite loop
+    imgElement.src = '/static/images/type/normal.png'; // Set to default normal type icon
+}
