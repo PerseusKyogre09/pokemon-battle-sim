@@ -102,9 +102,25 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.move-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
 .move-name {
     font-weight: 600;
-    margin-bottom: 4px;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.type-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    margin-left: 8px;
 }
 
 .move-pp {

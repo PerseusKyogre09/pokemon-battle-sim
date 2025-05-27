@@ -65,7 +65,10 @@
                 {% for move in player_moves %}
                     {% if loop.index <= 4 %}
                         <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button" data-type="{{ move.type }}" data-pp="{{ move.pp }}" data-max-pp="{{ move.max_pp }}">
-                            <div class="move-name">{{ move.name | capitalize }}</div>
+                            <div class="move-header">
+                                <span class="move-name">{{ move.name | capitalize }}</span>
+                                <img src="{{ url_for('static', filename='images/type/' + move.type|lower + '.png') }}" alt="{{ move.type }}" class="type-icon" onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/type/normal.png') }}'" />
+                            </div>
                             <div class="move-pp">
                                 <div class="pp-bar-container">
                                     <div class="pp-bar" data-pp-percent="{{ (move.pp / move.max_pp * 100) | round(0) }}"></div>
