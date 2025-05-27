@@ -214,22 +214,38 @@ def move():
     # Store the opponent's move name before processing the turn
     opponent_move_name = next(iter(game.opponent_pokemon.moves.keys()))
     
+    # Store initial HP values to calculate damage
+    initial_player_hp = game.player_pokemon.current_hp
+    initial_opponent_hp = game.opponent_pokemon.current_hp
+    
+    # Determine turn order
+    player_first = game.player_pokemon.speed >= game.opponent_pokemon.speed
+    
     # Process the turn with the player's move
     game.process_turn(move_name)
-
-    player_hp = game.player_pokemon.current_hp
-    opponent_hp = game.opponent_pokemon.current_hp
-    battle_log = [f"Player used {move_name}. Opponent used {opponent_move_name}."]
+    
+    # Calculate damage dealt
+    player_damage = initial_opponent_hp - game.opponent_pokemon.current_hp
+    opponent_damage = initial_player_hp - game.player_pokemon.current_hp
+    
+    # Prepare turn information
+    turn_info = {
+        'player_first': player_first,
+        'player_move': move_name,
+        'opponent_move': opponent_move_name,
+        'player_damage': player_damage,
+        'opponent_damage': opponent_damage
+    }
 
     is_game_over = game.battle_over
     result = game.get_battle_result() if is_game_over else None
 
     return jsonify({
-        "player_hp": player_hp,
-        "opponent_hp": opponent_hp,
+        "player_hp": game.player_pokemon.current_hp,
+        "opponent_hp": game.opponent_pokemon.current_hp,
         "player_max_hp": game.player_pokemon.max_hp,
         "opponent_max_hp": game.opponent_pokemon.max_hp,
-        "battle_log": battle_log,
+        "turn_info": turn_info,
         "is_game_over": is_game_over,
         "battle_result": result,
         "opponent_move": opponent_move_name,

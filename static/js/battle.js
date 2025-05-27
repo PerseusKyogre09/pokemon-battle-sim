@@ -285,9 +285,8 @@ async function makeMove(move) {
     disableMoveButtons(true);
     
     try {
-        // Player's turn - log the move
         const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
-        addLogMessage(`${capitalize(playerPokemonName)} used ${move}!`);
+        const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
         
         // Get data from server about the move result
         const response = await fetch('/move', {
@@ -306,79 +305,29 @@ async function makeMove(move) {
             return;
         }
         
-        // Execute player's attack animation
-        animateAttack(true);
+        const { turn_info } = data;
         
-        // Wait for animation to complete
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Update opponent's HP to show the damage from player's move
-        const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
-        document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentPokemonName)} HP: ${data.opponent_hp}`;
-        updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
-        
-        // Check if opponent is defeated
-        if (data.opponent_hp <= 0) {
-            // Show HP as 0 explicitly
-            document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentPokemonName)} HP: 0`;
-            updateHealthBar('opponent-health-bar', 0, data.opponent_max_hp);
+        // Process turns in the correct order based on speed
+        if (turn_info.player_first) {
+            // Player moves first
+            await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
+            if (data.is_game_over) return;
             
-            // Add faint message to battle log
-            addLogMessage(`Opponent ${capitalize(opponentPokemonName)} fainted!`);
-            
-            // Play the faint animation with distorted cry
-            await animateFaint(false);
-            
-            // Add a longer delay before redirecting to game over
-            addLogMessage("You won the battle!");
-            await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
-            
-            // Redirect to game over after animation completes
-            if (data.game_over_url) {
-                window.location.href = data.game_over_url;
+            // Opponent moves second if they have HP left
+            if (turn_info.opponent_damage > 0) {
+                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
+                if (data.player_hp <= 0) return;
             }
-            return;
-        }
-        
-        // Wait before opponent's turn
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Opponent's turn
-        if (data.opponent_move) {
-            addLogMessage(`Opponent ${capitalize(opponentPokemonName)} used ${data.opponent_move}!`);
-            
-            // Execute opponent's attack animation
-            animateAttack(false);
-            
-            // Wait for animation to complete
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // Update player's HP to show damage from opponent's move
-            document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: ${data.player_hp}`;
-            updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
-            
-            // Check if player is defeated
-            if (data.player_hp <= 0) {
-                // Show HP as 0 explicitly
-                document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: 0`;
-                updateHealthBar('player-health-bar', 0, data.player_max_hp);
-                
-                // Add faint message to battle log
-                addLogMessage(`${capitalize(playerPokemonName)} fainted!`);
-                
-                // Play the faint animation with distorted cry
-                await animateFaint(true);
-                
-                // Add a longer delay before redirecting to game over
-                addLogMessage("You lost the battle!");
-                await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
-                
-                // Redirect to game over after animation completes
-                if (data.game_over_url) {
-                    window.location.href = data.game_over_url;
-                }
-                return;
+        } else {
+            // Opponent moves first
+            if (turn_info.opponent_damage > 0) {
+                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
+                if (data.player_hp <= 0) return;
             }
+            
+            // Player moves second if they have HP left
+            await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
+            if (data.is_game_over) return;
         }
         
     } finally {
@@ -387,6 +336,58 @@ async function makeMove(move) {
             isTurnInProgress = false;
             disableMoveButtons(false);
         }, 500);
+    }
+}
+
+async function processPlayerMove(playerName, opponentName, move, data, turnInfo) {
+    // Log player's move
+    addLogMessage(`${capitalize(playerName)} used ${move}!`);
+    
+    // Execute player's attack animation
+    animateAttack(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Update opponent's HP
+    document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: ${data.opponent_hp}`;
+    updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+    
+    // Check if opponent is defeated
+    if (data.opponent_hp <= 0) {
+        document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: 0`;
+        updateHealthBar('opponent-health-bar', 0, data.opponent_max_hp);
+        addLogMessage(`Opponent ${capitalize(opponentName)} fainted!`);
+        await animateFaint(false);
+        addLogMessage("You won the battle!");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (data.game_over_url) {
+            window.location.href = data.game_over_url;
+        }
+    }
+}
+
+async function processOpponentMove(playerName, opponentName, data, turnInfo) {
+    // Log opponent's move
+    addLogMessage(`Opponent ${capitalize(opponentName)} used ${turnInfo.opponent_move}!`);
+    
+    // Execute opponent's attack animation
+    animateAttack(false);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Update player's HP
+    document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: ${data.player_hp}`;
+    updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
+    
+    // Check if player is defeated
+    if (data.player_hp <= 0) {
+        document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: 0`;
+        updateHealthBar('player-health-bar', 0, data.player_max_hp);
+        addLogMessage(`${capitalize(playerName)} fainted!`);
+        await animateFaint(true);
+        addLogMessage("You lost the battle!");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (data.game_over_url) {
+            window.location.href = data.game_over_url;
+        }
     }
 }
 
