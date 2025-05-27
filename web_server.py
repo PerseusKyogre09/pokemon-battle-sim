@@ -83,10 +83,37 @@ def get_pokemon_moves(pokemon_data):
                     move_power = 75
                     move_type = 'normal'
             
+            # Initialize move_pp with default value first
+            move_pp = 15  # Default PP if not found
+            
+            # For strategic moves, we need to fetch the move data first
+            try:
+                move_url = f'https://pokeapi.co/api/v2/move/{clean_move_name}'
+                print(f"\n=== Fetching move data for {clean_move_name} ===")
+                print(f"URL: {move_url}")
+                
+                move_response = requests.get(move_url)
+                print(f"Status code: {move_response.status_code}")
+                
+                if move_response.status_code == 200:
+                    move_data = move_response.json()
+                    print(f"Raw move data for {clean_move_name}:")
+                    print(f"- Name: {move_data.get('name')}")
+                    print(f"- PP: {move_data.get('pp')}")
+                    print(f"- Power: {move_data.get('power')}")
+                    print(f"- Type: {move_data.get('type', {}).get('name')}")
+                    
+                    move_pp = move_data.get('pp', 15)
+                    print(f"Using PP: {move_pp} (from API)")
+            except Exception as e:
+                print(f"Error getting PP for {move_name}: {e}")
+            
             selected_moves.append({
                 'name': move_name,
                 'power': move_power or 75,  # Ensure we have a power value
-                'type': move_type or 'normal'  # Ensure we have a type
+                'type': move_type or 'normal',  # Ensure we have a type
+                'pp': move_pp,
+                'max_pp': move_pp
             })
         return selected_moves
     
@@ -98,10 +125,15 @@ def get_pokemon_moves(pokemon_data):
         for move_name in dataset_moves:
             move_power = data_loader.get_move_power(move_name)
             move_type = data_loader.get_move_type(move_name)
+            # Get PP for the move from dataset
+            move_pp = data_loader.get_move_pp(move_name) or 15
+            
             selected_moves.append({
                 'name': move_name,
                 'power': move_power or 50,
-                'type': move_type or 'normal'
+                'type': move_type or 'normal',
+                'pp': move_pp,
+                'max_pp': move_pp
             })
         return selected_moves
     
@@ -113,15 +145,36 @@ def get_pokemon_moves(pokemon_data):
         move_name = move_entry['move']['name']
         move_url = move_entry['move']['url']  # URL for more details about the move
 
-        move_response = requests.get(move_url)
-        if move_response.status_code == 200:
-            move_data = move_response.json()
-            move_power = move_data.get('power', 50)
-            move_type = move_data.get('type', {}).get('name', 'normal')
+        try:
+            move_response = requests.get(move_url)
+            if move_response.status_code == 200:
+                move_data = move_response.json()
+                move_power = move_data.get('power', 50)
+                move_type = move_data.get('type', {}).get('name', 'normal')
+                
+                # Get PP directly from the move data
+                move_pp = move_data.get('pp', 15)  # Default to 15 if PP not found
+                print(f"\n=== Processing move: {move_name} ===")
+                print(f"- Move PP from API: {move_pp}")
+                print(f"- Move power: {move_power}")
+                print(f"- Move type: {move_type}")
+                
+                selected_moves.append({
+                    'name': move_name,
+                    'power': move_power,
+                    'type': move_type,
+                    'pp': move_pp,
+                    'max_pp': move_pp
+                })
+        except Exception as e:
+            print(f"Error processing move {move_name}: {e}")
+            # Fallback if API call fails
             selected_moves.append({
                 'name': move_name,
-                'power': move_power,
-                'type': move_type
+                'power': 50,
+                'type': 'normal',
+                'pp': 15,
+                'max_pp': 15
             })
     
     return selected_moves
@@ -191,8 +244,13 @@ def start_game():
             'opponent_sprite': game.opponent_pokemon.sprite_url,
             'player_hp': game.player_pokemon.current_hp,
             'opponent_hp': game.opponent_pokemon.current_hp,
-            'player_moves': [{'name': name, 'power': move.power, 'type': move.type} 
-                           for name, move in game.player_pokemon.moves.items()]
+            'player_moves': [{
+                'name': name, 
+                'power': move.power, 
+                'type': move.type,
+                'pp': getattr(move, 'pp', 15),  # Current PP
+                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))  # Max PP, fallback to current PP if not set
+            } for name, move in game.player_pokemon.moves.items()]
         }
         
         return render_template('battle.html', **battle_data)
@@ -218,11 +276,22 @@ def move():
     initial_player_hp = game.player_pokemon.current_hp
     initial_opponent_hp = game.opponent_pokemon.current_hp
     
+    # Get the player's move and its current PP
+    player_move = game.player_pokemon.moves.get(move_name)
+    current_pp = getattr(player_move, 'pp', 15) if player_move else 0
+    
     # Determine turn order
     player_first = game.player_pokemon.speed >= game.opponent_pokemon.speed
     
     # Process the turn with the player's move
     game.process_turn(move_name)
+    
+    # Update PP for the used move
+    updated_pp = None
+    if player_move and hasattr(player_move, 'pp'):
+        updated_pp = player_move.pp
+    elif player_move:
+        updated_pp = current_pp - 1 if current_pp > 0 else 0
     
     # Calculate damage dealt
     player_damage = initial_opponent_hp - game.opponent_pokemon.current_hp
@@ -240,17 +309,44 @@ def move():
     is_game_over = game.battle_over
     result = game.get_battle_result() if is_game_over else None
 
-    return jsonify({
+    # Get current PP for all player moves
+    print("\n=== Current Move PP Status ===")
+    player_moves_pp = {}
+    for move_name, move in game.player_pokemon.moves.items():
+        current_pp = getattr(move, 'pp', 15)
+        max_pp = getattr(move, 'max_pp', 15)
+        
+        print(f"Move: {move_name}")
+        print(f"- Current PP: {current_pp}")
+        print(f"- Max PP: {max_pp}")
+        
+        player_moves_pp[move_name] = {
+            'current_pp': current_pp,
+            'max_pp': max_pp
+        }
+    
+    response_data = {
         "player_hp": game.player_pokemon.current_hp,
         "opponent_hp": game.opponent_pokemon.current_hp,
         "player_max_hp": game.player_pokemon.max_hp,
         "opponent_max_hp": game.opponent_pokemon.max_hp,
+        "player_moves_pp": player_moves_pp,
         "turn_info": turn_info,
         "is_game_over": is_game_over,
         "battle_result": result,
         "opponent_move": opponent_move_name,
         "game_over_url": url_for('game_over_with_underscore', result_message=result) if is_game_over else None
-    })
+    }
+    
+    # Add PP information if available
+    if updated_pp is not None:
+        response_data['player_pp'] = {
+            'move': move_name,
+            'current_pp': updated_pp,
+            'max_pp': getattr(player_move, 'max_pp', 15) if player_move else 15
+        }
+    
+    return jsonify(response_data)
 
 @app.route('/game_over')
 def game_over_with_underscore():

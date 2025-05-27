@@ -75,27 +75,96 @@ body {
     margin-top: 20px;
 }
 
-/* Enhanced move button styling */
+/* Move button styling */
 .move-button {
-    display: inline-block;
-    padding: 10px 20px;
-    margin: 5px;
-    font-size: 16px;
-    font-weight: bold;
-    background-color: #ffcc00;
-    border: 2px solid #000;
-    color: #333;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: #2c3e50;
+    border: 2px solid #7f8c8d;
+    color: #ecf0f1;
     cursor: pointer;
-    border-radius: 5px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-align: left;
+    min-height: 60px;
+    position: relative;
+    overflow: hidden;
 }
 
 .move-button:hover {
-    background-color: #ffdd55;
-    color: #000;
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+    background-color: #34495e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
+.move-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.move-pp {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-size: 12px;
+    color: #bdc3c7;
+}
+
+.pp-bar-container {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.pp-bar {
+    height: 100%;
+    background-color: #3498db;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* Set initial width from data attribute */
+.pp-text {
+    font-size: 11px;
+    text-align: right;
+    color: #95a5a6;
+}
+
+/* Move grid layout */
+.move-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 15px 0;
+}
+
+/* Move type colors */
+.move-button[data-type="normal"] { border-left: 4px solid #a8a878; }
+.move-button[data-type="fire"] { border-left: 4px solid #f08030; }
+.move-button[data-type="water"] { border-left: 4px solid #6890f0; }
+.move-button[data-type="electric"] { border-left: 4px solid #f8d030; }
+.move-button[data-type="grass"] { border-left: 4px solid #78c850; }
+.move-button[data-type="ice"] { border-left: 4px solid #98d8d8; }
+.move-button[data-type="fighting"] { border-left: 4px solid #c03028; }
+.move-button[data-type="poison"] { border-left: 4px solid #a040a0; }
+.move-button[data-type="ground"] { border-left: 4px solid #e0c068; }
+.move-button[data-type="flying"] { border-left: 4px solid #a890f0; }
+.move-button[data-type="psychic"] { border-left: 4px solid #f85888; }
+.move-button[data-type="bug"] { border-left: 4px solid #a8b820; }
+.move-button[data-type="rock"] { border-left: 4px solid #b8a038; }
+.move-button[data-type="ghost"] { border-left: 4px solid #705898; }
+.move-button[data-type="dragon"] { border-left: 4px solid #7038f8; }
+.move-button[data-type="dark"] { border-left: 4px solid #705848; }
+.move-button[data-type="steel"] { border-left: 4px solid #b8b8d0; }
+.move-button[data-type="fairy"] { border-left: 4px solid #ee99ac; }
 
 .battle-log {
     background-color: #F5F5F5;

@@ -64,8 +64,14 @@
             <div class="move-grid">
                 {% for move in player_moves %}
                     {% if loop.index <= 4 %}
-                        <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button">
-                            {{ move.name | capitalize }}
+                        <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button" data-type="{{ move.type }}" data-pp="{{ move.pp }}" data-max-pp="{{ move.max_pp }}">
+                            <div class="move-name">{{ move.name | capitalize }}</div>
+                            <div class="move-pp">
+                                <div class="pp-bar-container">
+                                    <div class="pp-bar" data-pp-percent="{{ (move.pp / move.max_pp * 100) | round(0) }}"></div>
+                                </div>
+                                <span class="pp-text">{{ move.pp }}/{{ move.max_pp }} PP</span>
+                            </div>
                         </button>
                     {% endif %}
                 {% endfor %}

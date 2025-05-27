@@ -5,6 +5,7 @@ class Move:
         self.name = name
         self.power = power
         self.pp = pp
+        self.max_pp = pp  # Initialize max_pp to the initial pp value
         self.type = move_type
 
     #pp check and damage calculation with type effectiveness
@@ -28,5 +29,6 @@ class Move:
             'name': self.name,
             'power': self.power,
             'pp': self.pp,
+            'max_pp': self.max_pp,
             'type': self.type
         }

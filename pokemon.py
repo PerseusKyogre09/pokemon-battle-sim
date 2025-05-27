@@ -31,7 +31,10 @@ class Pokemon:
                 move_name = move['name']
                 move_power = data_loader.get_move_power(move_name) or move.get('power', 50)
                 move_type = data_loader.get_move_type(move_name)
-                self.moves[move_name] = Move(move_name, move_power, 10, move_type)
+                move_pp = move.get('pp', 10)  # Use PP from the move data, default to 10 if not provided
+                self.moves[move_name] = Move(move_name, move_power, move_pp, move_type)
+                # Also store max_pp for reference
+                self.moves[move_name].max_pp = move.get('max_pp', move_pp)
         #scaled to level 100 (since pokeapi wasnt setting pokemons to level 100 automatically for some reason)
 
     def take_damage(self, damage):

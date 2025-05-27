@@ -47,6 +47,12 @@ class Game:
                 actual_damage = player_prev_hp - self.player_pokemon.current_hp
                 print(f"DEBUG: {self.opponent_pokemon.name} used {opponent_move_name}! {self.player_pokemon.name} lost {actual_damage} HP (Now: {self.player_pokemon.current_hp}/{self.player_pokemon.max_hp})")
                 opponent_move.pp -= 1  # Decrement PP after successful move
+                
+                # Check if player fainted
+                if self.player_pokemon.is_fainted():
+                    print(f"DEBUG: {self.player_pokemon.name} fainted!")
+                    self.battle_over = True
+                    return
         else:
             # Opponent goes first if they have PP
             if opponent_move:

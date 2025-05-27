@@ -1,3 +1,42 @@
+// Function to update PP display for a move
+function updateMovePP(moveName, newPP) {
+    console.log(`Updating PP for ${moveName} to ${newPP}`);
+    const moveButtons = document.querySelectorAll('.move-button');
+    let found = false;
+    moveButtons.forEach(button => {
+        if (button.textContent.toLowerCase().includes(moveName.toLowerCase())) {
+            const ppText = button.querySelector('.pp-text');
+            const ppBar = button.querySelector('.pp-bar');
+            const maxPP = parseInt(button.getAttribute('data-max-pp'));
+            
+            if (ppText) {
+                ppText.textContent = `${newPP}/${maxPP} PP`;
+            }
+            
+            if (ppBar) {
+                const percentage = Math.max(0, (newPP / maxPP) * 100);
+                ppBar.style.width = `${percentage}%`;
+                
+                // Change color based on PP level
+                if (percentage < 25) {
+                    ppBar.style.backgroundColor = '#e74c3c'; // Red for low PP
+                } else if (percentage < 50) {
+                    ppBar.style.backgroundColor = '#f39c12'; // Orange for medium PP
+                } else {
+                    ppBar.style.backgroundColor = '#3498db'; // Blue for high PP
+                }
+                
+                // Disable button if no PP left
+                if (newPP <= 0) {
+                    button.disabled = true;
+                    button.style.opacity = 0.5;
+                    button.style.cursor = 'not-allowed';
+                }
+            }
+        }
+    });
+}
+
 // Global variables to track game state
 let isTurnInProgress = false;
 let battleLogEl;
@@ -9,6 +48,43 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start with an empty battle log
     addLogMessage("Battle started! Choose your move.");
+    
+    // Initialize PP bars for all moves
+    console.log('Initializing PP bars...');
+    document.querySelectorAll('.move-button').forEach(button => {
+        console.log('Processing move button:', button.textContent.trim());
+        const currentPP = parseInt(button.getAttribute('data-pp'));
+        const maxPP = parseInt(button.getAttribute('data-max-pp'));
+        const ppBar = button.querySelector('.pp-bar');
+        const ppText = button.querySelector('.pp-text');
+        
+        console.log(`  - Current PP: ${currentPP}, Max PP: ${maxPP}`);
+        if (ppBar) {
+            const percentage = Math.max(0, (currentPP / maxPP) * 100);
+            console.log(`  - PP Percentage: ${percentage}%`);
+            ppBar.style.width = `${percentage}%`;
+            
+            // Set initial color based on PP level
+            if (percentage < 25) {
+                ppBar.style.backgroundColor = '#e74c3c'; // Red for low PP
+            } else if (percentage < 50) {
+                ppBar.style.backgroundColor = '#f39c12'; // Orange for medium PP
+            } else {
+                ppBar.style.backgroundColor = '#3498db'; // Blue for high PP
+            }
+            
+            // Disable button if no PP left
+            if (currentPP <= 0) {
+                button.disabled = true;
+                button.style.opacity = 0.5;
+                button.style.cursor = 'not-allowed';
+            }
+        }
+        
+        if (ppText) {
+            ppText.textContent = `${currentPP}/${maxPP} PP`;
+        }
+    });
     
     // Set initial health bars
     const playerHealthText = document.getElementById("player-hp-text").innerText;
@@ -36,6 +112,14 @@ document.addEventListener('DOMContentLoaded', function() {
     moveButtons.forEach(button => {
         button.disabled = true;
         button.style.opacity = 0.5;
+    });
+    
+    // Initialize PP bars
+    document.querySelectorAll('.pp-bar[data-pp-percent]').forEach(bar => {
+        const percent = bar.getAttribute('data-pp-percent');
+        if (percent) {
+            bar.style.width = `${percent}%`;
+        }
     });
     
     // Start the battle sequence with animations
@@ -284,6 +368,9 @@ async function makeMove(move) {
     isTurnInProgress = true;
     disableMoveButtons(true);
     
+    // Update PP display
+    updateMovePP(move, -1); // Will be updated with actual PP from server
+    
     try {
         const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
         const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
@@ -305,29 +392,50 @@ async function makeMove(move) {
             return;
         }
         
-        const { turn_info } = data;
+        const { turn_info, player_moves_pp } = data;
+        
+        // Update PP for all moves from server response
+        console.log('Updating PP from server response:', player_moves_pp);
+        if (player_moves_pp) {
+            Object.entries(player_moves_pp).forEach(([moveName, ppData]) => {
+                console.log(`Updating PP for ${moveName}:`, ppData);
+                updateMovePP(moveName, ppData.current_pp);
+                
+                // Update the max PP in the button's data attribute
+                const moveButtons = document.querySelectorAll('.move-button');
+                moveButtons.forEach(button => {
+                    if (button.textContent.toLowerCase().includes(moveName.toLowerCase())) {
+                        button.setAttribute('data-max-pp', ppData.max_pp);
+                    }
+                });
+            });
+        }
         
         // Process turns in the correct order based on speed
         if (turn_info.player_first) {
-            // Player moves first
-            await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-            if (data.is_game_over) return;
+            // Player moves first if they have HP left
+            if (data.player_hp > 0) {
+                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
+                if (data.is_game_over) return;
+            }
             
             // Opponent moves second if they have HP left
-            if (turn_info.opponent_damage > 0) {
+            if (data.opponent_hp > 0) {
                 await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.player_hp <= 0) return;
+                if (data.is_game_over) return;
             }
         } else {
-            // Opponent moves first
-            if (turn_info.opponent_damage > 0) {
+            // Opponent moves first if they have HP left
+            if (data.opponent_hp > 0) {
                 await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.player_hp <= 0) return;
+                if (data.is_game_over) return;
             }
             
             // Player moves second if they have HP left
-            await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-            if (data.is_game_over) return;
+            if (data.player_hp > 0) {
+                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
+                if (data.is_game_over) return;
+            }
         }
         
     } finally {
@@ -348,21 +456,24 @@ async function processPlayerMove(playerName, opponentName, move, data, turnInfo)
     await new Promise(resolve => setTimeout(resolve, 800));
     
     // Update opponent's HP
-    document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: ${data.opponent_hp}`;
-    updateHealthBar('opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+    const opponentHp = Math.max(0, data.opponent_hp);
+    document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: ${opponentHp}`;
+    updateHealthBar('opponent-health-bar', opponentHp, data.opponent_max_hp);
     
     // Check if opponent is defeated
-    if (data.opponent_hp <= 0) {
+    if (opponentHp <= 0) {
         document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: 0`;
         updateHealthBar('opponent-health-bar', 0, data.opponent_max_hp);
         addLogMessage(`Opponent ${capitalize(opponentName)} fainted!`);
         await animateFaint(false);
         addLogMessage("You won the battle!");
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         if (data.game_over_url) {
             window.location.href = data.game_over_url;
         }
+        return true; // Battle is over
     }
+    return false; // Battle continues
 }
 
 async function processOpponentMove(playerName, opponentName, data, turnInfo) {
@@ -374,21 +485,24 @@ async function processOpponentMove(playerName, opponentName, data, turnInfo) {
     await new Promise(resolve => setTimeout(resolve, 800));
     
     // Update player's HP
-    document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: ${data.player_hp}`;
-    updateHealthBar('player-health-bar', data.player_hp, data.player_max_hp);
+    const playerHp = Math.max(0, data.player_hp);
+    document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: ${playerHp}`;
+    updateHealthBar('player-health-bar', playerHp, data.player_max_hp);
     
     // Check if player is defeated
-    if (data.player_hp <= 0) {
+    if (playerHp <= 0) {
         document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: 0`;
         updateHealthBar('player-health-bar', 0, data.player_max_hp);
         addLogMessage(`${capitalize(playerName)} fainted!`);
         await animateFaint(true);
         addLogMessage("You lost the battle!");
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         if (data.game_over_url) {
             window.location.href = data.game_over_url;
         }
+        return true; // Battle is over
     }
+    return false; // Battle continues
 }
 
 // Function to use a potion to heal the player's Pokémon
