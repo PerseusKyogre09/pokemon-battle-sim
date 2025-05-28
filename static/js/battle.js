@@ -416,28 +416,22 @@ async function makeMove(move) {
         
         // Process turns in the correct order based on speed
         if (turn_info.player_first) {
-            // Player moves first if they have HP left
-            if (data.player_hp > 0) {
-                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
-            }
+            // Player moves first
+            const playerFainted = await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
+            if (playerFainted) return;
             
-            // Opponent moves second if they have HP left
-            if (data.opponent_hp > 0) {
+            // Only process opponent's move if they're not already fainted
+            if (!data.opponent_fainted) {
                 await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
             }
         } else {
-            // Opponent moves first if they have HP left
-            if (data.opponent_hp > 0) {
-                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
-            }
+            // Opponent moves first
+            const opponentFainted = await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
+            if (opponentFainted) return;
             
-            // Player moves second if they have HP left
-            if (data.player_hp > 0) {
+            // Only process player's move if they're not already fainted
+            if (!data.player_fainted) {
                 await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
             }
         }
         
