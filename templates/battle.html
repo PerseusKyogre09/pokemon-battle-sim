@@ -17,11 +17,11 @@
             
             <!-- Pokeballs -->
             <div class="absolute left-12 bottom-16">
-                <img id="player-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Player Pokeball" class="w-16 h-16 hidden-element">
+                <img id="player-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Player Pokeball" class="w-16 h-16">
             </div>
             
             <div class="absolute right-20 top-16">
-                <img id="opponent-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Opponent Pokeball" class="w-16 h-16 hidden-element">
+                <img id="opponent-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Opponent Pokeball" class="w-16 h-16">
             </div>
             
             <!-- Player pokemon - visible by default -->
@@ -35,22 +35,32 @@
             </div>
             
             <!-- Player health bar - visible by default -->
-            <div class="absolute right-12 bottom-20 w-48" id="player-health-container">
-                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
-                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
-                        <div id="player-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+            <div class="player-health-container">
+                <div class="health-box">
+                    <div class="health-bar-background">
+                        <div id="player-health-bar" class="health-bar-fill" style="width: 100%;"></div>
                     </div>
-                    <p id="player-hp-text" class="text-sm font-bold text-gray-200">{{ player_data.name|capitalize }} HP: {{ player_hp }}</p>
+                    <div id="player-hp-text" class="health-text">
+                        <span id="player-pokemon-name">{{ player_data.name }}</span> <span id="player-hp">
+                            {% if player_hp is string %}
+                                {{ player_hp }}
+                            {% else %}
+                                {{ player_hp }}/{{ player_data.max_hp }}
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
             </div>
             
             <!-- Opponent health bar - visible by default -->
-            <div class="absolute left-12 top-12 w-48" id="opponent-health-container">
-                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
-                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
-                        <div id="opponent-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+            <div class="opponent-health-container">
+                <div class="health-box">
+                    <div class="health-bar-background">
+                        <div id="opponent-health-bar" class="health-bar-fill" style="width: 100%;"></div>
                     </div>
-                    <p id="opponent-hp-text" class="text-sm font-bold text-gray-200">Opponent {{ opponent_data.name|capitalize }} HP: {{ opponent_hp }}</p>
+                    <div id="opponent-hp-text" class="health-text">
+                        <span id="opponent-pokemon-name">{{ opponent_data.name }}</span> <span id="opponent-hp">{{ opponent_hp }}/{{ opponent_data.max_hp }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -124,9 +134,21 @@
     <audio id="pokeball-sound" src="{{ url_for('music', filename='pokeball-throw.mp3') }}" preload="auto"></audio>
     
     <!-- Pokémon cry audio elements -->
-    <audio id="player-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
-    <audio id="opponent-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
-    <audio id="player-faint-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
-    <audio id="opponent-faint-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
+    <audio id="player-cry" 
+           data-pokemon="{{ player_data.name }}" 
+           data-pokemon-id="{{ player_data.id }}" 
+           preload="none"></audio>
+    <audio id="opponent-cry" 
+           data-pokemon="{{ opponent_data.name }}" 
+           data-pokemon-id="{{ opponent_data.id }}" 
+           preload="none"></audio>
+    <audio id="player-faint-cry" 
+           data-pokemon="{{ player_data.name }}" 
+           data-pokemon-id="{{ player_data.id }}" 
+           preload="none"></audio>
+    <audio id="opponent-faint-cry" 
+           data-pokemon="{{ opponent_data.name }}" 
+           data-pokemon-id="{{ opponent_data.id }}" 
+           preload="none"></audio>
 </body>
 </html>

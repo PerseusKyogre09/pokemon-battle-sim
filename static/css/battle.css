@@ -4,6 +4,56 @@ body {
     text-align: center;
 }
 
+/* Health Bar Styles */
+.player-health-container {
+    position: absolute;
+    right: 3rem;
+    bottom: 5rem;
+    width: 12rem;
+}
+
+.opponent-health-container {
+    position: absolute;
+    left: 3rem;
+    top: 3rem;
+    width: 12rem;
+}
+
+.health-box {
+    background-color: #2d2d2d;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #4b5563;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.health-bar-background {
+    position: relative;
+    height: 1.25rem;
+    background-color: #374151;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.health-bar-fill {
+    position: absolute;
+    height: 100%;
+    background-color: #22c55e;
+    transition: all 0.3s ease-out;
+}
+
+.health-text {
+    font-size: 0.875rem;
+    font-weight: bold;
+    color: #e5e7eb;
+}
+
+/* Hidden element class */
+.hidden-element {
+    display: none !important;
+}
+
 .battle-screen {
     position: relative;
     height: 60vh;
@@ -367,8 +417,15 @@ body {
     }
 }
 
+/* Apply to Pokémon sprites */
+#player, #opponent {
+    opacity: 0; /* Start hidden */
+    transform-origin: center;
+}
+
 .appear-animation {
-    animation: appearPokemon 0.8s ease-out forwards;
+    animation: appearPokemon 0.8s ease-out forwards !important;
+    display: block !important; /* Ensure it's displayed */
 }
 
 /* Battle Controls Panel */
@@ -454,4 +511,49 @@ body {
     background-image: url('../images/battle-background.jpeg');
     background-size: cover;
     background-position: center;
+    position: relative;
+    overflow: hidden;
 }
+
+/* Battle animations */
+@keyframes throwOpponent {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-150px, 50px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes throwPlayer {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(150px, -50px) rotate(-720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes flash {
+    0% { background-color: white; opacity: 0.8; }
+    100% { background-color: transparent; opacity: 0; }
+}
+
+#flash-element {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    display: none;
+}
+
+/* Remove duplicate keyframes */

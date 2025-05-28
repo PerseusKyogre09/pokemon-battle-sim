@@ -238,8 +238,14 @@ def start_game():
         
         # Prepare data for the battle template
         battle_data = {
-            'player_data': game.player_pokemon.to_dict(),
-            'opponent_data': game.opponent_pokemon.to_dict(),
+            'player_data': {
+                **game.player_pokemon.to_dict(),
+                'id': player_data.get('id', 25)  # Default to Pikachu's ID if not found
+            },
+            'opponent_data': {
+                **game.opponent_pokemon.to_dict(),
+                'id': opponent_data.get('id', 6)  # Default to Charizard's ID if not found
+            },
             'player_sprite': game.player_pokemon.sprite_url,
             'opponent_sprite': game.opponent_pokemon.sprite_url,
             'player_hp': game.player_pokemon.current_hp,
@@ -248,8 +254,8 @@ def start_game():
                 'name': name, 
                 'power': move.power, 
                 'type': move.type,
-                'pp': getattr(move, 'pp', 15),  # Current PP
-                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))  # Max PP, fallback to current PP if not set
+                'pp': getattr(move, 'pp', 15),
+                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))
             } for name, move in game.player_pokemon.moves.items()]
         }
         
