@@ -37,17 +37,28 @@
             <!-- Player health bar - visible by default -->
             <div class="player-health-container">
                 <div class="health-box">
-                    <div class="health-bar-background">
-                        <div id="player-health-bar" class="health-bar-fill" style="width: 100%;"></div>
-                    </div>
-                    <div id="player-hp-text" class="health-text">
-                        <span id="player-pokemon-name">{{ player_data.name }}</span> <span id="player-hp">
-                            {% if player_hp is string %}
-                                {{ player_hp }}
-                            {% else %}
-                                {{ player_hp }}/{{ player_data.max_hp }}
-                            {% endif %}
-                        </span>
+                    <div class="status-inner">
+                        <div class="pokemon-name-level">
+                            <span id="player-pokemon-name" class="pokemon-name">{{ player_data.name }}</span>
+                            <div class="pokemon-level">
+                                <span>Lv.100</span>
+                            </div>
+                        </div>
+                        <div class="hp-row">
+                            <span class="hp-label">HP</span>
+                            <div class="hp-bar-container">
+                                <div id="player-health-bar" class="hp-bar-fill" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="hp-numbers">
+                            <span id="player-hp">
+                                {% if player_hp is string %}
+                                    {{ player_hp }}
+                                {% else %}
+                                    {{ player_hp }}/{{ player_data.max_hp }}
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -55,11 +66,22 @@
             <!-- Opponent health bar - visible by default -->
             <div class="opponent-health-container">
                 <div class="health-box">
-                    <div class="health-bar-background">
-                        <div id="opponent-health-bar" class="health-bar-fill" style="width: 100%;"></div>
-                    </div>
-                    <div id="opponent-hp-text" class="health-text">
-                        <span id="opponent-pokemon-name">{{ opponent_data.name }}</span> <span id="opponent-hp">{{ opponent_hp }}/{{ opponent_data.max_hp }}</span>
+                    <div class="status-inner">
+                        <div class="pokemon-name-level">
+                            <span id="opponent-pokemon-name" class="pokemon-name">{{ opponent_data.name }}</span>
+                            <div class="pokemon-level">
+                                <span>Lv.100</span>
+                            </div>
+                        </div>
+                        <div class="hp-row">
+                            <span class="hp-label">HP</span>
+                            <div class="hp-bar-container">
+                                <div id="opponent-health-bar" class="hp-bar-fill" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="hp-numbers">
+                            <span id="opponent-hp">{{ opponent_hp }}/{{ opponent_data.max_hp }}</span>
+                        </div>
                     </div>
                 </div>
             </div>

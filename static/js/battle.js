@@ -94,17 +94,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Set initial health bars
-    const playerHealthText = document.getElementById("player-hp-text");
-    const opponentHealthText = document.getElementById("opponent-hp-text");
+    const playerHealthBar = document.getElementById("player-health-bar");
+    const opponentHealthBar = document.getElementById("opponent-health-bar");
     
-    if (playerHealthText && opponentHealthText) {
-        const playerHp = parseInt(playerHealthText.innerText.match(/\d+/)[0]);
-        const opponentHp = parseInt(opponentHealthText.innerText.match(/\d+/)[0]);
+    if (playerHealthBar && opponentHealthBar) {
+        const playerHpElement = document.getElementById("player-hp");
+        const opponentHpElement = document.getElementById("opponent-hp");
         
-        updateHealthBar('#player-health-bar', playerHp, playerHp);
-        updateHealthBar('#opponent-health-bar', opponentHp, opponentHp);
+        if (playerHpElement && opponentHpElement) {
+            const playerHpText = playerHpElement.textContent.trim();
+            const opponentHpText = opponentHpElement.textContent.trim();
+            
+            const [playerHp, playerMaxHp] = playerHpText.split('/');
+            const [opponentHp, opponentMaxHp] = opponentHpText.split('/');
+            
+            updateHealthBar('#player-health-bar', parseInt(playerHp), parseInt(playerMaxHp));
+            updateHealthBar('#opponent-health-bar', parseInt(opponentHp), parseInt(opponentMaxHp));
+        } else {
+            console.error('Health text elements not found');
+        }
     } else {
-        console.error('Health text elements not found');
+        console.error('Health bar elements not found');
     }
     
     // Get DOM elements and store in a global object for the function
@@ -548,19 +558,28 @@ function updateHealthBar(selector, currentHp, maxHp) {
         return;
     }
     
+    // Ensure HP values are within bounds
+    currentHp = Math.max(0, Math.min(currentHp, maxHp));
     const healthPercentage = (currentHp / maxHp) * 100;
-    healthBar.style.width = healthPercentage + '%';
     
-    // Update health bar color based on percentage
-    if (healthPercentage > 50) {
-        healthBar.style.backgroundColor = '#10B981'; // Tailwind green-500
-    } else if (healthPercentage > 20) {
-        healthBar.style.backgroundColor = '#FBBF24'; // Tailwind yellow-400
-    } else {
-        healthBar.style.backgroundColor = '#EF4444'; // Tailwind red-500
+    // Update the health bar width with smooth transition
+    healthBar.style.width = `${healthPercentage}%`;
+    
+    // Update health bar color class based on percentage
+    healthBar.classList.remove('medium', 'low');
+    if (healthPercentage <= 20) {
+        healthBar.classList.add('low');
+    } else if (healthPercentage <= 50) {
+        healthBar.classList.add('medium');
     }
     
-    console.log(`Updated ${selector} to ${healthPercentage}% (${currentHp}/${maxHp})`);
+    // Update the HP text display
+    const hpTextElement = document.getElementById(selector.replace('-health-bar', '-hp'));
+    if (hpTextElement) {
+        hpTextElement.textContent = `${Math.round(currentHp)}/${maxHp}`;
+    }
+    
+    console.log(`Updated ${selector} to ${healthPercentage.toFixed(1)}% (${currentHp}/${maxHp})`);
 }
 
 function addLogMessage(message) {
@@ -750,12 +769,10 @@ async function processPlayerMove(playerName, opponentName, move, data, turnInfo)
     
     // Update opponent's HP
     const opponentHp = Math.max(0, data.opponent_hp);
-    document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: ${opponentHp}`;
     updateHealthBar('#opponent-health-bar', opponentHp, data.opponent_max_hp);
     
     // Check if opponent is defeated
     if (opponentHp <= 0) {
-        document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: 0`;
         updateHealthBar('#opponent-health-bar', 0, data.opponent_max_hp);
         addLogMessage(`Opponent ${capitalize(opponentName)} fainted!`);
         await animateFaint(false);
@@ -770,8 +787,11 @@ async function processPlayerMove(playerName, opponentName, move, data, turnInfo)
 }
 
 async function processOpponentMove(playerName, opponentName, data, turnInfo) {
+    // Determine opponent's move
+    const move = data.opponent_move;
+    
     // Log opponent's move
-    addLogMessage(`Opponent ${capitalize(opponentName)} used ${turnInfo.opponent_move}!`);
+    addLogMessage(`Opponent ${capitalize(opponentName)} used ${move}!`);
     
     // Execute opponent's attack animation
     animateAttack(false);
@@ -779,16 +799,14 @@ async function processOpponentMove(playerName, opponentName, data, turnInfo) {
     
     // Update player's HP
     const playerHp = Math.max(0, data.player_hp);
-    document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: ${playerHp}`;
     updateHealthBar('#player-health-bar', playerHp, data.player_max_hp);
     
     // Check if player is defeated
     if (playerHp <= 0) {
-        document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: 0`;
         updateHealthBar('#player-health-bar', 0, data.player_max_hp);
         addLogMessage(`${capitalize(playerName)} fainted!`);
         await animateFaint(true);
-        addLogMessage("You lost the battle!");
+        addLogMessage("You were defeated!");
         await new Promise(resolve => setTimeout(resolve, 2000));
         if (data.game_over_url) {
             window.location.href = data.game_over_url;
@@ -800,38 +818,31 @@ async function processOpponentMove(playerName, opponentName, data, turnInfo) {
 
 // Function to use a potion to heal the player's Pokémon
 function usePotion() {
-    // Prevent using potion if battle hasn't started or a turn is in progress
-    if (!battleStarted || isTurnInProgress) return;
+    if (isTurnInProgress) return;
     
-    // Get current player HP
-    const playerHpText = document.getElementById("player-hp-text").innerText;
-    const currentHp = parseInt(playerHpText.match(/\d+/)[0]);
+    // Get current HP from the health bar
+    const playerHpElement = document.getElementById("player-hp");
+    if (!playerHpElement) return;
     
-    // Get player max HP (this should be stored somewhere, for now we'll use 100)
-    const maxHp = 100; // This should be replaced with the actual max HP
+    const hpText = playerHpElement.textContent.trim();
+    const [currentHpStr, maxHpStr] = hpText.split('/');
+    const currentHp = parseInt(currentHpStr);
+    const maxHp = parseInt(maxHpStr);
     
-    // Don't use potion if HP is already full
-    if (currentHp >= maxHp) {
-        addLogMessage("Your Pokémon's HP is already full!");
-        return;
-    }
+    if (isNaN(currentHp) || isNaN(maxHp)) return;
     
-    // Calculate new HP (heal by 20 points, but don't exceed max)
+    // Calculate new HP (heal 20 or up to max)
     const healAmount = 20;
     const newHp = Math.min(currentHp + healAmount, maxHp);
     
-    // Update HP display
-    const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
-    document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: ${newHp}`;
-    updateHealthBar('player-health-bar', newHp, maxHp);
-    
-    // Add message to battle log
-    addLogMessage(`You used a Potion! ${capitalize(playerPokemonName)} recovered ${newHp - currentHp} HP.`);
-    
-    // Play healing sound (if available)
-    const healSound = document.getElementById('hit-sound');
-    if (healSound) {
-        healSound.play();
+    if (newHp > currentHp) {
+        // Update health bar and HP text through the updateHealthBar function
+        updateHealthBar('#player-health-bar', newHp, maxHp);
+        
+        // Log the action
+        addLogMessage(`Used a potion! Healed ${newHp - currentHp} HP.`);
+    } else {
+        addLogMessage("Your Pokémon is already at full health!");
     }
 }
 
