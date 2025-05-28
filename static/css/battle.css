@@ -21,8 +21,8 @@ body {
 }
 
 .player-pokemon {
-    --x-position: 50px;
-    --y-position: 270px;
+    --x-position: 60px;
+    --y-position: 290px;
     width: 300px;
     height: auto;
 }
