@@ -296,9 +296,12 @@ function disableMoveButtons(disabled) {
     moveButtons.forEach(button => {
         button.disabled = disabled;
         if (disabled) {
-            button.classList.add('opacity-50', 'cursor-not-allowed');
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
         } else {
-            button.classList.remove('opacity-50', 'cursor-not-allowed');
+            button.style.opacity = '';
+            button.style.cursor = '';
+            button.style.pointerEvents = '';
         }
     });
 }
