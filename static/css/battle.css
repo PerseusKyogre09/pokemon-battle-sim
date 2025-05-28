@@ -31,9 +31,10 @@ body {
 
 .status-inner {
     position: relative;
-    background: #d8d8d8;
+    background: #2d3748; /* Darker background */
     clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
     padding: 3px 6px;
+    border: 1px solid #4a5568; /* Subtle border */
 }
 
 .pokemon-name-level {
@@ -43,7 +44,7 @@ body {
     margin-bottom: 1px;
     font-size: 9px;
     font-weight: bold;
-    color: #000;
+    color: #e2e8f0; /* Lighter text color */
     line-height: 1;
 }
 
@@ -68,31 +69,35 @@ body {
 .hp-label {
     font-size: 8px;
     font-weight: bold;
-    color: #000;
+    color: #e2e8f0; /* Lighter text color */
     width: 12px;
 }
 
 .hp-bar-container {
     flex: 1;
     height: 3px;
-    background: #000;
+    background: #4a5568; /* Darker background for the container */
     position: relative;
     border-radius: 1px;
+    border: 1px solid #4a5568; /* Match the background for a cleaner look */
 }
 
 .hp-bar-fill {
     height: 100%;
-    background: #00ff00;
+    background: #48bb78; /* Softer green */
     transition: width 0.3s ease-out;
     border-radius: 1px;
+    box-shadow: 0 0 4px rgba(72, 187, 120, 0.5); /* Subtle glow */
 }
 
 .hp-bar-fill.medium {
-    background: #ffcc00;
+    background: #ecc94b; /* Softer yellow */
+    box-shadow: 0 0 4px rgba(236, 201, 75, 0.5);
 }
 
 .hp-bar-fill.low {
-    background: #ff3300;
+    background: #f56565; /* Softer red */
+    box-shadow: 0 0 4px rgba(245, 101, 101, 0.5);
 }
 
 .hp-numbers {

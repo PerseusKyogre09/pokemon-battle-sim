@@ -6,9 +6,41 @@ class Game:
         self.opponent_pokemon = None
         self.battle_over = False
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
-        # Use back sprite for player's Pokémon and front sprite for opponent
-        self.player_pokemon = Pokemon(player_data['name'], player_data['types'][0]['type']['name'], player_data['sprites']['back_default'], player_data['stats'], player_moves)
-        self.opponent_pokemon = Pokemon(opponent_data['name'], opponent_data['types'][0]['type']['name'], opponent_data['sprites']['front_default'], opponent_data['stats'], opponent_moves)
+        # Get player's back sprite (prefer Gen 5 animated, fallback to default)
+        player_sprite = (
+            player_data['sprites'].get('versions', {})
+            .get('generation-v', {})
+            .get('black-white', {})
+            .get('animated', {})
+            .get('back_default') or 
+            player_data['sprites'].get('back_default')
+        )
+        
+        # Get opponent's front sprite (prefer Gen 5 animated, fallback to default)
+        opponent_sprite = (
+            opponent_data['sprites'].get('versions', {})
+            .get('generation-v', {})
+            .get('black-white', {})
+            .get('animated', {})
+            .get('front_default') or 
+            opponent_data['sprites'].get('front_default')
+        )
+        
+        # Create Pokémon instances with the selected sprites
+        self.player_pokemon = Pokemon(
+            player_data['name'], 
+            player_data['types'][0]['type']['name'], 
+            player_sprite, 
+            player_data['stats'], 
+            player_moves
+        )
+        self.opponent_pokemon = Pokemon(
+            opponent_data['name'], 
+            opponent_data['types'][0]['type']['name'], 
+            opponent_sprite, 
+            opponent_data['stats'], 
+            opponent_moves
+        )
 
     def process_turn(self, move_name):
         # Get player's selected move
