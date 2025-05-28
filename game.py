@@ -6,7 +6,8 @@ class Game:
         self.opponent_pokemon = None
         self.battle_over = False
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
-        self.player_pokemon = Pokemon(player_data['name'], player_data['types'][0]['type']['name'], player_data['sprites']['front_default'], player_data['stats'], player_moves)
+        # Use back sprite for player's Pokémon and front sprite for opponent
+        self.player_pokemon = Pokemon(player_data['name'], player_data['types'][0]['type']['name'], player_data['sprites']['back_default'], player_data['stats'], player_moves)
         self.opponent_pokemon = Pokemon(opponent_data['name'], opponent_data['types'][0]['type']['name'], opponent_data['sprites']['front_default'], opponent_data['stats'], opponent_moves)
 
     def process_turn(self, move_name):
