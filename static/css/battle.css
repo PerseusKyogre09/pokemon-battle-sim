@@ -556,4 +556,25 @@ body {
     display: none;
 }
 
+/* Faint Animation */
+@keyframes faintPokemon {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        filter: brightness(1) grayscale(0);
+    }
+    50% {
+        filter: brightness(1.5) grayscale(0.5);
+    }
+    100% {
+        transform: scale(0.5) translateY(100px);
+        opacity: 0;
+        filter: brightness(2) grayscale(1);
+    }
+}
+
+.faint-animation {
+    animation: faintPokemon 1.5s ease-in-out forwards !important;
+}
+
 /* Remove duplicate keyframes */
