@@ -163,77 +163,96 @@ body {
 }
 
 /* Move type colors - Vibrant borders with light backgrounds */
-.move-button[data-type="normal"] { 
-    border: 2px solid #a8a878;
-    background-color: rgba(168, 168, 120, 0.15);
+/* Case-insensitive type matching */
+.move-button[data-type="normal" i], 
+.move-button[data-type="normal" i]:hover { 
+    border: 2px solid #a8a878 !important;
+    background-color: rgba(168, 168, 120, 0.15) !important;
 }
-.move-button[data-type="fire"] { 
-    border: 2px solid #f08030;
-    background-color: rgba(240, 128, 48, 0.15);
+.move-button[data-type="fire" i],
+.move-button[data-type="fire" i]:hover { 
+    border: 2px solid #f08030 !important;
+    background-color: rgba(240, 128, 48, 0.15) !important;
 }
-.move-button[data-type="water"] { 
-    border: 2px solid #6890f0;
-    background-color: rgba(104, 144, 240, 0.15);
+.move-button[data-type="water" i],
+.move-button[data-type="water" i]:hover { 
+    border: 2px solid #6890f0 !important;
+    background-color: rgba(104, 144, 240, 0.15) !important;
 }
-.move-button[data-type="electric"] { 
-    border: 2px solid #f8d030;
-    background-color: rgba(248, 208, 48, 0.15);
+.move-button[data-type="electric" i],
+.move-button[data-type="electric" i]:hover { 
+    border: 2px solid #f8d030 !important;
+    background-color: rgba(248, 208, 48, 0.15) !important;
 }
-.move-button[data-type="grass"] { 
-    border: 2px solid #78c850;
-    background-color: rgba(120, 200, 80, 0.15);
+.move-button[data-type="grass" i],
+.move-button[data-type="grass" i]:hover { 
+    border: 2px solid #78c850 !important;
+    background-color: rgba(120, 200, 80, 0.15) !important;
 }
-.move-button[data-type="ice"] { 
-    border: 2px solid #98d8d8;
-    background-color: rgba(152, 216, 216, 0.15);
+.move-button[data-type="ice" i],
+.move-button[data-type="ice" i]:hover { 
+    border: 2px solid #98d8d8 !important;
+    background-color: rgba(152, 216, 216, 0.15) !important;
 }
-.move-button[data-type="fighting"] { 
-    border: 2px solid #c03028;
-    background-color: rgba(192, 48, 40, 0.15);
+.move-button[data-type="fighting" i],
+.move-button[data-type="fighting" i]:hover { 
+    border: 2px solid #c03028 !important;
+    background-color: rgba(192, 48, 40, 0.15) !important;
 }
-.move-button[data-type="poison"] { 
-    border: 2px solid #a040a0;
-    background-color: rgba(160, 64, 160, 0.15);
+.move-button[data-type="poison" i],
+.move-button[data-type="poison" i]:hover { 
+    border: 2px solid #a040a0 !important;
+    background-color: rgba(160, 64, 160, 0.15) !important;
 }
-.move-button[data-type="ground"] { 
-    border: 2px solid #e0c068;
-    background-color: rgba(224, 192, 104, 0.15);
+.move-button[data-type="ground" i],
+.move-button[data-type="ground" i]:hover { 
+    border: 2px solid #e0c068 !important;
+    background-color: rgba(224, 192, 104, 0.15) !important;
 }
-.move-button[data-type="flying"] { 
-    border: 2px solid #a890f0;
-    background-color: rgba(168, 144, 240, 0.15);
+.move-button[data-type="flying" i],
+.move-button[data-type="flying" i]:hover { 
+    border: 2px solid #a890f0 !important;
+    background-color: rgba(168, 144, 240, 0.15) !important;
 }
-.move-button[data-type="psychic"] { 
-    border: 2px solid #f85888;
-    background-color: rgba(248, 88, 136, 0.15);
+.move-button[data-type="psychic" i],
+.move-button[data-type="psychic" i]:hover { 
+    border: 2px solid #f85888 !important;
+    background-color: rgba(248, 88, 136, 0.15) !important;
 }
-.move-button[data-type="bug"] { 
-    border: 2px solid #a8b820;
-    background-color: rgba(168, 184, 32, 0.15);
+.move-button[data-type="bug" i],
+.move-button[data-type="bug" i]:hover { 
+    border: 2px solid #a8b820 !important;
+    background-color: rgba(168, 184, 32, 0.15) !important;
 }
-.move-button[data-type="rock"] { 
-    border: 2px solid #b8a038;
-    background-color: rgba(184, 160, 56, 0.15);
+.move-button[data-type="rock" i],
+.move-button[data-type="rock" i]:hover { 
+    border: 2px solid #b8a038 !important;
+    background-color: rgba(184, 160, 56, 0.15) !important;
 }
-.move-button[data-type="ghost"] { 
-    border: 2px solid #705898;
-    background-color: rgba(112, 88, 152, 0.15);
+.move-button[data-type="ghost" i],
+.move-button[data-type="ghost" i]:hover { 
+    border: 2px solid #705898 !important;
+    background-color: rgba(112, 88, 152, 0.15) !important;
 }
-.move-button[data-type="dragon"] { 
-    border: 2px solid #7038f8;
-    background-color: rgba(112, 56, 248, 0.15);
+.move-button[data-type="dragon" i],
+.move-button[data-type="dragon" i]:hover { 
+    border: 2px solid #7038f8 !important;
+    background-color: rgba(112, 56, 248, 0.15) !important;
 }
-.move-button[data-type="dark"] { 
-    border: 2px solid #705848;
-    background-color: rgba(112, 88, 72, 0.15);
+.move-button[data-type="dark" i],
+.move-button[data-type="dark" i]:hover { 
+    border: 2px solid #705848 !important;
+    background-color: rgba(112, 88, 72, 0.15) !important;
 }
-.move-button[data-type="steel"] { 
-    border: 2px solid #b8b8d0;
-    background-color: rgba(184, 184, 208, 0.15);
+.move-button[data-type="steel" i],
+.move-button[data-type="steel" i]:hover { 
+    border: 2px solid #b8b8d0 !important;
+    background-color: rgba(184, 184, 208, 0.15) !important;
 }
-.move-button[data-type="fairy"] { 
-    border: 2px solid #ee99ac;
-    background-color: rgba(238, 153, 172, 0.15);
+.move-button[data-type="fairy" i],
+.move-button[data-type="fairy" i]:hover { 
+    border: 2px solid #ee99ac !important;
+    background-color: rgba(238, 153, 172, 0.15) !important;
 }
 
 .battle-log {
