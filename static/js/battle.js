@@ -296,9 +296,12 @@ function disableMoveButtons(disabled) {
     moveButtons.forEach(button => {
         button.disabled = disabled;
         if (disabled) {
-            button.classList.add('opacity-50', 'cursor-not-allowed');
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
         } else {
-            button.classList.remove('opacity-50', 'cursor-not-allowed');
+            button.style.opacity = '';
+            button.style.cursor = '';
+            button.style.pointerEvents = '';
         }
     });
 }
@@ -563,4 +566,10 @@ function forfeitBattle() {
 function capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function handleTypeIconError(imgElement, moveType) {
+    console.warn('Could not load image for type:', moveType);
+    imgElement.onerror = null; // Prevent infinite loop
+    imgElement.src = '/static/images/type/normal.png'; // Set to default normal type icon
 }

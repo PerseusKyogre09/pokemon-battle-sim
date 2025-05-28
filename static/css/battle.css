@@ -84,8 +84,8 @@ body {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
-    background-color: #2c3e50;
-    border: 2px solid #7f8c8d;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
     color: #ecf0f1;
     cursor: pointer;
     border-radius: 8px;
@@ -102,9 +102,25 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.move-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
 .move-name {
     font-weight: 600;
-    margin-bottom: 4px;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.type-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    margin-left: 8px;
 }
 
 .move-pp {
@@ -146,25 +162,98 @@ body {
     margin: 15px 0;
 }
 
-/* Move type colors */
-.move-button[data-type="normal"] { border-left: 4px solid #a8a878; }
-.move-button[data-type="fire"] { border-left: 4px solid #f08030; }
-.move-button[data-type="water"] { border-left: 4px solid #6890f0; }
-.move-button[data-type="electric"] { border-left: 4px solid #f8d030; }
-.move-button[data-type="grass"] { border-left: 4px solid #78c850; }
-.move-button[data-type="ice"] { border-left: 4px solid #98d8d8; }
-.move-button[data-type="fighting"] { border-left: 4px solid #c03028; }
-.move-button[data-type="poison"] { border-left: 4px solid #a040a0; }
-.move-button[data-type="ground"] { border-left: 4px solid #e0c068; }
-.move-button[data-type="flying"] { border-left: 4px solid #a890f0; }
-.move-button[data-type="psychic"] { border-left: 4px solid #f85888; }
-.move-button[data-type="bug"] { border-left: 4px solid #a8b820; }
-.move-button[data-type="rock"] { border-left: 4px solid #b8a038; }
-.move-button[data-type="ghost"] { border-left: 4px solid #705898; }
-.move-button[data-type="dragon"] { border-left: 4px solid #7038f8; }
-.move-button[data-type="dark"] { border-left: 4px solid #705848; }
-.move-button[data-type="steel"] { border-left: 4px solid #b8b8d0; }
-.move-button[data-type="fairy"] { border-left: 4px solid #ee99ac; }
+/* Move type colors - Vibrant borders with light backgrounds */
+/* Case-insensitive type matching */
+.move-button[data-type="normal" i], 
+.move-button[data-type="normal" i]:hover { 
+    border: 2px solid #a8a878 !important;
+    background-color: rgba(168, 168, 120, 0.15) !important;
+}
+.move-button[data-type="fire" i],
+.move-button[data-type="fire" i]:hover { 
+    border: 2px solid #f08030 !important;
+    background-color: rgba(240, 128, 48, 0.15) !important;
+}
+.move-button[data-type="water" i],
+.move-button[data-type="water" i]:hover { 
+    border: 2px solid #6890f0 !important;
+    background-color: rgba(104, 144, 240, 0.15) !important;
+}
+.move-button[data-type="electric" i],
+.move-button[data-type="electric" i]:hover { 
+    border: 2px solid #f8d030 !important;
+    background-color: rgba(248, 208, 48, 0.15) !important;
+}
+.move-button[data-type="grass" i],
+.move-button[data-type="grass" i]:hover { 
+    border: 2px solid #78c850 !important;
+    background-color: rgba(120, 200, 80, 0.15) !important;
+}
+.move-button[data-type="ice" i],
+.move-button[data-type="ice" i]:hover { 
+    border: 2px solid #98d8d8 !important;
+    background-color: rgba(152, 216, 216, 0.15) !important;
+}
+.move-button[data-type="fighting" i],
+.move-button[data-type="fighting" i]:hover { 
+    border: 2px solid #c03028 !important;
+    background-color: rgba(192, 48, 40, 0.15) !important;
+}
+.move-button[data-type="poison" i],
+.move-button[data-type="poison" i]:hover { 
+    border: 2px solid #a040a0 !important;
+    background-color: rgba(160, 64, 160, 0.15) !important;
+}
+.move-button[data-type="ground" i],
+.move-button[data-type="ground" i]:hover { 
+    border: 2px solid #e0c068 !important;
+    background-color: rgba(224, 192, 104, 0.15) !important;
+}
+.move-button[data-type="flying" i],
+.move-button[data-type="flying" i]:hover { 
+    border: 2px solid #a890f0 !important;
+    background-color: rgba(168, 144, 240, 0.15) !important;
+}
+.move-button[data-type="psychic" i],
+.move-button[data-type="psychic" i]:hover { 
+    border: 2px solid #f85888 !important;
+    background-color: rgba(248, 88, 136, 0.15) !important;
+}
+.move-button[data-type="bug" i],
+.move-button[data-type="bug" i]:hover { 
+    border: 2px solid #a8b820 !important;
+    background-color: rgba(168, 184, 32, 0.15) !important;
+}
+.move-button[data-type="rock" i],
+.move-button[data-type="rock" i]:hover { 
+    border: 2px solid #b8a038 !important;
+    background-color: rgba(184, 160, 56, 0.15) !important;
+}
+.move-button[data-type="ghost" i],
+.move-button[data-type="ghost" i]:hover { 
+    border: 2px solid #705898 !important;
+    background-color: rgba(112, 88, 152, 0.15) !important;
+}
+.move-button[data-type="dragon" i],
+.move-button[data-type="dragon" i]:hover { 
+    border: 2px solid #7038f8 !important;
+    background-color: rgba(112, 56, 248, 0.15) !important;
+}
+.move-button[data-type="dark" i],
+.move-button[data-type="dark" i]:hover { 
+    border: 2px solid #705848 !important;
+    background-color: rgba(112, 88, 72, 0.15) !important;
+}
+.move-button[data-type="steel" i],
+.move-button[data-type="steel" i]:hover { 
+    border: 2px solid #b8b8d0 !important;
+    background-color: rgba(184, 184, 208, 0.15) !important;
+}
+.move-button[data-type="fairy" i],
+.move-button[data-type="fairy" i]:hover { 
+    border: 2px solid #ee99ac !important;
+    background-color: rgba(238, 153, 172, 0.15) !important;
+}
 
 .battle-log {
     background-color: #F5F5F5;

@@ -18,12 +18,12 @@ def sounds(filename):
 @app.route('/pokemon/cry/<pokemon_name>')
 def pokemon_cry(pokemon_name):
     try:
-        # Fetch Pokémon data from the PokéAPI
+        # Fetch pokemon data from the pokeapi
         response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}')
         if response.status_code == 200:
             pokemon_data = response.json()
             
-            # Get the cry URL from the response
+            # Get the cry of the pokemon
             if 'cries' in pokemon_data and 'latest' in pokemon_data['cries']:
                 cry_url = pokemon_data['cries']['latest']
                 
