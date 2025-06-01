@@ -763,7 +763,26 @@ async function processPlayerMove(playerName, opponentName, move, data, turnInfo)
     // Log player's move
     addLogMessage(`${capitalize(playerName)} used ${move}!`);
     
+    // Show effectiveness messages for player's move if any
+    if (turnInfo.effectiveness_messages && turnInfo.effectiveness_messages.length > 0) {
+        // Since we process moves in order, the player's move's effectiveness message
+        // will be the first one if they moved first, or the second one if they moved second
+        const playerMoveIndex = turnInfo.player_first ? 0 : 1;
+        
+        // Only show the message if it exists and is for the player's move
+        if (turnInfo.effectiveness_messages[playerMoveIndex]) {
+            const message = turnInfo.effectiveness_messages[playerMoveIndex];
+            if (message.includes('It\'s super effective!') || 
+                message.includes('It\'s not very effective...') ||
+                message.includes('It had no effect...')) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                addLogMessage(message);
+            }
+        }
+    }
+    
     // Execute player's attack animation
+    await new Promise(resolve => setTimeout(resolve, 300));
     animateAttack(true);
     await new Promise(resolve => setTimeout(resolve, 800));
     
@@ -788,12 +807,31 @@ async function processPlayerMove(playerName, opponentName, move, data, turnInfo)
 
 async function processOpponentMove(playerName, opponentName, data, turnInfo) {
     // Determine opponent's move
-    const move = data.opponent_move;
+    const move = turnInfo.opponent_move;
     
     // Log opponent's move
     addLogMessage(`Opponent ${capitalize(opponentName)} used ${move}!`);
     
+    // Show effectiveness messages for opponent's move if any
+    if (turnInfo.effectiveness_messages && turnInfo.effectiveness_messages.length > 0) {
+        // Since we process moves in order, the opponent's move's effectiveness message
+        // will be the first one if they moved first, or the second one if they moved second
+        const opponentMoveIndex = turnInfo.player_first ? 1 : 0;
+        
+        // Only show the message if it exists and is for the opponent's move
+        if (turnInfo.effectiveness_messages[opponentMoveIndex]) {
+            const message = turnInfo.effectiveness_messages[opponentMoveIndex];
+            if (message.includes('It\'s super effective!') || 
+                message.includes('It\'s not very effective...') ||
+                message.includes('It had no effect...')) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                addLogMessage(message);
+            }
+        }
+    }
+    
     // Execute opponent's attack animation
+    await new Promise(resolve => setTimeout(resolve, 300));
     animateAttack(false);
     await new Promise(resolve => setTimeout(resolve, 800));
     
@@ -814,36 +852,6 @@ async function processOpponentMove(playerName, opponentName, data, turnInfo) {
         return true; // Battle is over
     }
     return false; // Battle continues
-}
-
-// Function to use a potion to heal the player's Pokémon
-function usePotion() {
-    if (isTurnInProgress) return;
-    
-    // Get current HP from the health bar
-    const playerHpElement = document.getElementById("player-hp");
-    if (!playerHpElement) return;
-    
-    const hpText = playerHpElement.textContent.trim();
-    const [currentHpStr, maxHpStr] = hpText.split('/');
-    const currentHp = parseInt(currentHpStr);
-    const maxHp = parseInt(maxHpStr);
-    
-    if (isNaN(currentHp) || isNaN(maxHp)) return;
-    
-    // Calculate new HP (heal 20 or up to max)
-    const healAmount = 20;
-    const newHp = Math.min(currentHp + healAmount, maxHp);
-    
-    if (newHp > currentHp) {
-        // Update health bar and HP text through the updateHealthBar function
-        updateHealthBar('#player-health-bar', newHp, maxHp);
-        
-        // Log the action
-        addLogMessage(`Used a potion! Healed ${newHp - currentHp} HP.`);
-    } else {
-        addLogMessage("Your Pokémon is already at full health!");
-    }
 }
 
 // Function to forfeit the battle

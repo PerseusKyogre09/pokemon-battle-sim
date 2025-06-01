@@ -190,15 +190,42 @@ class DataLoader:
         return valid_moves[:limit]
     
     def get_type_effectiveness(self, attacking_type: str, defending_type: str) -> float:
-        """Get type effectiveness multiplier."""
+        """
+        Get type effectiveness multiplier.
+        
+        Args:
+            attacking_type: The type of the attacking move
+            defending_type: The type of the defending Pokémon
+            
+        Returns:
+            float: Effectiveness multiplier (0.0, 0.5, 1.0, or 2.0)
+        """
+        if not attacking_type or not defending_type:
+            return 1.0
+            
+        # Convert to title case to match the type chart keys
+        attacking_type = attacking_type.title()
+        defending_type = defending_type.title()
+        
+        # Get the defending type's damage taken data
         defending_data = self.typechart_data.get(defending_type.lower(), {})
         damage_taken = defending_data.get('damageTaken', {})
-        effectiveness_code = damage_taken.get(attacking_type.title(), 0)
         
-        # Convert effectiveness codes to multipliers
-        # 0 = 1x, 1 = 2x, 2 = 0.5x, 3 = 0x (immune)
-        multipliers = {0: 1.0, 1: 2.0, 2: 0.5, 3: 0.0}
-        return multipliers.get(effectiveness_code, 1.0)
+        # Get the effectiveness code
+        # 0 = normal, 1 = 2x, 2 = 0.5x, 3 = 0x (immune)
+        effectiveness_code = damage_taken.get(attacking_type, 0)
+        
+        # Convert to multiplier
+        if effectiveness_code == 0:  # Normal effectiveness (1x)
+            return 1.0
+        elif effectiveness_code == 1:  # 2x effective
+            return 2.0
+        elif effectiveness_code == 2:  # 0.5x effective
+            return 0.5
+        elif effectiveness_code == 3:  # No effect (0x)
+            return 0.0
+            
+        return 1.0  # Default to normal effectiveness
     
     def get_move_power(self, move_name: str) -> int:
         """Get the base power of a move."""
@@ -206,6 +233,50 @@ class DataLoader:
         if move_data:
             return move_data.get('basePower', 50)
         return 50  # Default power
+        
+    def get_effectiveness_message(self, effectiveness: float) -> str:
+        """Get the appropriate effectiveness message based on the multiplier."""
+        if effectiveness == 0:
+            return "It had no effect..."
+        elif effectiveness < 1:
+            return "It's not very effective..."
+        elif effectiveness > 1:
+            return "It's super effective!"
+        return ""
+    
+    def calculate_effectiveness(self, move_type: str, target_types: list) -> tuple[float, str]:
+        """
+        Calculate the effectiveness of a move against a target with given types.
+        
+        Args:
+            move_type: The type of the move being used
+            target_types: List of types of the target Pokémon
+            
+        Returns:
+            tuple: (effectiveness_multiplier, effectiveness_message)
+        """
+        if not move_type or not target_types:
+            return 1.0, ""
+            
+        effectiveness = 1.0
+        
+        for target_type in target_types:
+            effectiveness *= self.get_type_effectiveness(move_type, target_type)
+        
+        # Round to avoid floating point precision issues (e.g., 0.9999 -> 1.0)
+        effectiveness = round(effectiveness, 2)
+        
+        # Get the appropriate message
+        if effectiveness == 0:
+            message = "It had no effect..."
+        elif effectiveness < 1:
+            message = "It's not very effective..."
+        elif effectiveness > 1:
+            message = "It's super effective!"
+        else:
+            message = ""
+            
+        return effectiveness, message
     
     def get_move_type(self, move_name: str) -> str:
         """Get the type of a move."""

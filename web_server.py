@@ -275,22 +275,15 @@ def move():
 
     move_name = request.json.get('move')
     
-    # Store the opponent's move name before processing the turn
-    opponent_move_name = next(iter(game.opponent_pokemon.moves.keys()))
-    
-    # Store initial HP values to calculate damage
-    initial_player_hp = game.player_pokemon.current_hp
-    initial_opponent_hp = game.opponent_pokemon.current_hp
-    
-    # Get the player's move and its current PP
+    # Get the player's move and its current PP before processing the turn
     player_move = game.player_pokemon.moves.get(move_name)
     current_pp = getattr(player_move, 'pp', 15) if player_move else 0
     
-    # Determine turn order
-    player_first = game.player_pokemon.speed >= game.opponent_pokemon.speed
+    # Process the turn and get turn information including effectiveness messages
+    turn_info = game.process_turn(move_name)
     
-    # Process the turn with the player's move
-    game.process_turn(move_name)
+    # Get the opponent's move name
+    opponent_move_name = turn_info.get('opponent_move', '')
     
     # Update PP for the used move
     updated_pp = None
@@ -299,19 +292,11 @@ def move():
     elif player_move:
         updated_pp = current_pp - 1 if current_pp > 0 else 0
     
-    # Calculate damage dealt
-    player_damage = initial_opponent_hp - game.opponent_pokemon.current_hp
-    opponent_damage = initial_player_hp - game.player_pokemon.current_hp
+    # Get current HP values after the turn
+    player_hp = game.player_pokemon.current_hp
+    opponent_hp = game.opponent_pokemon.current_hp
     
-    # Prepare turn information
-    turn_info = {
-        'player_first': player_first,
-        'player_move': move_name,
-        'opponent_move': opponent_move_name,
-        'player_damage': player_damage,
-        'opponent_damage': opponent_damage
-    }
-
+    # Check if the battle is over
     is_game_over = game.battle_over
     result = game.get_battle_result() if is_game_over else None
 
@@ -331,16 +316,23 @@ def move():
             'max_pp': max_pp
         }
     
+    # Prepare response data
     response_data = {
-        "player_hp": game.player_pokemon.current_hp,
-        "opponent_hp": game.opponent_pokemon.current_hp,
+        "player_hp": player_hp,
+        "opponent_hp": opponent_hp,
         "player_max_hp": game.player_pokemon.max_hp,
         "opponent_max_hp": game.opponent_pokemon.max_hp,
         "player_moves_pp": player_moves_pp,
-        "turn_info": turn_info,
+        "turn_info": {
+            "player_first": turn_info.get('player_first', True),
+            "player_move": turn_info.get('player_move', ''),
+            "opponent_move": opponent_move_name,
+            "player_damage": turn_info.get('player_damage', 0),
+            "opponent_damage": turn_info.get('opponent_damage', 0),
+            "effectiveness_messages": turn_info.get('effectiveness_messages', [])
+        },
         "is_game_over": is_game_over,
         "battle_result": result,
-        "opponent_move": opponent_move_name,
         "game_over_url": url_for('game_over_with_underscore', result_message=result) if is_game_over else None
     }
     
