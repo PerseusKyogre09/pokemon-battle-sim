@@ -59,15 +59,16 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1px;
-    font-size: 9px;
-    font-weight: bold;
-    color: #e2e8f0; /* Lighter text color */
-    line-height: 1;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 8px;
+    color: #e2e8f0;
+    line-height: 1.4;
+    letter-spacing: 0;
 }
 
 .pokemon-name {
     text-transform: capitalize;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
 }
 
 .pokemon-level {
@@ -75,6 +76,8 @@ body {
     align-items: center;
     gap: 2px;
     font-size: 8px;
+    font-family: 'Press Start 2P', cursive, monospace;
+    letter-spacing: 0;
 }
 
 .hp-row {
@@ -84,10 +87,11 @@ body {
 }
 
 .hp-label {
+    font-family: 'Press Start 2P', cursive, monospace;
     font-size: 8px;
-    font-weight: bold;
-    color: #e2e8f0; /* Lighter text color */
+    color: #e2e8f0;
     width: 12px;
+    letter-spacing: 0;
 }
 
 .hp-bar-container {
@@ -119,11 +123,12 @@ body {
 
 .hp-numbers {
     text-align: right;
+    font-family: 'Press Start 2P', cursive, monospace;
     font-size: 8px;
-    font-weight: bold;
     color: #000;
     margin-top: 1px;
-    font-family: monospace;
+    letter-spacing: 0;
+    line-height: 1.4;
 }
 
 /* Hidden element class */
@@ -288,18 +293,20 @@ body {
     justify-content: space-between;
     padding: 8px 12px;
     margin: 0;
-    font-size: 14px;
-    font-weight: 500;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 10px;
+    line-height: 1.4;
     background-color: rgba(255, 255, 255, 0.1);
     border: 2px solid transparent;
     color: #ecf0f1;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 4px;
     transition: all 0.2s ease;
     text-align: left;
     min-height: 60px;
     position: relative;
     overflow: hidden;
+    image-rendering: pixelated;
 }
 
 .move-button:hover {
@@ -317,16 +324,21 @@ body {
 }
 
 .move-name {
-    font-weight: 600;
+    font-weight: normal;
     margin: 0;
     flex-grow: 1;
+    font-size: 10px;
+    margin-bottom: 4px;
+    display: block;
 }
 
 .type-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     object-fit: contain;
-    margin-left: 8px;
+    margin-left: 6px;
+    image-rendering: pixelated;
+    vertical-align: middle;
 }
 
 .move-pp {
@@ -355,9 +367,11 @@ body {
 
 /* Set initial width from data attribute */
 .pp-text {
-    font-size: 11px;
+    font-size: 8px;
     text-align: right;
     color: #95a5a6;
+    letter-spacing: -0.5px;
+    margin-top: 2px;
 }
 
 /* Move grid layout */
