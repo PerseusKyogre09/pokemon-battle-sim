@@ -574,9 +574,15 @@ function updateHealthBar(selector, currentHp, maxHp) {
     }
     
     // Update the HP text display
-    const hpTextElement = document.getElementById(selector.replace('-health-bar', '-hp'));
+    const barId = selector.replace('#', ''); // Remove '#' from selector if present
+    const pokemonType = barId.includes('player') ? 'player' : 'opponent';
+    const hpTextElement = document.getElementById(`${pokemonType}-hp`);
+    
     if (hpTextElement) {
         hpTextElement.textContent = `${Math.round(currentHp)}/${maxHp}`;
+        console.log(`Updated ${pokemonType} HP text to: ${Math.round(currentHp)}/${maxHp}`);
+    } else {
+        console.error(`Could not find HP text element for ${pokemonType}`);
     }
     
     console.log(`Updated ${selector} to ${healthPercentage.toFixed(1)}% (${currentHp}/${maxHp})`);

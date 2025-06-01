@@ -65,12 +65,17 @@ def get_pokemon_moves(pokemon_data):
             # Clean up move name to match our dataset format
             clean_move_name = move_name.lower().replace(' ', '-')
             
-            # Try to get move data from our dataset
-            move_power = data_loader.get_move_power(clean_move_name)
-            move_type = data_loader.get_move_type(clean_move_name)
+            # First try to get move data from our dataset with debug logging
+            print(f"\n=== Getting move data for {clean_move_name} ===")
+            move_data = data_loader.get_move(clean_move_name)
             
-            # If not found in dataset, fetch from PokeAPI
-            if not move_power or not move_type:
+            if move_data:
+                move_power = move_data.get('basePower', 75)
+                move_type = move_data.get('type', 'normal')
+                print(f"Found in dataset: power={move_power}, type={move_type}")
+            else:
+                # If not found in dataset, fetch from PokeAPI
+                print(f"Move {clean_move_name} not found in dataset, trying PokeAPI...")
                 try:
                     move_url = f'https://pokeapi.co/api/v2/move/{clean_move_name}'
                     move_response = requests.get(move_url)
@@ -78,10 +83,16 @@ def get_pokemon_moves(pokemon_data):
                         move_data = move_response.json()
                         move_power = move_data.get('power', 75)  # Default to 75 for strategic moves
                         move_type = move_data.get('type', {}).get('name', 'normal')
-                except:
+                        print(f"Found in PokeAPI: power={move_power}, type={move_type}")
+                    else:
+                        print(f"PokeAPI returned status {move_response.status_code}")
+                        raise Exception("PokeAPI call failed")
+                except Exception as e:
                     # If API call fails, use reasonable defaults
+                    print(f"Error getting move data: {e}")
                     move_power = 75
                     move_type = 'normal'
+                    print(f"Using defaults: power={move_power}, type={move_type}")
             
             # Initialize move_pp with default value first
             move_pp = 15  # Default PP if not found

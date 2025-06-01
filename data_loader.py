@@ -76,16 +76,41 @@ class DataLoader:
             with open('datasets/moves.ts', 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Find all move entries
-            move_entries = re.finditer(r'(\w+):\s*{\s*num:\s*(\d+).*?type:\s*"(\w+)"', content, re.DOTALL)
+            print("\n=== STARTING MOVE DATA LOADING ===")
+            print(f"Total moves.ts file size: {len(content)} characters")
             
-            for match in move_entries:
-                move_name = match.group(1).lower()
+            # Find all move entries using a more precise pattern
+            pattern = r'(\w+):\s*{\s*num:\s*(\d+).*?name:\s*"(.*?)".*?type:\s*"(\w+)"'
+            print(f"Using regex pattern: {pattern}")
+            
+            move_entries = list(re.finditer(pattern, content, re.DOTALL))
+            print(f"Found {len(move_entries)} move entries in the file")
+            
+            for idx, match in enumerate(move_entries, 1):
+                move_key = match.group(1).lower()
                 move_num = int(match.group(2))
-                move_type = match.group(3)
+                move_name = match.group(3).lower()
+                move_type = match.group(4).lower()
                 
-                # Extract other properties with a more targeted approach
-                move_data = match.group(0)
+                # Log every 100th move for progress tracking
+                if idx % 100 == 0 or 'hurricane' in move_key or 'hurricane' in move_name:
+                    print(f"\nProcessing move {idx}: {move_name} (key: {move_key})")
+                    print(f"  Move type from regex: {move_type}")
+                
+                # Get the full move data block
+                move_start = match.start()
+                next_brace = content.find('},', move_start) + 1
+                if next_brace == 0:  # Handle last move in the file
+                    next_brace = content.find('}', move_start) + 1
+                move_data = content[move_start:next_brace]
+                
+                # Log detailed info for Hurricane move
+                if 'hurricane' in move_key or 'hurricane' in move_name:
+                    print("\n=== HURRICANE MOVE FOUND ===")
+                    print(f"Move key: {move_key}")
+                    print(f"Move name: {move_name}")
+                    print(f"Move type from regex: {move_type}")
+                    print(f"Move data block:\n{move_data[:500]}...")  # Print first 500 chars of move data
                 
                 # Get base power (default to 50 if not found)
                 power_match = re.search(r'basePower\s*:\s*(\d+)', move_data)
@@ -101,9 +126,10 @@ class DataLoader:
                 
                 # Get category (Physical, Special, or Status)
                 category_match = re.search(r'category\s*:\s*"(\w+)"', move_data)
-                category = category_match.group(1) if category_match else 'Physical'
+                category = category_match.group(1).lower() if category_match else 'physical'
                 
-                self.moves_data[move_name] = {
+                # Store by both the move key and the move name for easier lookup
+                move_entry = {
                     'name': move_name,
                     'type': move_type,
                     'basePower': base_power,
@@ -112,6 +138,10 @@ class DataLoader:
                     'category': category,
                     'num': move_num
                 }
+                
+                self.moves_data[move_key] = move_entry
+                if move_key != move_name:  # Avoid duplicate entries
+                    self.moves_data[move_name] = move_entry
                 
         except FileNotFoundError:
             print("Warning: moves.ts file not found")
@@ -175,9 +205,41 @@ class DataLoader:
         except Exception as e:
             print(f"Error loading typechart data: {e}")
     
-    def get_move_data(self, move_name: str) -> Optional[Dict[str, Any]]:
+    def get_move(self, move_name):
         """Get move data by name."""
-        return self.moves_data.get(move_name.lower().replace(' ', '').replace('-', ''))
+        if not move_name:
+            print("\n=== MOVE LOOKUP FAILED ===")
+            print("No move name provided")
+            return None
+            
+        move_key = move_name.lower().replace(' ', '').replace('-', '')
+        move_data = self.moves_data.get(move_key)
+        
+        # Log move lookup
+        if move_data:
+            print(f"\n=== MOVE LOOKUP ===")
+            print(f"Requested move: {move_name}")
+            print(f"Lookup key: {move_key}")
+            print(f"Found move: {move_data.get('name', 'Unknown')}")
+            print(f"Move type: {move_data.get('type', 'Unknown')}")
+            print(f"Full move data: {move_data}")
+            
+            # Log all available keys that contain the move name for debugging
+            matching_keys = [k for k in self.moves_data.keys() if move_key in k]
+            if len(matching_keys) > 1:
+                print(f"Found {len(matching_keys)} matching keys: {matching_keys[:10]}{'...' if len(matching_keys) > 10 else ''}")
+        else:
+            print(f"\n=== MOVE NOT FOUND ===")
+            print(f"Requested move: {move_name}")
+            print(f"Lookup key: {move_key}")
+            print(f"Available move keys (first 10): {list(self.moves_data.keys())[:10]}")
+            
+            # Try to find similar move names
+            similar_moves = [k for k in self.moves_data.keys() if move_key in k or move_key[:4] in k][:5]
+            if similar_moves:
+                print(f"Similar moves found: {similar_moves}")
+            
+        return move_data
     
     def get_pokemon_moves(self, pokemon_name: str, limit: int = 4) -> List[str]:
         """Get available moves for a Pokemon."""
@@ -229,10 +291,12 @@ class DataLoader:
     
     def get_move_power(self, move_name: str) -> int:
         """Get the base power of a move."""
+        print(f"\n=== GET MOVE POWER ===")
+        print(f"Getting power for move: {move_name}")
         move_data = self.get_move_data(move_name)
-        if move_data:
-            return move_data.get('basePower', 50)
-        return 50  # Default power
+        power = move_data.get('basePower', 50) if move_data else 50
+        print(f"Power for {move_name}: {power}")
+        return power
         
     def get_effectiveness_message(self, effectiveness: float) -> str:
         """Get the appropriate effectiveness message based on the multiplier."""
@@ -280,10 +344,27 @@ class DataLoader:
     
     def get_move_type(self, move_name: str) -> str:
         """Get the type of a move."""
+        print(f"\n=== GET MOVE TYPE ===")
+        print(f"Getting type for move: {move_name}")
         move_data = self.get_move_data(move_name)
-        if move_data:
-            return move_data.get('type', 'Normal')
-        return 'Normal'  # Default type
+        move_type = move_data.get('type', 'normal') if move_data else 'normal'
+        print(f"Move type for {move_name}: {move_type}")
+        return move_type
+
+    def get_move_data(self, move_name: str) -> Optional[Dict[str, Any]]:
+        """Get move data by name."""
+        print(f"\n=== GET MOVE DATA ===")
+        print(f"Looking up move: {move_name}")
+        move_data = self.get_move(move_name)
+        if not move_data:
+            print(f"Move not found: {move_name}")
+            # Try to find the move by name in the values
+            for key, data in self.moves_data.items():
+                if data.get('name', '').lower() == move_name.lower():
+                    print(f"Found move by name match: {key}")
+                    move_data = data
+                    break
+        return move_data
 
 # Global instance
 data_loader = DataLoader()
