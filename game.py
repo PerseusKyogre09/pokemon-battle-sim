@@ -84,9 +84,18 @@ class Game:
             # If opponent has no PP, they struggle
             opponent_move = None
         
-        # Determine who goes first based on speed
-        player_first = self.player_pokemon.speed >= self.opponent_pokemon.speed
+        # Determine who goes first based on speed (with random tie-breaker)
+        if self.player_pokemon.speed > self.opponent_pokemon.speed:
+            player_first = True
+        elif self.player_pokemon.speed < self.opponent_pokemon.speed:
+            player_first = False
+        else:
+            # In case of tie, random choice (50/50)
+            import random
+            player_first = random.choice([True, False])
+            
         turn_info['player_first'] = player_first
+        print(f"DEBUG: Turn order - Player first: {player_first} (Player speed: {self.player_pokemon.speed}, Opponent speed: {self.opponent_pokemon.speed})")
         
         def execute_move(attacker, defender, move, move_name, is_player_attacking):
             """Helper function to execute a move and return damage and effectiveness."""
@@ -104,54 +113,81 @@ class Game:
                 turn_info['player_damage'] = actual_damage
             else:
                 turn_info['opponent_damage'] = actual_damage
-                
-            # Add battle events in order
-            turn_info['battle_events'].append({
+            
+            # Create move event
+            move_event = {
                 'type': 'move',
-                'attacker_name': attacker.name,  # Add the actual Pokémon name
-                'defender_name': defender.name,  # Add the actual Pokémon name
+                'attacker_name': attacker.name,
+                'defender_name': defender.name,
                 'move': move_name,
                 'damage': actual_damage,
-                'effectiveness': effectiveness_msg,
-                'remaining_hp': f"{defender.current_hp}/{defender.max_hp}",
-                'is_player': is_player_attacking
-            })
-                
+                'is_player': is_player_attacking,
+                'attacker_hp': attacker.current_hp,
+                'defender_hp': defender.current_hp,
+                'attacker_max_hp': attacker.max_hp,
+                'defender_max_hp': defender.max_hp,
+                'timestamp': len(turn_info['battle_events'])
+            }
+            turn_info['battle_events'].append(move_event)
+            
+            # Add effectiveness as a separate event if there is a message
+            if effectiveness_msg:
+                effectiveness_event = {
+                    'type': 'effectiveness',
+                    'message': effectiveness_msg,
+                    'is_player': is_player_attacking,
+                    'timestamp': len(turn_info['battle_events'])
+                }
+                turn_info['battle_events'].append(effectiveness_event)
+            
             print(f"DEBUG: {attacker.name} used {move_name}! {defender.name} lost {actual_damage} HP (Now: {defender.current_hp}/{defender.max_hp})")
             if effectiveness_msg:
                 print(f"DEBUG: {effectiveness_msg}")
-                
+            
             # Decrement PP after successful move
             move.pp -= 1
             
-            return defender.is_fainted()
+            # Return whether the defender fainted, but don't create the event yet
+            return defender.current_hp <= 0
         
         try:
+            fainted_pokemon = None
+            
             if player_first:
                 # Player goes first
                 if execute_move(self.player_pokemon, self.opponent_pokemon, player_move, move_name, True):
-                    print(f"DEBUG: {self.opponent_pokemon.name} fainted!")
+                    fainted_pokemon = (self.opponent_pokemon, False)  # (pokemon, is_player)
                     self.battle_over = True
-                    return turn_info
                 
-                # Opponent goes second if they have PP and didn't faint
-                if opponent_move and not self.battle_over:
+                # Opponent goes second if they have PP and player didn't faint
+                if opponent_move and not self.battle_over and not self.player_pokemon.is_fainted():
                     if execute_move(self.opponent_pokemon, self.player_pokemon, opponent_move, opponent_move_name, False):
-                        print(f"DEBUG: {self.player_pokemon.name} fainted!")
+                        fainted_pokemon = (self.player_pokemon, True)
                         self.battle_over = True
             else:
                 # Opponent goes first if they have PP
                 if opponent_move:
                     if execute_move(self.opponent_pokemon, self.player_pokemon, opponent_move, opponent_move_name, False):
-                        print(f"DEBUG: {self.player_pokemon.name} fainted!")
+                        fainted_pokemon = (self.player_pokemon, True)
                         self.battle_over = True
-                        return turn_info
                 
                 # Player goes second if not fainted
-                if not self.battle_over:
+                if not self.battle_over and not self.opponent_pokemon.is_fainted():
                     if execute_move(self.player_pokemon, self.opponent_pokemon, player_move, move_name, True):
-                        print(f"DEBUG: {self.opponent_pokemon.name} fainted!")
+                        fainted_pokemon = (self.opponent_pokemon, False)
                         self.battle_over = True
+            
+            # Add faint event after all other events if a Pokémon fainted
+            if fainted_pokemon:
+                pokemon, is_player = fainted_pokemon
+                faint_event = {
+                    'type': 'faint',
+                    'pokemon_name': pokemon.name,
+                    'is_player': is_player,
+                    'timestamp': len(turn_info['battle_events'])
+                }
+                turn_info['battle_events'].append(faint_event)
+                print(f"DEBUG: {pokemon.name} fainted!")
         except Exception as e:
             print(f"Error during turn processing: {e}")
             

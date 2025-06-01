@@ -582,21 +582,60 @@ function updateHealthBar(selector, currentHp, maxHp) {
     console.log(`Updated ${selector} to ${healthPercentage.toFixed(1)}% (${currentHp}/${maxHp})`);
 }
 
-function addLogMessage(message) {
-    // Update the battle log in the original location (for compatibility)
-    const ul = battleLogEl.querySelector("ul");
-    const li = document.createElement("li");
-    li.textContent = message;
-    li.className = "py-1 border-b border-gray-700";
-    ul.appendChild(li);
+function clearBattleLog() {
+    // Clear main battle log
+    const battleLog = document.getElementById('battle-log');
+    if (battleLog) {
+        const logList = battleLog.querySelector('ul');
+        if (logList) {
+            logList.innerHTML = '';
+        }
+    }
     
-    // Auto-scroll to the bottom
-    battleLogEl.scrollTop = battleLogEl.scrollHeight;
+    // Clear right-side battle log
+    const rightBattleLog = document.getElementById('right-battle-log');
+    if (rightBattleLog) {
+        rightBattleLog.querySelector('div').innerHTML = '';
+    }
+}
+
+function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
+    // Add to the main battle log at the top
+    const battleLog = document.getElementById('battle-log');
+    if (battleLog) {
+        const logList = battleLog.querySelector('ul');
+        if (logList) {
+            const logItem = document.createElement('li');
+            logItem.textContent = message;
+            logList.appendChild(logItem);
+            battleLog.scrollTop = battleLog.scrollHeight;
+        }
+    }
     
-    // Update the battle log text in the new battle controls panel
-    const battleLogText = document.getElementById("battle-log-text");
+    // Update the battle log text at the top
+    const battleLogText = document.getElementById('battle-log-text');
     if (battleLogText) {
         battleLogText.textContent = message;
+    }
+    
+    // Add to the right-side battle log panel
+    const rightBattleLog = document.getElementById('right-battle-log');
+    if (rightBattleLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        // Add appropriate class based on message type
+        if (isEffectiveness) {
+            logEntry.classList.add('effectiveness');
+        } else if (isPlayer === true) {
+            logEntry.classList.add('player-move');
+        } else if (isPlayer === false) {
+            logEntry.classList.add('opponent-move');
+        }
+        
+        logEntry.textContent = message;
+        rightBattleLog.querySelector('div').appendChild(logEntry);
+        rightBattleLog.scrollTop = rightBattleLog.scrollHeight;
     }
 }
 
@@ -680,9 +719,6 @@ async function makeMove(move) {
     isTurnInProgress = true;
     disableMoveButtons(true);
     
-    // Update PP display
-    updateMovePP(move, -1); // Will be updated with actual PP from server
-    
     try {
         const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
         const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
@@ -723,15 +759,29 @@ async function makeMove(move) {
             });
         }
         
-        // Process battle events in the order they happened
+        // Process all battle events at once, with faint events handled last
         if (turn_info.battle_events && turn_info.battle_events.length > 0) {
-            for (const event of turn_info.battle_events) {
-                if (event.type === 'move') {
-                    await processMoveEvent(event, data);
-                    if (data.is_game_over) return;
-                }
-                // Add support for other event types here if needed
+            // Sort events by timestamp to ensure correct order
+            const sortedEvents = [...turn_info.battle_events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            
+            // Process all events at once - faint events will be handled last
+            const battleOver = await processMoveEvent(sortedEvents, data);
+            
+            // Update HP bars after processing all events
+            updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+            updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+            
+            // Check if battle is over after processing all events
+            if (battleOver) {
+                disableMoveButtons(true);
+                return;
             }
+        }
+        
+        // Final check for game over after all events
+        if (data.is_game_over) {
+            disableMoveButtons(true);
+            return;
         }
         
     } finally {
@@ -743,53 +793,111 @@ async function makeMove(move) {
     }
 }
 
-async function processMoveEvent(event, data) {
+async function processMoveEvent(events, data) {
+    // If a single event is passed, convert it to an array for consistency
+    const eventList = Array.isArray(events) ? events : [events];
+    
+    // Process all non-faint events first
+    for (const event of eventList) {
+        if (event.type !== 'fainted') {
+            switch (event.type) {
+                case 'move':
+                    await handleMoveEvent(event, data);
+                    break;
+                case 'effectiveness':
+                    handleEffectivenessEvent(event, data);
+                    break;
+                default:
+                    console.warn('Unknown event type:', event.type);
+            }
+            // Add a small delay between events for better readability
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+    }
+    
+    // Then process faint events if any
+    for (const event of eventList) {
+        if (event.type === 'faint') {
+            const battleOver = await handleFaintEvent(event, data);
+            if (battleOver) return true; // End processing if battle is over
+        }
+    }
+    
+    return false; // Battle continues
+}
+
+async function handleMoveEvent(event, data) {
     const isPlayer = event.is_player;
-    // Use the attacker_name and defender_name from the event
-    const attacker = event.attacker_name ? capitalize(event.attacker_name) : (isPlayer ? data.player_name : `Opponent ${data.opponent_name}`);
-    const defender = event.defender_name ? capitalize(event.defender_name) : (isPlayer ? `Opponent ${data.opponent_name}` : data.player_name);
+    const attacker = event.attacker_name ? capitalize(event.attacker_name) : 
+                     (isPlayer ? data.player_name : `Opponent ${data.opponent_name}`);
     
     // Log the move with the actual Pokémon name
-    addLogMessage(`${attacker} used ${event.move}!`);
-    
-    // Show effectiveness message if any
-    if (event.effectiveness) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        addLogMessage(event.effectiveness);
-    }
+    addLogMessage(`${attacker} used ${event.move}!`, false, isPlayer);
     
     // Execute attack animation
     await new Promise(resolve => setTimeout(resolve, 300));
     animateAttack(isPlayer);
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Update HP
-    const targetSelector = isPlayer ? '#opponent-health-bar' : '#player-health-bar';
-    const currentHp = isPlayer ? data.opponent_hp : data.player_hp;
-    const maxHp = isPlayer ? data.opponent_max_hp : data.player_max_hp;
-    
-    updateHealthBar(targetSelector, currentHp, maxHp);
-    
-    // Check if the target fainted
-    if (currentHp <= 0) {
-        updateHealthBar(targetSelector, 0, maxHp);
-        addLogMessage(`${capitalize(defender)} fainted!`);
-        await animateFaint(!isPlayer);
-        
-        if (isPlayer) {
-            addLogMessage("You won the battle!");
-        } else {
-            addLogMessage("You were defeated!");
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (data.game_over_url) {
-            window.location.href = data.game_over_url;
-        }
-        return true; // Battle is over
+    // Update HP based on the move's damage
+    if (isPlayer) {
+        // Player attacked opponent
+        data.opponent_hp = event.defender_hp;
+        updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+    } else {
+        // Opponent attacked player
+        data.player_hp = event.defender_hp;
+        updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
     }
     
-    return false; // Battle continues
+    return false; // Continue processing events
+}
+
+function handleEffectivenessEvent(event, data) {
+    if (event.message) {
+        addLogMessage(event.message, true, event.is_player);
+    }
+}
+
+async function handleFaintEvent(event, data) {
+    const pokemonName = capitalize(event.pokemon_name);
+    const isPlayer = event.is_player;
+    
+    // Update HP bar to 0
+    if (isPlayer) {
+        data.player_hp = 0;
+        updateHealthBar('#player-health-bar', 0, data.player_max_hp);
+        // Player fainted - show player's Pokémon fainting
+        await animateFaint(true);
+    } else {
+        data.opponent_hp = 0;
+        updateHealthBar('#opponent-health-bar', 0, data.opponent_max_hp);
+        // Opponent fainted - show opponent's Pokémon fainting
+        await animateFaint(false);
+    }
+    
+    // Show faint message with correct Pokémon name
+    addLogMessage(`${pokemonName} fainted!`);
+    
+    // Add a small delay before showing the battle result
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Show the battle result message (win/loss)
+    if (isPlayer) {
+        addLogMessage("You were defeated!");
+    } else {
+        addLogMessage("You won the battle!");
+    }
+    
+    // Add a small delay before redirecting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check for game over URL
+    if (data.game_over_url) {
+        window.location.href = data.game_over_url;
+    }
+    
+    return true; // Battle is over
 }
 
 // Old functions removed as they're no longer needed
@@ -803,7 +911,7 @@ function forfeitBattle() {
     // Confirm forfeit
     if (confirm("Are you sure you want to forfeit the battle?")) {
         // Add message to battle log
-        addLogMessage("You forfeited the battle!");
+        addLogMessage("You forfeited the battle!", false, true);
         
         // Wait a moment before redirecting
         setTimeout(() => {

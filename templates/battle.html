@@ -5,12 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/battle.css') }}">
+    <style>
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive, monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        .pixel-font-lg {
+            font-family: 'Press Start 2P', cursive, monospace;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Battle screen -->
-        <div id="battle-screen" class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl">
+    <div class="container mx-auto px-4 py-8 flex gap-6">
+        <!-- Left side (main battle area) -->
+        <div class="flex-1">
+            <!-- Battle screen -->
+            <div id="battle-screen" class="relative h-96 w-full mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl">
             
             <!-- Flash element for pokeball opening -->
             <div id="flash-element" class="hidden"></div>
@@ -88,9 +105,9 @@
         </div>
         
         <!-- Battle Controls Panel - New design based on the image -->
-        <div class="battle-controls max-w-3xl mx-auto mb-6">
+        <div class="battle-controls w-full mx-auto mb-6">
             <!-- Battle log header -->
-            <h3 id="battle-log-text" class="battle-log-text">Battle started! Choose your move.</h3>
+            <h3 id="battle-log-text" class="battle-log-text pixel-font text-sm">Battle started! Choose your move.</h3>
             
             <!-- Move buttons in a grid layout -->
             <div class="move-grid">
@@ -143,6 +160,17 @@
             <h4 class="text-lg font-bold mb-2 text-yellow-400">Battle Log</h4>
             <div id="battle-log" class="h-48 overflow-y-auto text-gray-300 text-sm px-2">
                 <ul class="space-y-1"></ul>
+            </div>
+        </div>
+        </div>
+        
+        <!-- Right side (battle log panel) -->
+        <div class="w-80 flex-shrink-0 bg-gray-800 border-4 border-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="bg-gray-900 px-4 py-3 border-b-4 border-gray-700">
+                <h3 class="text-sm font-bold text-yellow-400 pixel-font">BATTLE LOG</h3>
+            </div>
+            <div id="right-battle-log" class="flex-1 overflow-y-auto p-3 text-xs text-gray-200 pixel-font">
+                <div class="space-y-2"></div>
             </div>
         </div>
     </div>
