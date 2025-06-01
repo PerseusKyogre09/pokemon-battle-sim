@@ -55,19 +55,19 @@ class Game:
     def process_turn(self, move_name):
         """
         Process a turn of battle, handling move execution, damage calculation,
-        and effectiveness messages.
+        and battle events.
         
         Args:
             move_name: Name of the move the player is using
             
         Returns:
-            dict: Dictionary containing turn information including effectiveness messages
+            dict: Dictionary containing turn information including battle events
         """
         turn_info = {
             'player_move': move_name,
             'player_damage': 0,
             'opponent_damage': 0,
-            'effectiveness_messages': []
+            'battle_events': []  # Will store all battle events in order
         }
         
         # Get player's selected move
@@ -105,9 +105,17 @@ class Game:
             else:
                 turn_info['opponent_damage'] = actual_damage
                 
-            # Add effectiveness message if any
-            if effectiveness_msg:
-                turn_info['effectiveness_messages'].append(effectiveness_msg)
+            # Add battle events in order
+            turn_info['battle_events'].append({
+                'type': 'move',
+                'attacker_name': attacker.name,  # Add the actual Pokémon name
+                'defender_name': defender.name,  # Add the actual Pokémon name
+                'move': move_name,
+                'damage': actual_damage,
+                'effectiveness': effectiveness_msg,
+                'remaining_hp': f"{defender.current_hp}/{defender.max_hp}",
+                'is_player': is_player_attacking
+            })
                 
             print(f"DEBUG: {attacker.name} used {move_name}! {defender.name} lost {actual_damage} HP (Now: {defender.current_hp}/{defender.max_hp})")
             if effectiveness_msg:

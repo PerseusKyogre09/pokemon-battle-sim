@@ -329,7 +329,7 @@ def move():
             "opponent_move": opponent_move_name,
             "player_damage": turn_info.get('player_damage', 0),
             "opponent_damage": turn_info.get('opponent_damage', 0),
-            "effectiveness_messages": turn_info.get('effectiveness_messages', [])
+            "battle_events": turn_info.get('battle_events', [])  # New structured battle events
         },
         "is_game_over": is_game_over,
         "battle_result": result,

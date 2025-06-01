@@ -723,30 +723,14 @@ async function makeMove(move) {
             });
         }
         
-        // Process turns in the correct order based on speed
-        if (turn_info.player_first) {
-            // Player moves first if they have HP left
-            if (data.player_hp > 0) {
-                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
-            }
-            
-            // Opponent moves second if they have HP left
-            if (data.opponent_hp > 0) {
-                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
-            }
-        } else {
-            // Opponent moves first if they have HP left
-            if (data.opponent_hp > 0) {
-                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
-            }
-            
-            // Player moves second if they have HP left
-            if (data.player_hp > 0) {
-                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
+        // Process battle events in the order they happened
+        if (turn_info.battle_events && turn_info.battle_events.length > 0) {
+            for (const event of turn_info.battle_events) {
+                if (event.type === 'move') {
+                    await processMoveEvent(event, data);
+                    if (data.is_game_over) return;
+                }
+                // Add support for other event types here if needed
             }
         }
         
@@ -759,100 +743,57 @@ async function makeMove(move) {
     }
 }
 
-async function processPlayerMove(playerName, opponentName, move, data, turnInfo) {
-    // Log player's move
-    addLogMessage(`${capitalize(playerName)} used ${move}!`);
+async function processMoveEvent(event, data) {
+    const isPlayer = event.is_player;
+    // Use the attacker_name and defender_name from the event
+    const attacker = event.attacker_name ? capitalize(event.attacker_name) : (isPlayer ? data.player_name : `Opponent ${data.opponent_name}`);
+    const defender = event.defender_name ? capitalize(event.defender_name) : (isPlayer ? `Opponent ${data.opponent_name}` : data.player_name);
     
-    // Show effectiveness messages for player's move if any
-    if (turnInfo.effectiveness_messages && turnInfo.effectiveness_messages.length > 0) {
-        // Since we process moves in order, the player's move's effectiveness message
-        // will be the first one if they moved first, or the second one if they moved second
-        const playerMoveIndex = turnInfo.player_first ? 0 : 1;
-        
-        // Only show the message if it exists and is for the player's move
-        if (turnInfo.effectiveness_messages[playerMoveIndex]) {
-            const message = turnInfo.effectiveness_messages[playerMoveIndex];
-            if (message.includes('It\'s super effective!') || 
-                message.includes('It\'s not very effective...') ||
-                message.includes('It had no effect...')) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                addLogMessage(message);
-            }
-        }
+    // Log the move with the actual Pokémon name
+    addLogMessage(`${attacker} used ${event.move}!`);
+    
+    // Show effectiveness message if any
+    if (event.effectiveness) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        addLogMessage(event.effectiveness);
     }
     
-    // Execute player's attack animation
+    // Execute attack animation
     await new Promise(resolve => setTimeout(resolve, 300));
-    animateAttack(true);
+    animateAttack(isPlayer);
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Update opponent's HP
-    const opponentHp = Math.max(0, data.opponent_hp);
-    updateHealthBar('#opponent-health-bar', opponentHp, data.opponent_max_hp);
+    // Update HP
+    const targetSelector = isPlayer ? '#opponent-health-bar' : '#player-health-bar';
+    const currentHp = isPlayer ? data.opponent_hp : data.player_hp;
+    const maxHp = isPlayer ? data.opponent_max_hp : data.player_max_hp;
     
-    // Check if opponent is defeated
-    if (opponentHp <= 0) {
-        updateHealthBar('#opponent-health-bar', 0, data.opponent_max_hp);
-        addLogMessage(`Opponent ${capitalize(opponentName)} fainted!`);
-        await animateFaint(false);
-        addLogMessage("You won the battle!");
+    updateHealthBar(targetSelector, currentHp, maxHp);
+    
+    // Check if the target fainted
+    if (currentHp <= 0) {
+        updateHealthBar(targetSelector, 0, maxHp);
+        addLogMessage(`${capitalize(defender)} fainted!`);
+        await animateFaint(!isPlayer);
+        
+        if (isPlayer) {
+            addLogMessage("You won the battle!");
+        } else {
+            addLogMessage("You were defeated!");
+        }
+        
         await new Promise(resolve => setTimeout(resolve, 2000));
         if (data.game_over_url) {
             window.location.href = data.game_over_url;
         }
         return true; // Battle is over
     }
+    
     return false; // Battle continues
 }
 
-async function processOpponentMove(playerName, opponentName, data, turnInfo) {
-    // Determine opponent's move
-    const move = turnInfo.opponent_move;
-    
-    // Log opponent's move
-    addLogMessage(`Opponent ${capitalize(opponentName)} used ${move}!`);
-    
-    // Show effectiveness messages for opponent's move if any
-    if (turnInfo.effectiveness_messages && turnInfo.effectiveness_messages.length > 0) {
-        // Since we process moves in order, the opponent's move's effectiveness message
-        // will be the first one if they moved first, or the second one if they moved second
-        const opponentMoveIndex = turnInfo.player_first ? 1 : 0;
-        
-        // Only show the message if it exists and is for the opponent's move
-        if (turnInfo.effectiveness_messages[opponentMoveIndex]) {
-            const message = turnInfo.effectiveness_messages[opponentMoveIndex];
-            if (message.includes('It\'s super effective!') || 
-                message.includes('It\'s not very effective...') ||
-                message.includes('It had no effect...')) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                addLogMessage(message);
-            }
-        }
-    }
-    
-    // Execute opponent's attack animation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    animateAttack(false);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Update player's HP
-    const playerHp = Math.max(0, data.player_hp);
-    updateHealthBar('#player-health-bar', playerHp, data.player_max_hp);
-    
-    // Check if player is defeated
-    if (playerHp <= 0) {
-        updateHealthBar('#player-health-bar', 0, data.player_max_hp);
-        addLogMessage(`${capitalize(playerName)} fainted!`);
-        await animateFaint(true);
-        addLogMessage("You were defeated!");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (data.game_over_url) {
-            window.location.href = data.game_over_url;
-        }
-        return true; // Battle is over
-    }
-    return false; // Battle continues
-}
+// Old functions removed as they're no longer needed
+// processPlayerMove and processOpponentMove have been replaced by processMoveEvent
 
 // Function to forfeit the battle
 function forfeitBattle() {
