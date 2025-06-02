@@ -82,11 +82,14 @@ music/
 !music/battle_music.mp3
 
 # Large dataset files
-*.json
 *.csv
 *.xlsx
 *.pkl
 *.pickle
+
+# JSON files (except gen8_stats_sets.json)
+*.json
+!gen8_stats_sets.json
 
 # Temporary files
 *.tmp
