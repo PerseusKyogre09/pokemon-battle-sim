@@ -47,8 +47,10 @@ A simple Pokémon battle game built using Flask for the back-end and HTML, CSS, 
 4. When the battle ends, an alert will display the result (win or lose).
 
 ## Screenshots
-![IMG1](https://imgur.com/YZu6hfR.png)
-![IMG2](https://imgur.com/Jaa1stT.png)
+![image1](https://github.com/user-attachments/assets/91142e9c-d96a-4640-87a7-e8b4da0d9ee6)
+![image2](https://github.com/user-attachments/assets/78c61934-512c-4c5e-b0fe-47e92e3ece86)
+![image3](https://github.com/user-attachments/assets/48891598-009e-45ba-9d28-acece71032e8)
+![image4](https://github.com/user-attachments/assets/ec4fec02-3e02-495c-8c31-adb181394c82)
 
 ## Features To Be Added
 - Pokémon type advantages (e.g., water beats fire).
