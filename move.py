@@ -83,6 +83,13 @@ class Move:
                 else:
                     effectiveness_message = "A critical hit!"
         
+        # Apply random damage variation (85% to 100% of calculated damage)
+        # But ensure minimum damage is 1
+        if base_damage > 0:  # Only apply variation if damage is being dealt
+            damage_multiplier = random.uniform(0.85, 1.0)
+            base_damage = max(1, int(base_damage * damage_multiplier))
+            print(f"DEBUG: Damage roll: {damage_multiplier*100:.1f}% of max damage")
+        
         return base_damage, effectiveness_message
             
     def to_dict(self):
