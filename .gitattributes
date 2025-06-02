@@ -1,0 +1,19 @@
+# Tell GitHub to ignore TypeScript files for language stats
+*.ts linguist-documentation
+*.tsx linguist-documentation
+
+# Explicitly identify the main language as Python
+*.py linguist-detectable=true
+*.html linguist-detectable=true
+*.css linguist-detectable=true
+*.js linguist-detectable=true
+
+# Ensure these files aren't counted in language stats
+package-lock.json linguist-generated
+*.min.js linguist-generated
+*.min.css linguist-generated
+*.bundle.js linguist-generated
+
+# Remove any existing overrides for these files (to be safe)
+*.ts -linguist-detectable
+*.tsx -linguist-detectable
