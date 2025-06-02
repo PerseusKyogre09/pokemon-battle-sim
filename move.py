@@ -6,7 +6,7 @@ class Move:
         self.name = name
         self.power = power
         self.pp = pp
-        self.max_pp = pp  # Initialize max_pp to the initial pp value
+        self.max_pp = pp
         self.type = move_type
 
     def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, str]:
@@ -55,37 +55,34 @@ class Move:
             # Apply effectiveness to damage
             base_damage = int(base_damage * effectiveness)
             
-            # Only show effectiveness message if the move is not neutral (1.0x)
             if effectiveness == 0:
                 effectiveness_message = "It had no effect..."
-            elif effectiveness < 1:  # Between 0 and 1
+            elif effectiveness < 1:
                 effectiveness_message = "It's not very effective..."
-            elif effectiveness > 1:  # Greater than 1
+            elif effectiveness > 1:
                 effectiveness_message = "It's super effective!"
-            # No message for effectiveness == 1 (neutral)
             
-                # Apply STAB (Same Type Attack Bonus) if the move type matches any of the attacker's types
+                # Apply STAB
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
                     base_damage = int(base_damage * 1.5)
                     print(f"DEBUG: STAB applied for {attacking_pokemon.name}'s {self.name}")
             
-            # Check for critical hit (1/16 chance)
+            # Check for critical hit (6.25% chance)
             import random
             is_critical = random.randint(1, 16) == 1
             
             if is_critical:
                 base_damage = int(base_damage * 1.5)
                 print(f"DEBUG: Critical hit! {attacking_pokemon.name}'s {self.name} did 1.5x damage!")
-                if effectiveness_message:  # If there's already an effectiveness message
+                if effectiveness_message:
                     effectiveness_message = "A critical hit! " + effectiveness_message
                 else:
                     effectiveness_message = "A critical hit!"
         
         # Apply random damage variation (85% to 100% of calculated damage)
-        # But ensure minimum damage is 1
-        if base_damage > 0:  # Only apply variation if damage is being dealt
+        if base_damage > 0:
             damage_multiplier = random.uniform(0.85, 1.0)
             base_damage = max(1, int(base_damage * damage_multiplier))
             print(f"DEBUG: Damage roll: {damage_multiplier*100:.1f}% of max damage")
