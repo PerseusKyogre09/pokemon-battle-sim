@@ -16,29 +16,18 @@
         <div class="bg-gray-800 p-8 rounded-xl shadow-lg max-w-3xl w-full">
             <p class="text-xl mb-6 text-center">Choose your Pokémon and face off against a random opponent!</p>
             
-            <form id="pokemon-form" action="{{ url_for('start_game') }}" method="POST" class="space-y-6">
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        id="pokemon-input" 
-                        name="pokemon" 
-                        placeholder="Search for a Pokémon..." 
-                        autocomplete="off"
-                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                        required>
-                    <div id="suggestions" class="absolute z-10 w-full mt-1 bg-gray-700 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+            <form id="pokemon-form" class="w-full max-w-md mx-auto">
+                <div class="relative mb-2">
+                    <input type="text" id="pokemon-search" 
+                           class="w-full px-4 py-3 bg-gray-900 text-white focus:border-yellow-500 focus:ring-0" 
+                           placeholder="SEARCH POKÉMON..." autocomplete="off">
+                    <div id="suggestions" class="absolute z-10 w-full mt-1 bg-gray-900 border-4 border-gray-700 shadow-lg hidden max-h-60 overflow-y-auto">
                         <!-- Suggestions will be added here -->
                     </div>
                 </div>
-                
-                <div class="flex justify-center">
-                    <button 
-                        type="submit" 
-                        class="px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg shadow-md transition duration-300 transform hover:scale-105"
-                        id="start-button">
-                        Start Battle
-                    </button>
-                </div>
+                <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-6 transition duration-200">
+                    SEARCH
+                </button>
             </form>
             
             <div id="selected-pokemon" class="mt-8 hidden w-full max-w-4xl mx-auto px-4">
@@ -84,8 +73,13 @@
                                 </div>
                             </div>
                             
-                            <div class="text-xs text-gray-500 mt-4 text-right">
-                                Data from PokéAPI • ID: <span id="pokemon-id"></span>
+                            <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-700">
+                                <div class="text-xs text-gray-500">
+                                    Data from PokéAPI • ID: <span id="pokemon-id"></span>
+                                </div>
+                                <button id="start-battle" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-6 transition duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    START BATTLE
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -94,6 +88,7 @@
         </div>
     </div>
 
+    <!-- JavaScript -->
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>

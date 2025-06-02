@@ -1,3 +1,10 @@
+/* Pixelated UI Elements */
+* {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
 /* Custom scrollbar for suggestions */
 #suggestions::-webkit-scrollbar {
     width: 8px;
@@ -5,12 +12,12 @@
 
 #suggestions::-webkit-scrollbar-track {
     background: #374151;
-    border-radius: 0 0 0.5rem 0.5rem;
 }
 
 #suggestions::-webkit-scrollbar-thumb {
     background: #4B5563;
-    border-radius: 4px;
+    border: 2px solid #2D3748;
+    box-shadow: 2px 0 0 0 #000, -2px 0 0 0 #000;
 }
 
 #suggestions::-webkit-scrollbar-thumb:hover {
@@ -19,17 +26,27 @@
 
 /* Type badges */
 .type-badge {
+    display: inline-block;
     padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: bold;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    font-weight: normal;
     color: white;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-    margin: 0 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    border: 4px solid transparent;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23ffffff'/%3E%3C/svg%3E") 2 / 4px;
+    border-image-outset: 2px;
+    margin: 0 2px 4px 0;
+    position: relative;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    transform: translate(-1px, -1px);
+    transition: all 0.1s ease;
+}
+
+.type-badge:hover {
+    transform: translate(0, 0);
+    box-shadow: none;
 }
 
 /* Type colors */
@@ -52,15 +69,45 @@
 .type-steel { background-color: #B8B8D0; color: #000; }
 .type-fairy { background-color: #EE99AC; color: #000; }
 
+/* Pixel borders */
+.pixel-border {
+    border-style: solid;
+    border-width: 4px;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23D4AF37'/%3E%3C/svg%3E") 4 / 2px 2px;
+    border-image-outset: 2px;
+    border-image-repeat: round;
+    image-rendering: pixelated;
+    position: relative;
+    background-color: #2D3748;
+}
+
+.pixel-border::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 4px solid transparent;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23FFD700'/%3E%3C/svg%3E") 4 / 2px 2px;
+    z-index: -1;
+}
+
 /* Pokemon card */
 .pokemon-card {
     position: relative;
-    overflow: hidden;
-    border: 4px solid #D4AF37;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    overflow: visible;
     max-width: 100%;
     margin: 0 auto;
+    background-color: #2D3748;
+    box-shadow: 4px 4px 0 #1A202C, 8px 8px 0 #4A5568;
+    transform: translate(-4px, -4px);
+    transition: all 0.1s ease;
+}
+
+.pokemon-card:hover {
+    transform: translate(0, 0);
+    box-shadow: none;
 }
 
 .pokemon-card::before {
@@ -70,7 +117,8 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #FFD700, #D4AF37, #FFD700);
+    background: repeating-linear-gradient(90deg, #FFD700, #FFD700 4px, #D4AF37 4px, #D4AF37 8px);
+    z-index: 1;
 }
 
 /* Stat bars */
@@ -92,11 +140,70 @@
 body {
     font-family: 'Press Start 2P', cursive;
     line-height: 1.6;
+    color: #e0e0e0;
+    background-color: #1a1a2e;
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2326264d' fill-opacity='0.2' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Press Start 2P', cursive;
-    letter-spacing: -0.5px;
+    letter-spacing: 0;
+    text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    margin-bottom: 1rem;
+}
+
+/* Input and Buttons */
+input[type="text"], button, .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    border: 4px solid #4a4a4a;
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    outline: none;
+    transition: all 0.1s ease;
+    box-shadow: 3px 3px 0 #000;
+    transform: translate(-1px, -1px);
+    position: relative;
+    cursor: pointer;
+}
+
+input[type="text"]:focus, button:focus, .btn:focus {
+    outline: none;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+button, .btn {
+    background-color: #4a90e2;
+    color: white;
+    text-shadow: 1px 1px 0 #000;
+    border-color: #2d5a9e;
+    padding: 0.5rem 1.5rem;
+}
+
+button:hover:not(:disabled), .btn:hover:not(:disabled) {
+    background-color: #5a9ef0;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+button:active:not(:disabled), .btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+
+button:disabled, .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+/* Form elements */
+form {
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 /* Responsive adjustments */
