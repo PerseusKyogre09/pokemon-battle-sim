@@ -133,12 +133,177 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Display selected Pokémon
-    function showSelectedPokemon(pokemon) {
+    // Fetch species data for Pokedex entry
+    async function fetchPokemonSpecies(id) {
+        try {
+            const response = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+        } catch (error) {
+            console.error('Error fetching Pokémon species:', error);
+        }
+        return null;
+    }
+
+    // Format Pokedex entry text
+    function formatPokedexEntry(entry) {
+        // Replace form feed characters with spaces and clean up text
+        return entry
+            .replace(/\f/g, ' ')
+            .replace(/\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Get English Pokedex entry
+    function getEnglishEntry(entries) {
+        const entry = entries.find(e => e.language.name === 'en');
+        return entry ? formatPokedexEntry(entry.flavor_text) : 'No Pokedex entry available.';
+    }
+
+    // Format stat name
+    function formatStatName(statName) {
+        return statName
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    // Calculate color based on stat value
+    function getStatColor(value) {
+        if (value >= 100) return '#4CAF50';
+        if (value >= 80) return '#8BC34A';
+        if (value >= 60) return '#FFC107';
+        if (value >= 40) return '#FF9800';
+        return '#F44336';
+    }
+
+    // Fetch moves for a Pokémon
+    async function fetchPokemonMoves(pokemonName) {
+        try {
+            // First try to get moves from the local moveset data
+            const response = await fetch(`/get_moveset/${pokemonName.toLowerCase()}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.moves && data.moves.length > 0) {
+                    return data.moves;
+                }
+            }
+            
+            // If no moves found in local data, try to get moves from the PokeAPI
+            const pokeApiResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName.toLowerCase()}`);
+            if (pokeApiResponse.ok) {
+                const pokemonData = await pokeApiResponse.json();
+                if (pokemonData.moves && pokemonData.moves.length > 0) {
+                    // Get up to 4 moves, prioritizing level-up moves
+                    const levelUpMoves = pokemonData.moves
+                        .filter(move => move.version_group_details.some(detail => 
+                            detail.move_learn_method.name === 'level-up' && detail.level_learned_at > 0
+                        ))
+                        .sort((a, b) => {
+                            const aLevel = Math.min(...a.version_group_details
+                                .filter(d => d.move_learn_method.name === 'level-up')
+                                .map(d => d.level_learned_at));
+                            const bLevel = Math.min(...b.version_group_details
+                                .filter(d => d.move_learn_method.name === 'level-up')
+                                .map(d => d.level_learned_at));
+                            return bLevel - aLevel; // Sort by level in descending order
+                        });
+                    
+                    // Get up to 4 moves, starting with level-up moves, then fill with other moves if needed
+                    const moves = [
+                        ...levelUpMoves.slice(0, 4).map(m => m.move.name.replace('-', ' ')),
+                        ...pokemonData.moves
+                            .filter(move => !levelUpMoves.includes(move))
+                            .slice(0, 4 - Math.min(4, levelUpMoves.length))
+                            .map(m => m.move.name.replace('-', ' '))
+                    ];
+                    
+                    return moves.slice(0, 4);
+                }
+            }
+            
+            // Default moves if none found
+            return ['Tackle', 'Growl', 'Scratch', 'Leer'].slice(0, 4);
+        } catch (error) {
+            console.error('Error fetching Pokémon moves:', error);
+            return ['Tackle', 'Growl', 'Scratch', 'Leer'].slice(0, 4);
+        }
+    }
+
+    // Display selected Pokémon with all details
+    async function showSelectedPokemon(pokemon) {
         selectedPokemon = pokemon;
-        selectedSprite.src = pokemon.sprites.front_default;
-        selectedName.textContent = pokemon.name;
-        selectedTypes.textContent = pokemon.types.map(t => t.type.name).join(', ');
+        
+        // Set basic info
+        selectedSprite.src = pokemon.sprites.other['official-artwork'].front_default || 
+                            pokemon.sprites.front_default;
+        selectedName.textContent = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+        
+        // Set Pokemon ID
+        document.getElementById('pokemon-id').textContent = `#${String(pokemon.id).padStart(3, '0')}`;
+        
+        // Set types with badges
+        selectedTypes.innerHTML = '';
+        pokemon.types.forEach(typeInfo => {
+            const type = typeInfo.type.name;
+            const typeBadge = document.createElement('span');
+            typeBadge.className = `type-badge type-${type}`;
+            typeBadge.textContent = type.toUpperCase();
+            selectedTypes.appendChild(typeBadge);
+        });
+
+        // Clear previous content
+        document.getElementById('pokedex-entry').textContent = 'Loading...';
+        document.getElementById('stats-container').innerHTML = 'Loading...';
+        document.getElementById('moves-container').innerHTML = 'Loading...';
+
+        // Fetch data in parallel
+        const [speciesData, moves] = await Promise.all([
+            fetchPokemonSpecies(pokemon.id),
+            fetchPokemonMoves(pokemon.name)
+        ]);
+
+        // Set Pokedex entry
+        const pokedexEntry = speciesData ? getEnglishEntry(speciesData.flavor_text_entries) : 'No Pokedex entry available.';
+        document.getElementById('pokedex-entry').textContent = pokedexEntry;
+
+        // Set stats
+        const statsContainer = document.getElementById('stats-container');
+        statsContainer.innerHTML = '';
+        
+        pokemon.stats.forEach(statInfo => {
+            const statName = statInfo.stat.name;
+            const baseStat = statInfo.base_stat;
+            
+            const statItem = document.createElement('div');
+            statItem.className = 'stat-item';
+            statItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="stat-label">${formatStatName(statName)}</span>
+                    <span class="stat-value">${baseStat}</span>
+                </div>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill" style="width: ${Math.min(100, (baseStat / 255) * 100)}%; background: ${getStatColor(baseStat)}"></div>
+                </div>
+            `;
+            statsContainer.appendChild(statItem);
+        });
+
+        // Set moves
+        const movesContainer = document.getElementById('moves-container');
+        movesContainer.innerHTML = '';
+        
+        moves.forEach(move => {
+            const moveElement = document.createElement('div');
+            moveElement.className = 'bg-gray-700 rounded-md p-2 text-center text-sm font-medium capitalize';
+            moveElement.textContent = move;
+            movesContainer.appendChild(moveElement);
+        });
+
+        // Show the card and enable start button
         selectedPokemonDiv.classList.remove('hidden');
         startButton.disabled = false;
     }

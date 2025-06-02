@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
     <div class="container mx-auto px-4 flex flex-col items-center justify-center min-h-screen">
         <h1 class="text-4xl font-bold mb-8 text-yellow-400 text-center">Pokémon Battle Simulator</h1>
-        <div class="bg-gray-800 p-8 rounded-xl shadow-lg max-w-lg w-full">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-lg max-w-3xl w-full">
             <p class="text-xl mb-6 text-center">Choose your Pokémon and face off against a random opponent!</p>
             
             <form id="pokemon-form" action="{{ url_for('start_game') }}" method="POST" class="space-y-6">
@@ -38,14 +41,53 @@
                 </div>
             </form>
             
-            <div id="selected-pokemon" class="mt-6 hidden">
-                <div class="flex items-center justify-center space-x-4">
-                    <div class="relative">
-                        <img id="selected-sprite" src="" alt="Selected Pokémon" class="w-24 h-24 object-contain">
-                    </div>
-                    <div>
-                        <h3 id="selected-name" class="text-xl font-bold capitalize"></h3>
-                        <p id="selected-types" class="text-sm text-gray-300"></p>
+            <div id="selected-pokemon" class="mt-8 hidden w-full max-w-4xl mx-auto px-4">
+                <div class="pokemon-card p-6 rounded-lg bg-gray-800 text-white shadow-xl">
+                    <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                        <!-- Left side: Image and Moves -->
+                        <div class="flex-shrink-0">
+                            <div class="relative">
+                                <img id="selected-sprite" class="w-48 h-48 object-contain" src="" alt="Pokemon Sprite">
+                            </div>
+                            <!-- Moves Section -->
+                            <div class="mt-4">
+                                <h3 class="text-lg font-semibold text-yellow-300 mb-2 border-b border-gray-700 pb-1 text-center">MOVES</h3>
+                                <div id="moves-container" class="grid grid-cols-2 gap-2 min-w-[200px]">
+                                    <!-- Moves will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right side: Details -->
+                        <div class="flex-1 w-full">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 id="selected-name" class="text-3xl font-bold mb-2"></h2>
+                                    <div id="selected-types" class="flex flex-wrap gap-2 mb-4">
+                                        <!-- Types will be inserted here -->
+                                    </div>
+                                </div>
+                                <div id="pokemon-id" class="text-gray-400 text-lg"></div>
+                            </div>
+                            
+                            <!-- Pokedex Entry -->
+                            <div class="bg-gray-900 p-4 rounded-lg mb-4">
+                                <h3 class="text-yellow-300 text-lg font-semibold mb-2 border-b border-gray-700 pb-1">POKÉDEX ENTRY</h3>
+                                <p id="pokedex-entry" class="text-sm">Select a Pokémon to see its Pokedex entry.</p>
+                            </div>
+                            
+                            <!-- Stats -->
+                            <div class="mb-4">
+                                <h3 class="text-yellow-300 text-lg font-semibold mb-2 border-b border-gray-700 pb-1">BASE STATS</h3>
+                                <div id="stats-container" class="grid grid-cols-2 gap-4">
+                                    <!-- Stats will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="text-xs text-gray-500 mt-4 text-right">
+                                Data from PokéAPI • ID: <span id="pokemon-id"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

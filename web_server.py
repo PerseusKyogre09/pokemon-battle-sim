@@ -190,6 +190,40 @@ def get_pokemon_moves(pokemon_data):
     
     return selected_moves
 
+@app.route('/get_moveset/<pokemon_name>')
+def get_moveset(pokemon_name):
+    try:
+        # Get strategic moveset for the Pokémon
+        moveset = get_strategic_moveset(pokemon_name, debug=False)
+        
+        if moveset and len(moveset) > 0:
+            return jsonify({
+                'success': True,
+                'moves': moveset[:4]  # Return up to 4 moves
+            })
+        else:
+            # If no strategic moveset found, try to get moves from PokeAPI
+            pokemon_data = get_pokemon_data(pokemon_name)
+            if 'moves' in pokemon_data and len(pokemon_data['moves']) > 0:
+                # Get the first 4 moves
+                moves = [move['move']['name'].replace('-', ' ') for move in pokemon_data['moves'][:4]]
+                return jsonify({
+                    'success': True,
+                    'moves': moves
+                })
+            
+            # Default moves if none found
+            return jsonify({
+                'success': True,
+                'moves': ['tackle', 'growl', 'scratch', 'leer']
+            })
+    except Exception as e:
+        print(f"Error getting moveset for {pokemon_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Start webpage with Pokémon selection
 @app.route('/', methods=['GET'])
 def index():
