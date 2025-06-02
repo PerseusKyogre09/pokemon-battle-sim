@@ -64,12 +64,24 @@ class Move:
                 effectiveness_message = "It's super effective!"
             # No message for effectiveness == 1 (neutral)
             
-            # Apply STAB (Same Type Attack Bonus) if the move type matches any of the attacker's types
+                # Apply STAB (Same Type Attack Bonus) if the move type matches any of the attacker's types
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
                     base_damage = int(base_damage * 1.5)
                     print(f"DEBUG: STAB applied for {attacking_pokemon.name}'s {self.name}")
+            
+            # Check for critical hit (1/16 chance)
+            import random
+            is_critical = random.randint(1, 16) == 1
+            
+            if is_critical:
+                base_damage = int(base_damage * 1.5)
+                print(f"DEBUG: Critical hit! {attacking_pokemon.name}'s {self.name} did 1.5x damage!")
+                if effectiveness_message:  # If there's already an effectiveness message
+                    effectiveness_message = "A critical hit! " + effectiveness_message
+                else:
+                    effectiveness_message = "A critical hit!"
         
         return base_damage, effectiveness_message
             
