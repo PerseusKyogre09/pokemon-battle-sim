@@ -4,7 +4,14 @@ from data_loader import data_loader
 class Pokemon:
     def __init__(self, name, type_, sprite_url, stats, moves=None, level=100):
         self.name = name
-        self.type = type_
+        # Handle both single type (string) and multiple types (list)
+        if isinstance(type_, list):
+            self.types = [t.lower() for t in type_]
+            self.type = self.types[0]  # For backward compatibility
+        else:
+            self.types = [type_.lower()]
+            self.type = type_.lower()  # For backward compatibility
+            
         self.sprite_url = sprite_url
         self.sprite = sprite_url  # Add sprite alias for backward compatibility
         self.level = level

@@ -44,7 +44,14 @@ let battleStarted = false; // Set to false initially until animation completes
 
 // Initialize the battle when the page loads
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded, initializing battle...');
+    
     battleLogEl = document.getElementById("battle-log");
+    if (!battleLogEl) {
+        console.error('Battle log element not found!');
+    } else {
+        console.log('Battle log element found');
+    }
     
     // Start with an empty battle log
     addLogMessage("Battle started! Choose your move.");
@@ -87,32 +94,88 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Set initial health bars
-    const playerHealthText = document.getElementById("player-hp-text").innerText;
-    const opponentHealthText = document.getElementById("opponent-hp-text").innerText;
+    const playerHealthBar = document.getElementById("player-health-bar");
+    const opponentHealthBar = document.getElementById("opponent-health-bar");
     
-    const playerHp = parseInt(playerHealthText.match(/\d+/)[0]);
-    const opponentHp = parseInt(opponentHealthText.match(/\d+/)[0]);
+    if (playerHealthBar && opponentHealthBar) {
+        const playerHpElement = document.getElementById("player-hp");
+        const opponentHpElement = document.getElementById("opponent-hp");
+        
+        if (playerHpElement && opponentHpElement) {
+            const playerHpText = playerHpElement.textContent.trim();
+            const opponentHpText = opponentHpElement.textContent.trim();
+            
+            const [playerHp, playerMaxHp] = playerHpText.split('/');
+            const [opponentHp, opponentMaxHp] = opponentHpText.split('/');
+            
+            updateHealthBar('#player-health-bar', parseInt(playerHp), parseInt(playerMaxHp));
+            updateHealthBar('#opponent-health-bar', parseInt(opponentHp), parseInt(opponentMaxHp));
+        } else {
+            console.error('Health text elements not found');
+        }
+    } else {
+        console.error('Health bar elements not found');
+    }
     
-    updateHealthBar('player-health-bar', playerHp, playerHp);
-    updateHealthBar('opponent-health-bar', opponentHp, opponentHp);
+    // Get DOM elements and store in a global object for the function
+    const elements = {
+        playerPokemon: document.getElementById('player'),
+        opponentPokemon: document.getElementById('opponent'),
+        playerHealthContainer: document.querySelector('.player-health-container'),
+        opponentHealthContainer: document.querySelector('.opponent-health-container'),
+        moveButtons: document.querySelectorAll('.move-button'),
+        flashElement: document.getElementById('flash-element'),
+        playerPokeball: document.getElementById('player-pokeball'),
+        opponentPokeball: document.getElementById('opponent-pokeball'),
+        opponentCry: document.getElementById('opponent-cry'),
+        playerCry: document.getElementById('player-cry')
+    };
     
-    // Hide Pokémon and health bars initially
-    const playerPokemon = document.getElementById('player');
-    const opponentPokemon = document.getElementById('opponent');
-    const playerHealthContainer = document.getElementById('player-health-container');
-    const opponentHealthContainer = document.getElementById('opponent-health-container');
-    const moveButtons = document.querySelectorAll('.move-button');
+    // Make elements available to all scopes in this function
+    const {
+        playerPokemon,
+        opponentPokemon,
+        playerHealthContainer,
+        opponentHealthContainer,
+        moveButtons,
+        flashElement,
+        playerPokeball,
+        opponentPokeball,
+        opponentCry,
+        playerCry
+    } = elements;
     
-    playerPokemon.classList.add('hidden-element');
-    opponentPokemon.classList.add('hidden-element');
-    playerHealthContainer.classList.add('hidden-element');
-    opponentHealthContainer.classList.add('hidden-element');
+    console.log('Hiding elements - Player Pokemon:', !!playerPokemon, 
+                'Opponent Pokemon:', !!opponentPokemon,
+                'Player Health:', !!playerHealthContainer,
+                'Opponent Health:', !!opponentHealthContainer);
+    
+    // Hide elements initially
+    const hideElement = (element, name) => {
+        if (element) {
+            element.classList.add('hidden-element');
+            element.style.opacity = '0';
+            console.log(`   - Hidden ${name}`);
+        } else {
+            console.log(`   - ${name} element not found`);
+        }
+    };
+    
+    hideElement(playerPokemon, 'player Pokémon');
+    hideElement(opponentPokemon, 'opponent Pokémon');
+    hideElement(playerHealthContainer, 'player health bar');
+    hideElement(opponentHealthContainer, 'opponent health bar');
+    hideElement(flashElement, 'flash element');
     
     // Disable move buttons until animation completes
-    moveButtons.forEach(button => {
-        button.disabled = true;
-        button.style.opacity = 0.5;
-    });
+    if (moveButtons.length > 0) {
+        moveButtons.forEach(button => {
+            button.disabled = true;
+            button.style.opacity = 0.5;
+        });
+    } else {
+        console.warn('No move buttons found!');
+    }
     
     // Initialize PP bars
     document.querySelectorAll('.pp-bar[data-pp-percent]').forEach(bar => {
@@ -123,7 +186,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Start the battle sequence with animations
-    startBattleSequence();
+    console.log('Starting battle sequence...');
+    // Add a small delay to ensure all elements are properly initialized
+    setTimeout(() => {
+        startBattleSequence().catch(error => {
+            console.error('Error in battle sequence:', error);
+        });
+    }, 500);
 });
 
 // Function to load and play a Pokémon cry
@@ -147,147 +216,432 @@ function loadPokemonCry(audioElement, pokemonName, distorted = false) {
     });
 }
 
-// Start the battle sequence with animations - not used by default but kept for future use
+// Start the battle sequence with animations
 async function startBattleSequence() {
-    // Start battle music
-    const battleMusic = document.getElementById('battle-music');
-    battleMusic.volume = 0.7;
-    battleMusic.play();
-    
-    // Wait a moment before starting animations
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Show the pokeballs
-    const playerPokeball = document.getElementById('player-pokeball');
-    const opponentPokeball = document.getElementById('opponent-pokeball');
-    
-    playerPokeball.classList.remove('hidden-element');
-    opponentPokeball.classList.remove('hidden-element');
-    
-    // Get the Pokémon elements
-    const playerPokemon = document.getElementById('player');
-    const opponentPokemon = document.getElementById('opponent');
-    
-    // Get the flash element
-    const flashElement = document.getElementById('flash-element');
-    
-    // Get the health containers
-    const playerHealthContainer = document.getElementById('player-health-container');
-    const opponentHealthContainer = document.getElementById('opponent-health-container');
-    
-    // Get the Pokémon data from the audio elements
-    const playerCry = document.getElementById('player-cry');
-    const opponentCry = document.getElementById('opponent-cry');
-    const playerPokemonName = playerCry.getAttribute('data-pokemon');
-    const opponentPokemonName = opponentCry.getAttribute('data-pokemon');
-    
-    // Load the Pokémon cries
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Play the Pokéball throw sound for opponent's Pokémon
-    const pokeballSound = document.getElementById('pokeball-sound');
-    pokeballSound.play();
-    
-    // Animate opponent's Pokéball throw
-    opponentPokeball.classList.add('throw-animation-opponent');
-    
-    // Wait for the throw animation to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Flash the screen
-    flashElement.classList.add('flash');
-    
-    // Wait for the flash
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Hide the opponent's Pokéball and show the Pokémon
-    opponentPokeball.classList.add('hidden-element');
-    opponentPokemon.classList.remove('hidden-element');
-    
-    // Play opponent's Pokémon cry
-    loadPokemonCry(opponentCry, opponentPokemonName);
-    
-    // Show opponent's health bar
-    await new Promise(resolve => setTimeout(resolve, 500));
-    opponentHealthContainer.classList.remove('hidden-element');
-    
-    // Wait a moment before player's turn
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Play the Pokéball throw sound for player's Pokémon
-    pokeballSound.currentTime = 0;
-    pokeballSound.play();
-    
-    // Animate player's Pokéball throw
-    playerPokeball.classList.add('throw-animation-player');
-    
-    // Wait for the throw animation to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Flash the screen again
-    flashElement.classList.remove('flash');
-    await new Promise(resolve => setTimeout(resolve, 50));
-    flashElement.classList.add('flash');
-    
-    // Wait for the flash
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Hide the player's Pokéball and show the Pokémon
-    playerPokeball.classList.add('hidden-element');
-    playerPokemon.classList.remove('hidden-element');
-    
-    // Play player's Pokémon cry
-    loadPokemonCry(playerCry, playerPokemonName);
-    
-    // Show player's health bar
-    await new Promise(resolve => setTimeout(resolve, 500));
-    playerHealthContainer.classList.remove('hidden-element');
-    
-    // Remove the flash
-    flashElement.classList.remove('flash');
-    
-    // Enable move buttons with fade-in effect
-    const moveButtons = document.querySelectorAll('.move-button');
-    moveButtons.forEach(button => {
-        button.disabled = false;
-        button.style.transition = 'opacity 0.5s ease-in';
-        button.style.opacity = 1;
-    });
-    
-    // Set battle as started
-    battleStarted = true;
-}
-
-function updateHealthBar(elementId, currentHp, maxHp) {
-    const healthBar = document.getElementById(elementId);
-    const healthPercentage = (currentHp / maxHp) * 100;
-    healthBar.style.width = healthPercentage + '%';
-    
-    // Update health bar color based on percentage
-    if (healthPercentage > 50) {
-        healthBar.style.backgroundColor = '#10B981'; // Tailwind green-500
-    } else if (healthPercentage > 20) {
-        healthBar.style.backgroundColor = '#FBBF24'; // Tailwind yellow-400
-    } else {
-        healthBar.style.backgroundColor = '#EF4444'; // Tailwind red-500
+    console.log('Battle sequence started');
+    try {
+        console.log('1. Starting battle music...');
+        // Start battle music
+        const battleMusic = document.getElementById('battle-music');
+        if (battleMusic) {
+            console.log('   - Battle music element found, setting volume...');
+            battleMusic.volume = 0.7;
+            console.log('   - Attempting to play music...');
+            try {
+                await battleMusic.play();
+                console.log('   - Music started successfully');
+            } catch (error) {
+                console.log('   - Music play failed:', error);
+            }
+        } else {
+            console.log('   - Battle music element not found');
+        }
+        
+        // Wait a moment before starting animations
+        console.log('2. Waiting before starting animations...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('3. Showing Pokéballs...');
+        // Show the pokeballs
+        const playerPokeball = document.getElementById('player-pokeball');
+        const opponentPokeball = document.getElementById('opponent-pokeball');
+        
+        console.log('   - Player Pokéball element:', playerPokeball ? 'found' : 'not found');
+        console.log('   - Opponent Pokéball element:', opponentPokeball ? 'found' : 'not found');
+        
+        if (playerPokeball) {
+            console.log('   - Setting player Pokéball opacity to 1');
+            playerPokeball.style.opacity = '1';
+        }
+        
+        if (opponentPokeball) {
+            console.log('   - Setting opponent Pokéball opacity to 1');
+            opponentPokeball.style.opacity = '1';
+        }
+        
+        // Get the Pokémon elements
+        const playerPokemon = document.getElementById('player');
+        const opponentPokemon = document.getElementById('opponent');
+        
+        // Get the flash element
+        const flashElement = document.getElementById('flash-element');
+        
+        // Throw opponent's Pokéball first
+        console.log('4. Starting opponent\'s Pokéball throw...');
+        if (opponentPokeball) {
+            console.log('   - Playing Pokéball throw sound...');
+            // Play the Pokéball throw sound for opponent's Pokémon
+            const pokeballSound = document.getElementById('pokeball-sound');
+            if (pokeballSound) {
+                try {
+                    await pokeballSound.play();
+                    console.log('   - Pokéball sound played successfully');
+                } catch (error) {
+                    console.log('   - Pokeball sound failed:', error);
+                }
+            } else {
+                console.log('   - Pokéball sound element not found');
+            }
+            
+            console.log('   - Starting throw animation...');
+            // Animate opponent's Pokéball throw
+            opponentPokeball.style.animation = 'throwOpponent 1s forwards';
+            
+            // Wait for the throw animation to complete
+            console.log('   - Waiting for throw animation to complete...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('   - Throw animation complete');
+            
+            // Flash the screen
+            console.log('5. Starting flash animation...');
+            if (flashElement) {
+                console.log('   - Flash element found, displaying flash...');
+                flashElement.style.display = 'block';
+                flashElement.style.animation = 'flash 0.3s';
+                
+                // Wait for the flash
+                console.log('   - Waiting for flash to complete...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Show opponent's Pokémon
+                console.log('6. Showing opponent\'s Pokémon...');
+                if (opponentPokemon) {
+                    console.log('   - Opponent Pokémon element found, making visible');
+                    // Remove hidden-element class if present
+                    opponentPokemon.classList.remove('hidden-element');
+                    // Reset any previous animations
+                    opponentPokemon.style.animation = 'none';
+                    // Force reflow to restart animation
+                    void opponentPokemon.offsetWidth;
+                    // Apply the appear animation
+                    opponentPokemon.style.animation = 'appearPokemon 0.8s forwards';
+                    opponentPokemon.style.opacity = '1';
+                    opponentPokemon.style.display = 'block';
+                    console.log('   - Applied animation to opponent Pokémon');
+                    
+                    // Show opponent's health bar after a short delay
+                    const showOpponentHealth = () => {
+                        console.log('   - Showing opponent\'s health bar...');
+                        const container = document.querySelector('.opponent-health-container');
+                        if (container) {
+                            container.classList.remove('hidden-element');
+                            container.style.opacity = '1';
+                            container.style.display = 'block';
+                            console.log('   - Opponent health bar shown');
+                        } else {
+                            console.log('   - Opponent health container not found');
+                        }
+                    };
+                    setTimeout(showOpponentHealth, 300);
+                } else {
+                    console.log('   - Opponent Pokémon element not found');
+                }
+                    
+                // Play opponent's cry
+                console.log('7. Playing opponent\'s cry...');
+                const opponentCry = document.getElementById('opponent-cry');
+                if (opponentCry) {
+                    try {
+                        // Get the opponent's name from the data attribute
+                        const opponentName = opponentCry.getAttribute('data-pokemon');
+                        if (opponentName) {
+                            console.log(`   - Loading cry for ${opponentName}...`);
+                            // Get the Pokémon ID from the cry element's data attribute or use a default
+                            const pokemonId = opponentCry.getAttribute('data-pokemon-id') || '6'; // Default to Charizard if not found
+                            const cryPath = `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`;
+                            console.log('   - Loading cry from:', cryPath);
+                            
+                            try {
+                                // Create a new audio element to avoid issues with loading
+                                const audio = new Audio(cryPath);
+                                audio.volume = 0.5;
+                                
+                                // Play the cry
+                                const playPromise = audio.play();
+                                if (playPromise !== undefined) {
+                                    await playPromise.catch(e => {
+                                        console.log('   - Error playing cry (will continue):', e.message);
+                                        return Promise.resolve();
+                                    });
+                                }
+                                
+                                console.log('   - Opponent cry playback started');
+                                
+                                // Wait for the cry to finish or timeout after 2 seconds
+                                await Promise.race([
+                                    new Promise(resolve => {
+                                        audio.onended = resolve;
+                                    }),
+                                    new Promise(resolve => setTimeout(resolve, 2000))
+                                ]);
+                                
+                                console.log('   - Opponent cry sequence complete');
+                            } catch (error) {
+                                console.log('   - Error with cry playback (continuing):', error.message);
+                            }
+                        } else {
+                            console.log('   - No opponent name found in data attribute');
+                        }
+                    } catch (error) {
+                        console.log('   - Opponent cry failed:', error.message);
+                    }
+                } else {
+                    console.log('   - Opponent cry element not found');
+                }
+                
+                // Hide the flash
+                console.log('8. Hiding flash...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                flashElement.style.display = 'none';
+                console.log('   - Flash hidden');
+            } else {
+                console.log('   - Flash element not found');
+            }
+        }
+        
+        // Wait a moment before player's turn
+        console.log('9. Waiting before player\'s turn...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Throw player's Pokéball
+        console.log('10. Starting player\'s Pokéball throw...');
+        if (playerPokeball) {
+            // Play the Pokéball throw sound for player's Pokémon
+            console.log('    - Playing Pokéball throw sound...');
+            const pokeballSound = document.getElementById('pokeball-sound');
+            if (pokeballSound) {
+                try {
+                    pokeballSound.currentTime = 0;
+                    await pokeballSound.play();
+                    console.log('    - Pokéball sound played successfully');
+                } catch (error) {
+                    console.log('    - Pokeball sound failed:', error);
+                }
+            } else {
+                console.log('    - Pokéball sound element not found');
+            }
+            
+            // Animate player's Pokéball throw
+            console.log('    - Starting player throw animation...');
+            playerPokeball.style.animation = 'throwPlayer 1s forwards';
+            
+            // Wait for the throw animation to complete
+            console.log('    - Waiting for throw animation to complete...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('    - Player throw animation complete');
+            
+            // Flash the screen
+            console.log('11. Starting flash animation for player...');
+            if (flashElement) {
+                console.log('    - Flash element found, displaying flash...');
+                flashElement.style.display = 'block';
+                flashElement.style.animation = 'flash 0.3s';
+                
+                // Wait for the flash
+                console.log('    - Waiting for flash to complete...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Show player's Pokémon
+                console.log('12. Showing player\'s Pokémon...');
+                if (playerPokemon) {
+                    console.log('    - Player Pokémon element found, making visible');
+                    // Remove hidden-element class if present
+                    playerPokemon.classList.remove('hidden-element');
+                    // Reset any previous animations
+                    playerPokemon.style.animation = 'none';
+                    // Force reflow to restart animation
+                    void playerPokemon.offsetWidth;
+                    // Apply the appear animation
+                    playerPokemon.style.animation = 'appearPokemon 0.8s forwards';
+                    playerPokemon.style.opacity = '1';
+                    playerPokemon.style.display = 'block';
+                    console.log('    - Applied animation to player Pokémon');
+                    
+                    // Show player's health bar after a short delay
+                    const showPlayerHealth = () => {
+                        console.log('    - Showing player\'s health bar...');
+                        const container = document.querySelector('.player-health-container');
+                        if (container) {
+                            container.classList.remove('hidden-element');
+                            container.style.opacity = '1';
+                            container.style.display = 'block';
+                            console.log('    - Player health bar shown');
+                        } else {
+                            console.log('    - Player health container not found');
+                        }
+                    };
+                    setTimeout(showPlayerHealth, 300);
+                } else {
+                    console.log('    - Player Pokémon element not found');
+                }
+                
+                // Play player's cry
+                console.log('13. Playing player\'s cry...');
+                const playerCry = document.getElementById('player-cry');
+                if (playerCry) {
+                    try {
+                        // Get the Pokémon ID from the cry element's data attribute or use a default
+                        const pokemonId = playerCry.getAttribute('data-pokemon-id') || '6'; // Default to Charizard if not found
+                        const cryPath = `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`;
+                        console.log('    - Loading player cry from:', cryPath);
+                        
+                        // Create a new audio element to avoid issues with loading
+                        const audio = new Audio(cryPath);
+                        audio.volume = 0.5;
+                        
+                        // Play the cry
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            await playPromise.catch(e => {
+                                console.log('    - Error playing player cry (will continue):', e.message);
+                                return Promise.resolve();
+                            });
+                        }
+                        
+                        console.log('    - Player cry playback started');
+                        
+                        // Wait for the cry to finish or timeout after 2 seconds
+                        await Promise.race([
+                            new Promise(resolve => {
+                                audio.onended = resolve;
+                            }),
+                            new Promise(resolve => setTimeout(resolve, 2000))
+                        ]);
+                        
+                        console.log('    - Player cry sequence complete');
+                    } catch (error) {
+                        console.log('    - Error with player cry playback (continuing):', error.message);
+                    }
+                } else {
+                    console.log('    - Player cry element not found');
+                }
+                
+                // Hide the flash
+                console.log('14. Hiding flash...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                flashElement.style.display = 'none';
+                console.log('    - Flash hidden');
+            } else {
+                console.log('    - Flash element not found');
+            }
+        }
+        
+        // Enable move buttons after animations complete
+        console.log('15. Enabling move buttons...');
+        const moveButtons = document.querySelectorAll('.move-button');
+        if (moveButtons.length > 0) {
+            console.log(`    - Found ${moveButtons.length} move buttons, enabling them...`);
+            moveButtons.forEach((button, index) => {
+                button.disabled = false;
+                button.style.opacity = '1';
+                console.log(`    - Button ${index + 1} enabled`);
+            });
+        } else {
+            console.log('    - No move buttons found!');
+        }
+        
+        console.log('16. Battle sequence completed successfully!');
+    } catch (error) {
+        console.error('Error in battle sequence:', error);
+    } finally {
+        // Set battle as started
+        console.log('17. Setting battle as started');
+        battleStarted = true;
+        console.log('18. Battle started flag set to:', battleStarted);
     }
 }
 
-function addLogMessage(message) {
-    // Update the battle log in the original location (for compatibility)
-    const ul = battleLogEl.querySelector("ul");
-    const li = document.createElement("li");
-    li.textContent = message;
-    li.className = "py-1 border-b border-gray-700";
-    ul.appendChild(li);
+function updateHealthBar(selector, currentHp, maxHp) {
+    const healthBar = document.querySelector(selector);
+    if (!healthBar) {
+        console.error(`Health bar not found with selector: ${selector}`);
+        return;
+    }
     
-    // Auto-scroll to the bottom
-    battleLogEl.scrollTop = battleLogEl.scrollHeight;
+    // Ensure HP values are within bounds
+    currentHp = Math.max(0, Math.min(currentHp, maxHp));
+    const healthPercentage = (currentHp / maxHp) * 100;
     
-    // Update the battle log text in the new battle controls panel
-    const battleLogText = document.getElementById("battle-log-text");
+    // Update the health bar width with smooth transition
+    healthBar.style.width = `${healthPercentage}%`;
+    
+    // Update health bar color class based on percentage
+    healthBar.classList.remove('medium', 'low');
+    if (healthPercentage <= 20) {
+        healthBar.classList.add('low');
+    } else if (healthPercentage <= 50) {
+        healthBar.classList.add('medium');
+    }
+    
+    // Update the HP text display
+    const barId = selector.replace('#', ''); // Remove '#' from selector if present
+    const pokemonType = barId.includes('player') ? 'player' : 'opponent';
+    const hpTextElement = document.getElementById(`${pokemonType}-hp`);
+    
+    if (hpTextElement) {
+        hpTextElement.textContent = `${Math.round(currentHp)}/${maxHp}`;
+        console.log(`Updated ${pokemonType} HP text to: ${Math.round(currentHp)}/${maxHp}`);
+    } else {
+        console.error(`Could not find HP text element for ${pokemonType}`);
+    }
+    
+    console.log(`Updated ${selector} to ${healthPercentage.toFixed(1)}% (${currentHp}/${maxHp})`);
+}
+
+function clearBattleLog() {
+    // Clear main battle log
+    const battleLog = document.getElementById('battle-log');
+    if (battleLog) {
+        const logList = battleLog.querySelector('ul');
+        if (logList) {
+            logList.innerHTML = '';
+        }
+    }
+    
+    // Clear right-side battle log
+    const rightBattleLog = document.getElementById('right-battle-log');
+    if (rightBattleLog) {
+        rightBattleLog.querySelector('div').innerHTML = '';
+    }
+}
+
+function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
+    // Add to the main battle log at the top
+    const battleLog = document.getElementById('battle-log');
+    if (battleLog) {
+        const logList = battleLog.querySelector('ul');
+        if (logList) {
+            const logItem = document.createElement('li');
+            logItem.textContent = message;
+            logList.appendChild(logItem);
+            battleLog.scrollTop = battleLog.scrollHeight;
+        }
+    }
+    
+    // Update the battle log text at the top
+    const battleLogText = document.getElementById('battle-log-text');
     if (battleLogText) {
         battleLogText.textContent = message;
+    }
+    
+    // Add to the right-side battle log panel
+    const rightBattleLog = document.getElementById('right-battle-log');
+    if (rightBattleLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        // Add appropriate class based on message type
+        if (isEffectiveness) {
+            logEntry.classList.add('effectiveness');
+        } else if (isPlayer === true) {
+            logEntry.classList.add('player-move');
+        } else if (isPlayer === false) {
+            logEntry.classList.add('opponent-move');
+        }
+        
+        logEntry.textContent = message;
+        rightBattleLog.querySelector('div').appendChild(logEntry);
+        rightBattleLog.scrollTop = rightBattleLog.scrollHeight;
     }
 }
 
@@ -371,9 +725,6 @@ async function makeMove(move) {
     isTurnInProgress = true;
     disableMoveButtons(true);
     
-    // Update PP display
-    updateMovePP(move, -1); // Will be updated with actual PP from server
-    
     try {
         const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
         const opponentPokemonName = document.getElementById('opponent-cry').getAttribute('data-pokemon');
@@ -414,31 +765,29 @@ async function makeMove(move) {
             });
         }
         
-        // Process turns in the correct order based on speed
-        if (turn_info.player_first) {
-            // Player moves first if they have HP left
-            if (data.player_hp > 0) {
-                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
-            }
+        // Process all battle events at once, with faint events handled last
+        if (turn_info.battle_events && turn_info.battle_events.length > 0) {
+            // Sort events by timestamp to ensure correct order
+            const sortedEvents = [...turn_info.battle_events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             
-            // Opponent moves second if they have HP left
-            if (data.opponent_hp > 0) {
-                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
-            }
-        } else {
-            // Opponent moves first if they have HP left
-            if (data.opponent_hp > 0) {
-                await processOpponentMove(playerPokemonName, opponentPokemonName, data, turn_info);
-                if (data.is_game_over) return;
-            }
+            // Process all events at once - faint events will be handled last
+            const battleOver = await processMoveEvent(sortedEvents, data);
             
-            // Player moves second if they have HP left
-            if (data.player_hp > 0) {
-                await processPlayerMove(playerPokemonName, opponentPokemonName, move, data, turn_info);
-                if (data.is_game_over) return;
+            // Update HP bars after processing all events
+            updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+            updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+            
+            // Check if battle is over after processing all events
+            if (battleOver) {
+                disableMoveButtons(true);
+                return;
             }
+        }
+        
+        // Final check for game over after all events
+        if (data.is_game_over) {
+            disableMoveButtons(true);
+            return;
         }
         
     } finally {
@@ -450,100 +799,115 @@ async function makeMove(move) {
     }
 }
 
-async function processPlayerMove(playerName, opponentName, move, data, turnInfo) {
-    // Log player's move
-    addLogMessage(`${capitalize(playerName)} used ${move}!`);
+async function processMoveEvent(events, data) {
+    // If a single event is passed, convert it to an array for consistency
+    const eventList = Array.isArray(events) ? events : [events];
     
-    // Execute player's attack animation
-    animateAttack(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Update opponent's HP
-    const opponentHp = Math.max(0, data.opponent_hp);
-    document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: ${opponentHp}`;
-    updateHealthBar('opponent-health-bar', opponentHp, data.opponent_max_hp);
-    
-    // Check if opponent is defeated
-    if (opponentHp <= 0) {
-        document.getElementById("opponent-hp-text").innerText = `Opponent ${capitalize(opponentName)} HP: 0`;
-        updateHealthBar('opponent-health-bar', 0, data.opponent_max_hp);
-        addLogMessage(`Opponent ${capitalize(opponentName)} fainted!`);
-        await animateFaint(false);
-        addLogMessage("You won the battle!");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (data.game_over_url) {
-            window.location.href = data.game_over_url;
+    // Process all non-faint events first
+    for (const event of eventList) {
+        if (event.type !== 'fainted') {
+            switch (event.type) {
+                case 'move':
+                    await handleMoveEvent(event, data);
+                    break;
+                case 'effectiveness':
+                    handleEffectivenessEvent(event, data);
+                    break;
+                default:
+                    console.warn('Unknown event type:', event.type);
+            }
+            // Add a small delay between events for better readability
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
-        return true; // Battle is over
     }
+    
+    // Then process faint events if any
+    for (const event of eventList) {
+        if (event.type === 'faint') {
+            const battleOver = await handleFaintEvent(event, data);
+            if (battleOver) return true; // End processing if battle is over
+        }
+    }
+    
     return false; // Battle continues
 }
 
-async function processOpponentMove(playerName, opponentName, data, turnInfo) {
-    // Log opponent's move
-    addLogMessage(`Opponent ${capitalize(opponentName)} used ${turnInfo.opponent_move}!`);
+async function handleMoveEvent(event, data) {
+    const isPlayer = event.is_player;
+    const attacker = event.attacker_name ? capitalize(event.attacker_name) : 
+                     (isPlayer ? data.player_name : `Opponent ${data.opponent_name}`);
     
-    // Execute opponent's attack animation
-    animateAttack(false);
+    // Log the move with the actual Pokémon name
+    addLogMessage(`${attacker} used ${event.move}!`, false, isPlayer);
+    
+    // Execute attack animation
+    await new Promise(resolve => setTimeout(resolve, 300));
+    animateAttack(isPlayer);
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Update player's HP
-    const playerHp = Math.max(0, data.player_hp);
-    document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: ${playerHp}`;
-    updateHealthBar('player-health-bar', playerHp, data.player_max_hp);
+    // Update HP based on the move's damage
+    if (isPlayer) {
+        // Player attacked opponent
+        data.opponent_hp = event.defender_hp;
+        updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+    } else {
+        // Opponent attacked player
+        data.player_hp = event.defender_hp;
+        updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+    }
     
-    // Check if player is defeated
-    if (playerHp <= 0) {
-        document.getElementById("player-hp-text").innerText = `${capitalize(playerName)} HP: 0`;
-        updateHealthBar('player-health-bar', 0, data.player_max_hp);
-        addLogMessage(`${capitalize(playerName)} fainted!`);
+    return false; // Continue processing events
+}
+
+function handleEffectivenessEvent(event, data) {
+    if (event.message) {
+        addLogMessage(event.message, true, event.is_player);
+    }
+}
+
+async function handleFaintEvent(event, data) {
+    const pokemonName = capitalize(event.pokemon_name);
+    const isPlayer = event.is_player;
+    
+    // Update HP bar to 0
+    if (isPlayer) {
+        data.player_hp = 0;
+        updateHealthBar('#player-health-bar', 0, data.player_max_hp);
+        // Player fainted - show player's Pokémon fainting
         await animateFaint(true);
-        addLogMessage("You lost the battle!");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (data.game_over_url) {
-            window.location.href = data.game_over_url;
-        }
-        return true; // Battle is over
+    } else {
+        data.opponent_hp = 0;
+        updateHealthBar('#opponent-health-bar', 0, data.opponent_max_hp);
+        // Opponent fainted - show opponent's Pokémon fainting
+        await animateFaint(false);
     }
-    return false; // Battle continues
+    
+    // Show faint message with correct Pokémon name
+    addLogMessage(`${pokemonName} fainted!`);
+    
+    // Add a small delay before showing the battle result
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Show the battle result message (win/loss)
+    if (isPlayer) {
+        addLogMessage("You were defeated!");
+    } else {
+        addLogMessage("You won the battle!");
+    }
+    
+    // Add a small delay before redirecting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check for game over URL
+    if (data.game_over_url) {
+        window.location.href = data.game_over_url;
+    }
+    
+    return true; // Battle is over
 }
 
-// Function to use a potion to heal the player's Pokémon
-function usePotion() {
-    // Prevent using potion if battle hasn't started or a turn is in progress
-    if (!battleStarted || isTurnInProgress) return;
-    
-    // Get current player HP
-    const playerHpText = document.getElementById("player-hp-text").innerText;
-    const currentHp = parseInt(playerHpText.match(/\d+/)[0]);
-    
-    // Get player max HP (this should be stored somewhere, for now we'll use 100)
-    const maxHp = 100; // This should be replaced with the actual max HP
-    
-    // Don't use potion if HP is already full
-    if (currentHp >= maxHp) {
-        addLogMessage("Your Pokémon's HP is already full!");
-        return;
-    }
-    
-    // Calculate new HP (heal by 20 points, but don't exceed max)
-    const healAmount = 20;
-    const newHp = Math.min(currentHp + healAmount, maxHp);
-    
-    // Update HP display
-    const playerPokemonName = document.getElementById('player-cry').getAttribute('data-pokemon');
-    document.getElementById("player-hp-text").innerText = `${capitalize(playerPokemonName)} HP: ${newHp}`;
-    updateHealthBar('player-health-bar', newHp, maxHp);
-    
-    // Add message to battle log
-    addLogMessage(`You used a Potion! ${capitalize(playerPokemonName)} recovered ${newHp - currentHp} HP.`);
-    
-    // Play healing sound (if available)
-    const healSound = document.getElementById('hit-sound');
-    if (healSound) {
-        healSound.play();
-    }
-}
+// Old functions removed as they're no longer needed
+// processPlayerMove and processOpponentMove have been replaced by processMoveEvent
 
 // Function to forfeit the battle
 function forfeitBattle() {
@@ -553,7 +917,7 @@ function forfeitBattle() {
     // Confirm forfeit
     if (confirm("Are you sure you want to forfeit the battle?")) {
         // Add message to battle log
-        addLogMessage("You forfeited the battle!");
+        addLogMessage("You forfeited the battle!", false, true);
         
         // Wait a moment before redirecting
         setTimeout(() => {

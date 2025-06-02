@@ -1,7 +1,139 @@
 body {
-    font-family: Arial, sans-serif;
-    background-color: lightblue;
+    font-family: 'Press Start 2P', cursive, sans-serif;
+    background-color: #1a1a1a;
     text-align: center;
+    line-height: 1.6;
+    color: #e0e0e0;
+}
+
+/* Pixel font classes */
+.pixel-font {
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    letter-spacing: 0;
+}
+
+.pixel-font-lg {
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: 0;
+}
+
+/* Health Bar Styles */
+.player-health-container, .opponent-health-container {
+    position: absolute;
+    width: 200px;
+    z-index: 10;
+    image-rendering: pixelated;
+}
+
+.player-health-container {
+    right: 3rem;
+    bottom: 5rem;
+}
+
+.opponent-health-container {
+    left: 3rem;
+    top: 3rem;
+}
+
+.health-box {
+    background: #000;
+    padding: 2px;
+    position: relative;
+    clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
+}
+
+.status-inner {
+    position: relative;
+    background: #2d3748; /* Darker background */
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+    padding: 3px 6px;
+    border: 1px solid #4a5568; /* Subtle border */
+}
+
+.pokemon-name-level {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1px;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 8px;
+    color: #e2e8f0;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+
+.pokemon-name {
+    text-transform: capitalize;
+    letter-spacing: 0;
+}
+
+.pokemon-level {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 8px;
+    font-family: 'Press Start 2P', cursive, monospace;
+    letter-spacing: 0;
+}
+
+.hp-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.hp-label {
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 8px;
+    color: #e2e8f0;
+    width: 12px;
+    letter-spacing: 0;
+}
+
+.hp-bar-container {
+    flex: 1;
+    height: 3px;
+    background: #4a5568; /* Darker background for the container */
+    position: relative;
+    border-radius: 1px;
+    border: 1px solid #4a5568; /* Match the background for a cleaner look */
+}
+
+.hp-bar-fill {
+    height: 100%;
+    background: #48bb78; /* Softer green */
+    transition: width 0.3s ease-out;
+    border-radius: 1px;
+    box-shadow: 0 0 4px rgba(72, 187, 120, 0.5); /* Subtle glow */
+}
+
+.hp-bar-fill.medium {
+    background: #ecc94b; /* Softer yellow */
+    box-shadow: 0 0 4px rgba(236, 201, 75, 0.5);
+}
+
+.hp-bar-fill.low {
+    background: #f56565; /* Softer red */
+    box-shadow: 0 0 4px rgba(245, 101, 101, 0.5);
+}
+
+.hp-numbers {
+    text-align: right;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 8px;
+    color: #000;
+    margin-top: 1px;
+    letter-spacing: 0;
+    line-height: 1.4;
+}
+
+/* Hidden element class */
+.hidden-element {
+    display: none !important;
 }
 
 .battle-screen {
@@ -21,8 +153,8 @@ body {
 }
 
 .player-pokemon {
-    --x-position: 50px;
-    --y-position: 270px;
+    --x-position: 60px;
+    --y-position: 290px;
     width: 300px;
     height: auto;
 }
@@ -75,6 +207,85 @@ body {
     margin-top: 20px;
 }
 
+/* Battle log styles */
+#battle-log {
+    background-color: #1a1a1a;
+    border: 4px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 15px;
+    height: 100px;
+    overflow-y: auto;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 10px;
+    color: #e0e0e0;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+    line-height: 1.6;
+}
+
+#battle-log ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#battle-log li {
+    padding: 4px 0;
+    border-bottom: 1px solid #333;
+    word-wrap: break-word;
+}
+
+#battle-log li:last-child {
+    border-bottom: none;
+}
+
+.battle-log-text {
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 12px;
+    border: 4px solid #2a2a2a;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    color: #fff;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 10px;
+    text-align: left;
+    min-height: 20px;
+    line-height: 1.6;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Right side battle log panel */
+#right-battle-log {
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+#right-battle-log .log-entry {
+    padding: 6px 8px;
+    margin: 4px 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-left: 4px solid transparent;
+    border-radius: 2px;
+    word-wrap: break-word;
+}
+
+#right-battle-log .player-move {
+    border-left-color: #60a5fa;
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+#right-battle-log .opponent-move {
+    border-left-color: #f87171;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+#right-battle-log .effectiveness {
+    color: #fde047;
+    font-style: italic;
+    background-color: rgba(253, 224, 71, 0.1);
+}
+
 /* Move button styling */
 .move-button {
     display: flex;
@@ -82,18 +293,20 @@ body {
     justify-content: space-between;
     padding: 8px 12px;
     margin: 0;
-    font-size: 14px;
-    font-weight: 500;
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 10px;
+    line-height: 1.4;
     background-color: rgba(255, 255, 255, 0.1);
     border: 2px solid transparent;
     color: #ecf0f1;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 4px;
     transition: all 0.2s ease;
     text-align: left;
     min-height: 60px;
     position: relative;
     overflow: hidden;
+    image-rendering: pixelated;
 }
 
 .move-button:hover {
@@ -111,16 +324,21 @@ body {
 }
 
 .move-name {
-    font-weight: 600;
+    font-weight: normal;
     margin: 0;
     flex-grow: 1;
+    font-size: 10px;
+    margin-bottom: 4px;
+    display: block;
 }
 
 .type-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     object-fit: contain;
-    margin-left: 8px;
+    margin-left: 6px;
+    image-rendering: pixelated;
+    vertical-align: middle;
 }
 
 .move-pp {
@@ -149,9 +367,11 @@ body {
 
 /* Set initial width from data attribute */
 .pp-text {
-    font-size: 11px;
+    font-size: 8px;
     text-align: right;
     color: #95a5a6;
+    letter-spacing: -0.5px;
+    margin-top: 2px;
 }
 
 /* Move grid layout */
@@ -367,11 +587,16 @@ body {
     }
 }
 
-.appear-animation {
-    animation: appearPokemon 0.8s ease-out forwards;
+/* Apply to Pokémon sprites */
+#player, #opponent {
+    opacity: 0; /* Start hidden */
+    transform-origin: center;
 }
 
-/* Battle Controls Panel */
+.appear-animation {
+    animation: appearPokemon 0.8s ease-out forwards !important;
+    display: block !important; /* Ensure it's displayed */
+}
 .battle-controls {
     max-width: 3xl;
     margin: 0 auto;
@@ -381,14 +606,6 @@ body {
     padding: 1rem;
     border-radius: 0.5rem;
     border: 4px solid #4b5563;
-}
-
-.battle-log-text {
-    font-size: 1.25rem;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 1rem;
-    color: #f3f4f6;
 }
 
 .move-grid {
@@ -454,4 +671,70 @@ body {
     background-image: url('../images/battle-background.jpeg');
     background-size: cover;
     background-position: center;
+    position: relative;
+    overflow: hidden;
 }
+
+/* Battle animations */
+@keyframes throwOpponent {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-150px, 50px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes throwPlayer {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(150px, -50px) rotate(-720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes flash {
+    0% { background-color: white; opacity: 0.8; }
+    100% { background-color: transparent; opacity: 0; }
+}
+
+#flash-element {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    display: none;
+}
+
+/* Faint Animation */
+@keyframes faintPokemon {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        filter: brightness(1) grayscale(0);
+    }
+    50% {
+        filter: brightness(1.5) grayscale(0.5);
+    }
+    100% {
+        transform: scale(0.5) translateY(100px);
+        opacity: 0;
+        filter: brightness(2) grayscale(1);
+    }
+}
+
+.faint-animation {
+    animation: faintPokemon 1.5s ease-in-out forwards !important;
+}
+
+/* Remove duplicate keyframes */

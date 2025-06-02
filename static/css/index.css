@@ -1,3 +1,10 @@
+/* Pixelated UI Elements */
+* {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
 /* Custom scrollbar for suggestions */
 #suggestions::-webkit-scrollbar {
     width: 8px;
@@ -5,12 +12,12 @@
 
 #suggestions::-webkit-scrollbar-track {
     background: #374151;
-    border-radius: 0 0 0.5rem 0.5rem;
 }
 
 #suggestions::-webkit-scrollbar-thumb {
     background: #4B5563;
-    border-radius: 4px;
+    border: 2px solid #2D3748;
+    box-shadow: 2px 0 0 0 #000, -2px 0 0 0 #000;
 }
 
 #suggestions::-webkit-scrollbar-thumb:hover {
@@ -19,7 +26,195 @@
 
 /* Type badges */
 .type-badge {
-    @apply inline-block px-2 py-1 rounded-full text-xs font-semibold text-white mr-1 mb-1;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    font-weight: normal;
+    color: white;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    border: 4px solid transparent;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23ffffff'/%3E%3C/svg%3E") 2 / 4px;
+    border-image-outset: 2px;
+    margin: 0 2px 4px 0;
+    position: relative;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    transform: translate(-1px, -1px);
+    transition: all 0.1s ease;
+}
+
+.type-badge:hover {
+    transform: translate(0, 0);
+    box-shadow: none;
+}
+
+/* Type colors */
+.type-normal { background-color: #A8A878; }
+.type-fire { background-color: #F08030; }
+.type-water { background-color: #6890F0; }
+.type-electric { background-color: #F8D030; color: #000; }
+.type-grass { background-color: #78C850; }
+.type-ice { background-color: #98D8D8; color: #000; }
+.type-fighting { background-color: #C03028; }
+.type-poison { background-color: #A040A0; }
+.type-ground { background-color: #E0C068; color: #000; }
+.type-flying { background-color: #A890F0; }
+.type-psychic { background-color: #F85888; }
+.type-bug { background-color: #A8B820; }
+.type-rock { background-color: #B8A038; }
+.type-ghost { background-color: #705898; }
+.type-dragon { background-color: #7038F8; }
+.type-dark { background-color: #705848; }
+.type-steel { background-color: #B8B8D0; color: #000; }
+.type-fairy { background-color: #EE99AC; color: #000; }
+
+/* Pixel borders */
+.pixel-border {
+    border-style: solid;
+    border-width: 4px;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23D4AF37'/%3E%3C/svg%3E") 4 / 2px 2px;
+    border-image-outset: 2px;
+    border-image-repeat: round;
+    image-rendering: pixelated;
+    position: relative;
+    background-color: #2D3748;
+}
+
+.pixel-border::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 4px solid transparent;
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0h2v2H0zM4 0h2v2H4zM2 2h2v2H2zM6 2h2v2H6zM0 4h2v2H0zM4 4h2v2H4zM2 6h2v2H2zM6 6h2v2H6z' fill='%23FFD700'/%3E%3C/svg%3E") 4 / 2px 2px;
+    z-index: -1;
+}
+
+/* Pokemon card */
+.pokemon-card {
+    position: relative;
+    overflow: visible;
+    max-width: 100%;
+    margin: 0 auto;
+    background-color: #2D3748;
+    box-shadow: 4px 4px 0 #1A202C, 8px 8px 0 #4A5568;
+    transform: translate(-4px, -4px);
+    transition: all 0.1s ease;
+}
+
+.pokemon-card:hover {
+    transform: translate(0, 0);
+    box-shadow: none;
+}
+
+.pokemon-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(90deg, #FFD700, #FFD700 4px, #D4AF37 4px, #D4AF37 8px);
+    z-index: 1;
+}
+
+/* Stat bars */
+.stat-bar {
+    height: 6px;
+    background-color: #333;
+    border-radius: 3px;
+    margin-top: 2px;
+    overflow: hidden;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    transition: width 0.5s ease-in-out;
+}
+
+/* Fonts */
+body {
+    font-family: 'Press Start 2P', cursive;
+    line-height: 1.6;
+    color: #e0e0e0;
+    background-color: #1a1a2e;
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2326264d' fill-opacity='0.2' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Press Start 2P', cursive;
+    letter-spacing: 0;
+    text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    margin-bottom: 1rem;
+}
+
+/* Input and Buttons */
+input[type="text"], button, .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    border: 4px solid #4a4a4a;
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    outline: none;
+    transition: all 0.1s ease;
+    box-shadow: 3px 3px 0 #000;
+    transform: translate(-1px, -1px);
+    position: relative;
+    cursor: pointer;
+}
+
+input[type="text"]:focus, button:focus, .btn:focus {
+    outline: none;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+button, .btn {
+    background-color: #4a90e2;
+    color: white;
+    text-shadow: 1px 1px 0 #000;
+    border-color: #2d5a9e;
+    padding: 0.5rem 1.5rem;
+}
+
+button:hover:not(:disabled), .btn:hover:not(:disabled) {
+    background-color: #5a9ef0;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+button:active:not(:disabled), .btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+
+button:disabled, .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    box-shadow: 1px 1px 0 #000;
+}
+
+/* Form elements */
+form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .pokemon-card {
+        padding: 1rem;
+    }
+    
+    .stat-bar {
+        height: 4px;
+    }
 }
 
 /* Animation for selected Pokémon */
@@ -29,11 +224,96 @@
 }
 
 #selected-pokemon {
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Pokedex entry text */
+#pokedex-entry {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #e0e0e0;
+}
+
+/* Stats container */
+.stat-item {
+    margin-bottom: 0.75rem;
+    min-width: 180px;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    min-width: 100px;
+}
+
+.stat-value {
+    font-size: 1rem;
+    color: #ffffff;
+    font-weight: bold;
+    display: inline-block;
+    text-align: right;
+    min-width: 40px;
+}
+
+/* Stats grid */
+#stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
 /* Make sure the suggestions dropdown appears above other elements */
 .relative {
     position: relative;
     z-index: 10;
+}
+
+/* Moves section */
+#moves-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(100px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    min-width: 220px;
+}
+
+#moves-container div {
+    background-color: rgba(45, 55, 72, 0.9);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    border: 2px solid rgba(255, 223, 0, 0.2);
+    transition: all 0.2s ease;
+    color: #f0f0f0;
+    word-break: break-word;
+    line-height: 1.2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#moves-container div:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background-color: rgba(66, 153, 225, 0.8);
+    border-color: rgba(255, 223, 0, 0.4);
+    z-index: 10;
+}
+
+/* Responsive adjustments for moves */
+@media (max-width: 768px) {
+    #moves-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.4rem;
+    }
+    
+    #moves-container div {
+        padding: 0.4rem 0.25rem;
+        font-size: 0.65rem;
+    }
 }

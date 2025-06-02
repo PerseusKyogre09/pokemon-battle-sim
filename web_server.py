@@ -65,12 +65,17 @@ def get_pokemon_moves(pokemon_data):
             # Clean up move name to match our dataset format
             clean_move_name = move_name.lower().replace(' ', '-')
             
-            # Try to get move data from our dataset
-            move_power = data_loader.get_move_power(clean_move_name)
-            move_type = data_loader.get_move_type(clean_move_name)
+            # First try to get move data from our dataset with debug logging
+            print(f"\n=== Getting move data for {clean_move_name} ===")
+            move_data = data_loader.get_move(clean_move_name)
             
-            # If not found in dataset, fetch from PokeAPI
-            if not move_power or not move_type:
+            if move_data:
+                move_power = move_data.get('basePower', 75)
+                move_type = move_data.get('type', 'normal')
+                print(f"Found in dataset: power={move_power}, type={move_type}")
+            else:
+                # If not found in dataset, fetch from PokeAPI
+                print(f"Move {clean_move_name} not found in dataset, trying PokeAPI...")
                 try:
                     move_url = f'https://pokeapi.co/api/v2/move/{clean_move_name}'
                     move_response = requests.get(move_url)
@@ -78,10 +83,16 @@ def get_pokemon_moves(pokemon_data):
                         move_data = move_response.json()
                         move_power = move_data.get('power', 75)  # Default to 75 for strategic moves
                         move_type = move_data.get('type', {}).get('name', 'normal')
-                except:
+                        print(f"Found in PokeAPI: power={move_power}, type={move_type}")
+                    else:
+                        print(f"PokeAPI returned status {move_response.status_code}")
+                        raise Exception("PokeAPI call failed")
+                except Exception as e:
                     # If API call fails, use reasonable defaults
+                    print(f"Error getting move data: {e}")
                     move_power = 75
                     move_type = 'normal'
+                    print(f"Using defaults: power={move_power}, type={move_type}")
             
             # Initialize move_pp with default value first
             move_pp = 15  # Default PP if not found
@@ -179,6 +190,40 @@ def get_pokemon_moves(pokemon_data):
     
     return selected_moves
 
+@app.route('/get_moveset/<pokemon_name>')
+def get_moveset(pokemon_name):
+    try:
+        # Get strategic moveset for the Pokémon
+        moveset = get_strategic_moveset(pokemon_name, debug=False)
+        
+        if moveset and len(moveset) > 0:
+            return jsonify({
+                'success': True,
+                'moves': moveset[:4]  # Return up to 4 moves
+            })
+        else:
+            # If no strategic moveset found, try to get moves from PokeAPI
+            pokemon_data = get_pokemon_data(pokemon_name)
+            if 'moves' in pokemon_data and len(pokemon_data['moves']) > 0:
+                # Get the first 4 moves
+                moves = [move['move']['name'].replace('-', ' ') for move in pokemon_data['moves'][:4]]
+                return jsonify({
+                    'success': True,
+                    'moves': moves
+                })
+            
+            # Default moves if none found
+            return jsonify({
+                'success': True,
+                'moves': ['tackle', 'growl', 'scratch', 'leer']
+            })
+    except Exception as e:
+        print(f"Error getting moveset for {pokemon_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Start webpage with Pokémon selection
 @app.route('/', methods=['GET'])
 def index():
@@ -238,8 +283,14 @@ def start_game():
         
         # Prepare data for the battle template
         battle_data = {
-            'player_data': game.player_pokemon.to_dict(),
-            'opponent_data': game.opponent_pokemon.to_dict(),
+            'player_data': {
+                **game.player_pokemon.to_dict(),
+                'id': player_data.get('id', 25)  # Default to Pikachu's ID if not found
+            },
+            'opponent_data': {
+                **game.opponent_pokemon.to_dict(),
+                'id': opponent_data.get('id', 6)  # Default to Charizard's ID if not found
+            },
             'player_sprite': game.player_pokemon.sprite_url,
             'opponent_sprite': game.opponent_pokemon.sprite_url,
             'player_hp': game.player_pokemon.current_hp,
@@ -248,8 +299,8 @@ def start_game():
                 'name': name, 
                 'power': move.power, 
                 'type': move.type,
-                'pp': getattr(move, 'pp', 15),  # Current PP
-                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))  # Max PP, fallback to current PP if not set
+                'pp': getattr(move, 'pp', 15),
+                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))
             } for name, move in game.player_pokemon.moves.items()]
         }
         
@@ -269,22 +320,15 @@ def move():
 
     move_name = request.json.get('move')
     
-    # Store the opponent's move name before processing the turn
-    opponent_move_name = next(iter(game.opponent_pokemon.moves.keys()))
-    
-    # Store initial HP values to calculate damage
-    initial_player_hp = game.player_pokemon.current_hp
-    initial_opponent_hp = game.opponent_pokemon.current_hp
-    
-    # Get the player's move and its current PP
+    # Get the player's move and its current PP before processing the turn
     player_move = game.player_pokemon.moves.get(move_name)
     current_pp = getattr(player_move, 'pp', 15) if player_move else 0
     
-    # Determine turn order
-    player_first = game.player_pokemon.speed >= game.opponent_pokemon.speed
+    # Process the turn and get turn information including effectiveness messages
+    turn_info = game.process_turn(move_name)
     
-    # Process the turn with the player's move
-    game.process_turn(move_name)
+    # Get the opponent's move name
+    opponent_move_name = turn_info.get('opponent_move', '')
     
     # Update PP for the used move
     updated_pp = None
@@ -293,19 +337,11 @@ def move():
     elif player_move:
         updated_pp = current_pp - 1 if current_pp > 0 else 0
     
-    # Calculate damage dealt
-    player_damage = initial_opponent_hp - game.opponent_pokemon.current_hp
-    opponent_damage = initial_player_hp - game.player_pokemon.current_hp
+    # Get current HP values after the turn
+    player_hp = game.player_pokemon.current_hp
+    opponent_hp = game.opponent_pokemon.current_hp
     
-    # Prepare turn information
-    turn_info = {
-        'player_first': player_first,
-        'player_move': move_name,
-        'opponent_move': opponent_move_name,
-        'player_damage': player_damage,
-        'opponent_damage': opponent_damage
-    }
-
+    # Check if the battle is over
     is_game_over = game.battle_over
     result = game.get_battle_result() if is_game_over else None
 
@@ -325,16 +361,23 @@ def move():
             'max_pp': max_pp
         }
     
+    # Prepare response data
     response_data = {
-        "player_hp": game.player_pokemon.current_hp,
-        "opponent_hp": game.opponent_pokemon.current_hp,
+        "player_hp": player_hp,
+        "opponent_hp": opponent_hp,
         "player_max_hp": game.player_pokemon.max_hp,
         "opponent_max_hp": game.opponent_pokemon.max_hp,
         "player_moves_pp": player_moves_pp,
-        "turn_info": turn_info,
+        "turn_info": {
+            "player_first": turn_info.get('player_first', True),
+            "player_move": turn_info.get('player_move', ''),
+            "opponent_move": opponent_move_name,
+            "player_damage": turn_info.get('player_damage', 0),
+            "opponent_damage": turn_info.get('opponent_damage', 0),
+            "battle_events": turn_info.get('battle_events', [])  # New structured battle events
+        },
         "is_game_over": is_game_over,
         "battle_result": result,
-        "opponent_move": opponent_move_name,
         "game_over_url": url_for('game_over_with_underscore', result_message=result) if is_game_over else None
     }
     

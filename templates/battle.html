@@ -5,60 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Battle</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/battle.css') }}">
+    <style>
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive, monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        .pixel-font-lg {
+            font-family: 'Press Start 2P', cursive, monospace;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Battle screen -->
-        <div id="battle-screen" class="relative h-96 w-full max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl">
+    <div class="container mx-auto px-4 py-8 flex gap-6">
+        <!-- Left side (main battle area) -->
+        <div class="flex-1">
+            <!-- Battle screen -->
+            <div id="battle-screen" class="relative h-96 w-full mx-auto mb-8 rounded-lg overflow-hidden border-4 border-gray-700 shadow-2xl">
             
             <!-- Flash element for pokeball opening -->
             <div id="flash-element" class="hidden"></div>
             
             <!-- Pokeballs -->
             <div class="absolute left-12 bottom-16">
-                <img id="player-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Player Pokeball" class="w-16 h-16 hidden-element">
+                <img id="player-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Player Pokeball" class="w-16 h-16">
             </div>
             
             <div class="absolute right-20 top-16">
-                <img id="opponent-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Opponent Pokeball" class="w-16 h-16 hidden-element">
+                <img id="opponent-pokeball" src="{{ url_for('static', filename='images/pokeball.png') }}" alt="Opponent Pokeball" class="w-16 h-16">
             </div>
             
             <!-- Player pokemon - visible by default -->
-            <div class="absolute left-12 bottom-16">
+            <div class="absolute left-28 bottom-1">
                 <img id="player" src="{{ player_sprite }}" alt="Player Pokémon" class="w-64 h-auto">
             </div>
             
             <!-- Opponent pokemon - visible by default -->
-            <div class="absolute right-20 top-16">
+            <div class="absolute right-20 top-6">
                 <img id="opponent" src="{{ opponent_sprite }}" alt="Opponent Pokémon" class="w-40 h-auto">
             </div>
             
             <!-- Player health bar - visible by default -->
-            <div class="absolute right-12 bottom-20 w-48" id="player-health-container">
-                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
-                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
-                        <div id="player-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+            <div class="player-health-container">
+                <div class="health-box">
+                    <div class="status-inner">
+                        <div class="pokemon-name-level">
+                            <span id="player-pokemon-name" class="pokemon-name">{{ player_data.name }}</span>
+                            <div class="pokemon-level">
+                                <span>Lv.100</span>
+                            </div>
+                        </div>
+                        <div class="hp-row">
+                            <span class="hp-label">HP</span>
+                            <div class="hp-bar-container">
+                                <div id="player-health-bar" class="hp-bar-fill" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="hp-numbers">
+                            <span id="player-hp">
+                                {% if player_hp is string %}
+                                    {{ player_hp }}
+                                {% else %}
+                                    {{ player_hp }}/{{ player_data.max_hp }}
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
-                    <p id="player-hp-text" class="text-sm font-bold text-gray-200">{{ player_data.name|capitalize }} HP: {{ player_hp }}</p>
                 </div>
             </div>
             
             <!-- Opponent health bar - visible by default -->
-            <div class="absolute left-12 top-12 w-48" id="opponent-health-container">
-                <div class="bg-gray-800 rounded-lg p-2 border border-gray-600 shadow-lg">
-                    <div class="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-1">
-                        <div id="opponent-health-bar" class="absolute h-full bg-green-500 transition-all duration-300 ease-out" style="width: 100%"></div>
+            <div class="opponent-health-container">
+                <div class="health-box">
+                    <div class="status-inner">
+                        <div class="pokemon-name-level">
+                            <span id="opponent-pokemon-name" class="pokemon-name">{{ opponent_data.name }}</span>
+                            <div class="pokemon-level">
+                                <span>Lv.100</span>
+                            </div>
+                        </div>
+                        <div class="hp-row">
+                            <span class="hp-label">HP</span>
+                            <div class="hp-bar-container">
+                                <div id="opponent-health-bar" class="hp-bar-fill" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="hp-numbers">
+                            <span id="opponent-hp">{{ opponent_hp }}/{{ opponent_data.max_hp }}</span>
+                        </div>
                     </div>
-                    <p id="opponent-hp-text" class="text-sm font-bold text-gray-200">Opponent {{ opponent_data.name|capitalize }} HP: {{ opponent_hp }}</p>
                 </div>
             </div>
         </div>
         
         <!-- Battle Controls Panel - New design based on the image -->
-        <div class="battle-controls max-w-3xl mx-auto mb-6">
+        <div class="battle-controls w-full mx-auto mb-6">
             <!-- Battle log header -->
-            <h3 id="battle-log-text" class="battle-log-text">Battle started! Choose your move.</h3>
+            <h3 id="battle-log-text" class="battle-log-text pixel-font text-sm">Battle started! Choose your move.</h3>
             
             <!-- Move buttons in a grid layout -->
             <div class="move-grid">
@@ -113,6 +162,17 @@
                 <ul class="space-y-1"></ul>
             </div>
         </div>
+        </div>
+        
+        <!-- Right side (battle log panel) -->
+        <div class="w-80 flex-shrink-0 bg-gray-800 border-4 border-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="bg-gray-900 px-4 py-3 border-b-4 border-gray-700">
+                <h3 class="text-sm font-bold text-yellow-400 pixel-font">BATTLE LOG</h3>
+            </div>
+            <div id="right-battle-log" class="flex-1 overflow-y-auto p-3 text-xs text-gray-200 pixel-font">
+                <div class="space-y-2"></div>
+            </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/battle.js') }}"></script>
@@ -124,9 +184,21 @@
     <audio id="pokeball-sound" src="{{ url_for('music', filename='pokeball-throw.mp3') }}" preload="auto"></audio>
     
     <!-- Pokémon cry audio elements -->
-    <audio id="player-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
-    <audio id="opponent-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
-    <audio id="player-faint-cry" data-pokemon="{{ player_data.name }}" preload="auto"></audio>
-    <audio id="opponent-faint-cry" data-pokemon="{{ opponent_data.name }}" preload="auto"></audio>
+    <audio id="player-cry" 
+           data-pokemon="{{ player_data.name }}" 
+           data-pokemon-id="{{ player_data.id }}" 
+           preload="none"></audio>
+    <audio id="opponent-cry" 
+           data-pokemon="{{ opponent_data.name }}" 
+           data-pokemon-id="{{ opponent_data.id }}" 
+           preload="none"></audio>
+    <audio id="player-faint-cry" 
+           data-pokemon="{{ player_data.name }}" 
+           data-pokemon-id="{{ player_data.id }}" 
+           preload="none"></audio>
+    <audio id="opponent-faint-cry" 
+           data-pokemon="{{ opponent_data.name }}" 
+           data-pokemon-id="{{ opponent_data.id }}" 
+           preload="none"></audio>
 </body>
 </html>
