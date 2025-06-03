@@ -3,8 +3,6 @@ services:
     name: pokemon-battle-sim
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn web_server:app"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.0
     plan: free
+    python:
+      version: 3.9.0
