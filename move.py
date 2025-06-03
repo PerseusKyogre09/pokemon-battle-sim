@@ -43,26 +43,67 @@ class Move:
             
         return True  # Default to True if accuracy is somehow invalid
 
-    def _apply_status_effect(self, target, status_effect: Dict[str, Any]) -> str:
+    def _apply_status_effect(self, target, status_effect: Union[Dict[str, Any], str]) -> str:
         """
         Apply status effect to the target Pokémon.
         
         Args:
             target: The Pokémon to apply the status effect to
-            status_effect: Dictionary containing status effect information
+            status_effect: Either a dictionary containing status effect information or a status string
             
         Returns:
             str: Message describing the status effect application
         """
         if not hasattr(target, 'apply_status_effect'):
             return ""
+        
+        # Handle case where status_effect is a string
+        if isinstance(status_effect, str):
+            status_effect = {'type': status_effect, 'chance': 100}
+        elif not isinstance(status_effect, dict):
+            return ""
             
         # Check if the status effect applies based on chance
         if random.randint(1, 100) > status_effect.get('chance', 100):
             return ""
             
-        status_type = status_effect['type'].lower()
-        return target.apply_status_effect(status_type)
+        status_type = status_effect.get('type', '').lower()
+        if not status_type:
+            return ""
+        
+        # Map move status effects to standard status conditions
+        status_mapping = {
+            'par': 'paralysis',
+            'paralyze': 'paralysis',
+            'paralyzed': 'paralysis',
+            'brn': 'burn',
+            'burn': 'burn',
+            'frz': 'freeze',
+            'freeze': 'freeze',
+            'frozen': 'freeze',
+            'psn': 'poison',
+            'poison': 'poison',
+            'tox': 'toxic',
+            'toxic': 'toxic',
+            'slp': 'sleep',
+            'sleep': 'sleep',
+            'asleep': 'sleep'
+        }
+        
+        # Get the standard status condition name
+        status_condition = status_mapping.get(status_type, status_type)
+        
+        # Special handling for certain status conditions
+        if status_condition == 'toxic':
+            # Toxic poison deals increasing damage each turn
+            if hasattr(target, 'set_status'):
+                target.set_status('toxic')
+                return f"{target.name} was badly poisoned!"
+        
+        # Default status application
+        if hasattr(target, 'apply_status_effect'):
+            return target.apply_status_effect(status_condition)
+        return ""
 
     def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, str, Optional[str]]:
         """
@@ -75,19 +116,30 @@ class Move:
         Returns:
             tuple: (damage: int, effectiveness_message: str, status_message: Optional[str])
         """
+        # Debug log for move usage
+        debug_msg = f"{attacking_pokemon.name}'s {self.name} (power: {self.power}, category: {self.category}, type: {self.type})"
+        if defending_pokemon:
+            debug_msg += f" vs {defending_pokemon.name} ({', '.join(defending_pokemon.types) if hasattr(defending_pokemon, 'types') else 'unknown'})"
+        print(f"DEBUG: {debug_msg}")
+        
         # Check if the move hits
         if not self._check_accuracy():
             return 0, f"{attacking_pokemon.name}'s {self.name} missed!", None
         
-        # Handle status moves separately - they deal no damage
-        if self.is_status_move:
+        # Handle status moves and 0-power moves - they deal no damage
+        if self.is_status_move or self.power == 0:
             status_message = ""
             if self.status_effect and defending_pokemon:
                 status_message = self._apply_status_effect(defending_pokemon, self.status_effect)
             return 0, f"{attacking_pokemon.name} used {self.name}!", status_message
         
+        # If we get here, it's a damaging move
         base_damage = self.power
         effectiveness_message = ""
+        
+        # If it's a status move, it shouldn't have any damage calculation
+        if self.is_status_move or self.power == 0:
+            return 0, f"{attacking_pokemon.name} used {self.name}!", ""
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:

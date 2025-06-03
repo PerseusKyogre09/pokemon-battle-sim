@@ -83,6 +83,12 @@ class Game:
         if opponent_move and opponent_move.pp <= 0:
             # If opponent has no PP, they struggle
             opponent_move = None
+            turn_info['battle_events'].append({
+                'type': 'status',
+                'message': f"{self.opponent_pokemon.name} has no PP left for {opponent_move_name}!",
+                'target': 'opponent',
+                'timestamp': len(turn_info['battle_events'])
+            })
         
         # Determine who goes first based on speed (with random tie-breaker)
         if self.player_pokemon.speed > self.opponent_pokemon.speed:
@@ -116,10 +122,11 @@ class Game:
             
             # Handle status message if present
             if status_message:
-                turn_info['events'].append({
+                turn_info['battle_events'].append({
                     'type': 'status',
                     'message': status_message,
-                    'target': 'opponent' if is_player_attacking else 'player'
+                    'target': 'opponent' if is_player_attacking else 'player',
+                    'timestamp': len(turn_info['battle_events'])
                 })
             
             # Create move event

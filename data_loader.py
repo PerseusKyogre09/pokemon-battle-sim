@@ -260,27 +260,40 @@ class DataLoader:
     
     def get_move_type(self, move_name: str) -> str:
         """Get the type of a move."""
-        print(f"\n=== GET MOVE TYPE ===")
-        print(f"Getting type for move: {move_name}")
         move_data = self.get_move_data(move_name)
-        move_type = move_data.get('type', 'normal') if move_data else 'normal'
-        print(f"Move type for {move_name}: {move_type}")
-        return move_type
-
+        return move_data.get('type', 'normal').lower() if move_data else 'normal'
+        
     def get_move_data(self, move_name: str) -> Optional[Dict[str, Any]]:
-        """Get move data by name."""
-        print(f"\n=== GET MOVE DATA ===")
-        print(f"Looking up move: {move_name}")
-        move_data = self.get_move(move_name)
-        if not move_data:
-            print(f"Move not found: {move_name}")
-            # Try to find the move by name in the values
-            for key, data in self.moves_data.items():
-                if data.get('name', '').lower() == move_name.lower():
-                    print(f"Found move by name match: {key}")
-                    move_data = data
-                    break
-        return move_data
+        """
+        Get move data by name.
+        
+        Args:
+            move_name: Name of the move to look up
+            
+        Returns:
+            dict: Move data or None if not found
+        """
+        if not move_name:
+            return None
+            
+        # Try to find the move by exact key first
+        move_key = move_name.lower().replace(' ', '').replace('-', '')
+        
+        # Check if the move exists in our data
+        if move_key in self.moves_data:
+            return self.moves_data[move_key]
+            
+        # If not found, try to find by name in the values
+        for key, data in self.moves_data.items():
+            if data.get('name', '').lower() == move_name.lower():
+                return data
+                
+        # If still not found, try a partial match
+        for key, data in self.moves_data.items():
+            if move_name.lower() in key.lower() or move_name.lower() in data.get('name', '').lower():
+                return data
+                
+        return None
 
 # Global instance
 data_loader = DataLoader()
