@@ -103,7 +103,7 @@ class Game:
             if not move:
                 return False
                 
-            damage, effectiveness_msg = move.use_move(attacker, defender)
+            damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
             prev_hp = defender.current_hp
             defender.take_damage(damage)
             actual_damage = prev_hp - defender.current_hp
@@ -113,6 +113,14 @@ class Game:
                 turn_info['player_damage'] = actual_damage
             else:
                 turn_info['opponent_damage'] = actual_damage
+            
+            # Handle status message if present
+            if status_message:
+                turn_info['events'].append({
+                    'type': 'status',
+                    'message': status_message,
+                    'target': 'opponent' if is_player_attacking else 'player'
+                })
             
             # Create move event
             move_event = {

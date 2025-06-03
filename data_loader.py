@@ -14,62 +14,33 @@ class DataLoader:
         self._load_learnsets()
         self._load_typechart()
     
-    def _parse_ts_object(self, content: str, object_name: str) -> Dict[str, Any]:
-        # Find the object
-        match = re.search(pattern, content, re.DOTALL | re.MULTILINE)
-        
-        if not match:
-            return {}
-        
-        object_content = match.group(1)
-        # Convert TypeScript object to JSON-like format
-        try:
-            # Replace TypeScript-specific syntax
-            object_content = re.sub(r'(\w+):', r'"\1":', object_content)  # Quote keys
-            object_content = re.sub(r':\s*([^",{\[\]}\s]+)(?=\s*[,}])', r': "\1"', object_content)  # Quote string values
-            object_content = re.sub(r':\s*true\b', ': True', object_content)  # Convert boolean
-            object_content = re.sub(r':\s*false\b', ': False', object_content)  # Convert boolean
-            object_content = re.sub(r':\s*null\b', ': None', object_content)  # Convert null
+    def _extract_status_effect(self, move_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract status effect information from move data."""
+        # Check for direct status effect
+        if 'status' in move_data and move_data['status']:
+            return {
+                'type': move_data['status'],
+                'chance': 100  # If status is directly in move_data, it's 100% chance
+            }
             
-            # Wrap in braces and parse
-            json_content = '{' + object_content + '}'
-            return eval(json_content)
-        except:
-            # Fallback to manual parsing
-            return self._manual_parse_object(object_content)
-    
-    def _manual_parse_object(self, content: str) -> Dict[str, Any]:
-        """Manual parsing for complex TypeScript objects."""
-        result = {}
+        # Check for secondary effect
+        if 'secondary' in move_data and move_data['secondary'] and 'status' in move_data['secondary']:
+            return {
+                'type': move_data['secondary']['status'],
+                'chance': move_data['secondary'].get('chance', 100)
+            }
+            
+        # Check for secondary effects in secondary array (some moves have multiple effects)
+        if 'secondaries' in move_data and move_data['secondaries']:
+            for effect in move_data['secondaries']:
+                if 'status' in effect:
+                    return {
+                        'type': effect['status'],
+                        'chance': effect.get('chance', 100)
+                    }
         
-        # Split by top-level entries
-        entries = re.findall(r'(\w+):\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)},?', content)
-        
-        for key, value in entries:
-            try:
-                # Parse the inner object
-                inner_obj = {}
-                # Find key-value pairs
-                pairs = re.findall(r'(\w+):\s*([^,}]+)', value)
-                for pair_key, pair_value in pairs:
-                    pair_value = pair_value.strip()
-                    if pair_value.isdigit():
-                        inner_obj[pair_key] = int(pair_value)
-                    elif pair_value == 'true':
-                        inner_obj[pair_key] = True
-                    elif pair_value == 'false':
-                        inner_obj[pair_key] = False
-                    elif pair_value == 'null':
-                        inner_obj[pair_key] = None
-                    else:
-                        inner_obj[pair_key] = pair_value.strip('"\'')
-                
-                result[key] = inner_obj
-            except:
-                continue
-        
-        return result
-    
+        return None
+
     def _load_moves(self):
         """Load moves data from moves.json file."""
         try:
@@ -82,16 +53,21 @@ class DataLoader:
                 move_name = move_data.get('name', '').lower()
                 if not move_name:
                     continue
-                    
-                # Create a simplified move entry with just the data we need
+                
+                # Extract status effect information
+                status_effect = self._extract_status_effect(move_data)
+                
+                # Create a move entry with all necessary data
                 move_entry = {
                     'name': move_name,
                     'type': move_data.get('type', 'normal').lower(),
                     'basePower': int(move_data.get('basePower', 0)),
                     'pp': int(move_data.get('pp', 10)),
-                    'accuracy': int(move_data.get('accuracy', 100)),
-                    'category': move_data.get('category', 'physical').lower(),
-                    'num': int(move_data.get('num', 0))
+                    'accuracy': move_data.get('accuracy', 100),  # Can be True for certain moves
+                    'category': move_data.get('category', 'status' if move_data.get('basePower', 0) == 0 else 'physical').lower(),
+                    'num': int(move_data.get('num', 0)),
+                    'status_effect': status_effect,
+                    'is_status_move': move_data.get('category', '').lower() == 'status' or move_data.get('basePower', 0) == 0
                 }
                 
                 # Store by both the move key and the move name for easier lookup
@@ -158,6 +134,10 @@ class DataLoader:
             print(f"Lookup key: {move_key}")
             print(f"Found move: {move_data.get('name', 'Unknown')}")
             print(f"Move type: {move_data.get('type', 'Unknown')}")
+            print(f"Category: {move_data.get('category', 'physical').capitalize()}")
+            print(f"Accuracy: {move_data.get('accuracy', 100)}")
+            if move_data.get('status_effect'):
+                print(f"Status Effect: {move_data['status_effect']['type']} ({move_data['status_effect']['chance']}% chance)")
             print(f"Full move data: {move_data}")
             
             # Log all available keys that contain the move name for debugging

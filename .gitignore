@@ -87,9 +87,10 @@ music/
 *.pkl
 *.pickle
 
-# JSON files (except gen8_stats_sets.json)
-*.json
-!gen8_stats_sets.json
+# Track JSON files in datasets directory
+!datasets/learnsets.json
+!datasets/moves.json
+!datasets/typechart.json
 
 # Temporary files
 *.tmp
