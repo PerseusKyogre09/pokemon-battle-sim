@@ -71,139 +71,75 @@ class DataLoader:
         return result
     
     def _load_moves(self):
-        """Load moves data from moves.ts file."""
+        """Load moves data from moves.json file."""
         try:
-            with open('datasets/moves.ts', 'r', encoding='utf-8') as f:
-                content = f.read()
+            with open('datasets/moves.json', 'r', encoding='utf-8') as f:
+                moves_data = json.load(f)
             
-            print("\n=== STARTING MOVE DATA LOADING ===")
-            print(f"Total moves.ts file size: {len(content)} characters")
+            print(f"\n=== LOADED {len(moves_data)} MOVES FROM moves.json ===")
             
-            # Find all move entries using a more precise pattern
-            pattern = r'(\w+):\s*{\s*num:\s*(\d+).*?name:\s*"(.*?)".*?type:\s*"(\w+)"'
-            print(f"Using regex pattern: {pattern}")
-            
-            move_entries = list(re.finditer(pattern, content, re.DOTALL))
-            print(f"Found {len(move_entries)} move entries in the file")
-            
-            for idx, match in enumerate(move_entries, 1):
-                move_key = match.group(1).lower()
-                move_num = int(match.group(2))
-                move_name = match.group(3).lower()
-                move_type = match.group(4).lower()
-                
-                # Log every 100th move for progress tracking
-                if idx % 100 == 0 or 'hurricane' in move_key or 'hurricane' in move_name:
-                    print(f"\nProcessing move {idx}: {move_name} (key: {move_key})")
-                    print(f"  Move type from regex: {move_type}")
-                
-                # Get the full move data block
-                move_start = match.start()
-                next_brace = content.find('},', move_start) + 1
-                if next_brace == 0:  # Handle last move in the file
-                    next_brace = content.find('}', move_start) + 1
-                move_data = content[move_start:next_brace]
-                
-                # Log detailed info for Hurricane move
-                if 'hurricane' in move_key or 'hurricane' in move_name:
-                    print("\n=== HURRICANE MOVE FOUND ===")
-                    print(f"Move key: {move_key}")
-                    print(f"Move name: {move_name}")
-                    print(f"Move type from regex: {move_type}")
-                    print(f"Move data block:\n{move_data[:500]}...")  # Print first 500 chars of move data
-                
-                # Get base power (default to 50 if not found)
-                power_match = re.search(r'basePower\s*:\s*(\d+)', move_data)
-                base_power = int(power_match.group(1)) if power_match else 50
-                
-                # Get PP (default to 10 if not found)
-                pp_match = re.search(r'pp\s*:\s*(\d+)', move_data)
-                pp = int(pp_match.group(1)) if pp_match else 10
-                
-                # Get accuracy (default to 100 if not found)
-                accuracy_match = re.search(r'accuracy\s*:\s*(\d+)', move_data)
-                accuracy = int(accuracy_match.group(1)) if accuracy_match else 100
-                
-                # Get category (Physical, Special, or Status)
-                category_match = re.search(r'category\s*:\s*"(\w+)"', move_data)
-                category = category_match.group(1).lower() if category_match else 'physical'
-                
-                # Store by both the move key and the move name for easier lookup
+            for move_key, move_data in moves_data.items():
+                move_name = move_data.get('name', '').lower()
+                if not move_name:
+                    continue
+                    
+                # Create a simplified move entry with just the data we need
                 move_entry = {
                     'name': move_name,
-                    'type': move_type,
-                    'basePower': base_power,
-                    'pp': pp,
-                    'accuracy': accuracy,
-                    'category': category,
-                    'num': move_num
+                    'type': move_data.get('type', 'normal').lower(),
+                    'basePower': int(move_data.get('basePower', 0)),
+                    'pp': int(move_data.get('pp', 10)),
+                    'accuracy': int(move_data.get('accuracy', 100)),
+                    'category': move_data.get('category', 'physical').lower(),
+                    'num': int(move_data.get('num', 0))
                 }
                 
-                self.moves_data[move_key] = move_entry
-                if move_key != move_name:  # Avoid duplicate entries
-                    self.moves_data[move_name] = move_entry
-                
+                # Store by both the move key and the move name for easier lookup
+                self.moves_data[move_key.lower()] = move_entry
+                if move_key.lower() != move_name.lower():
+                    self.moves_data[move_name.lower()] = move_entry
+                    
         except FileNotFoundError:
-            print("Warning: moves.ts file not found")
+            print("Warning: moves.json file not found")
         except Exception as e:
             print(f"Error loading moves data: {e}")
+            raise
     
     def _load_learnsets(self):
-        """Load learnsets data from learnsets.ts file."""
+        """Load Pokémon learnset data from learnsets.json file."""
         try:
-            with open('datasets/learnsets.ts', 'r', encoding='utf-8') as f:
-                content = f.read()
+            with open('datasets/learnsets.json', 'r', encoding='utf-8') as f:
+                learnsets_data = json.load(f)
             
-            # Extract Pokemon learnset data
-            pokemon_pattern = r'(\w+):\s*{\s*learnset:\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)}'
-            pokemon_data = re.findall(pokemon_pattern, content)
+            print(f"\n=== LOADED LEARNSETS FOR {len(learnsets_data)} POKÉMON ===")
             
-            for pokemon_name, learnset_data in pokemon_data:
-                moves = {}
-                # Parse individual moves
-                move_entries = re.findall(r'(\w+):\s*\[([^\]]+)\]', learnset_data)
-                for move_name, learn_methods in move_entries:
-                    # Clean up the learn methods
-                    methods = [method.strip().strip('"\'') for method in learn_methods.split(',')]
-                    moves[move_name] = methods
-                
-                self.learnsets_data[pokemon_name] = {'learnset': moves}
-                
+            for pokemon_name, data in learnsets_data.items():
+                if 'learnset' in data:
+                    # Convert move names to lowercase for case-insensitive lookup
+                    moves = [move.lower() for move in data['learnset'].keys()]
+                    self.learnsets_data[pokemon_name.lower()] = moves
+            
         except FileNotFoundError:
-            print("Warning: learnsets.ts file not found")
+            print("Warning: learnsets.json file not found")
         except Exception as e:
-            print(f"Error loading learnsets data: {e}")
+            print(f"Error loading learnset data: {e}")
+            raise
     
     def _load_typechart(self):
-        """Load type chart data from typechart.ts file."""
+        """Load type chart data from typechart.json file."""
         try:
-            with open('datasets/typechart.ts', 'r', encoding='utf-8') as f:
-                content = f.read()
+            with open('datasets/typechart.json', 'r', encoding='utf-8') as f:
+                self.typechart_data = json.load(f)
             
-            # The typechart is already properly formatted in the attachment
-            # Extract the TypeChart object
-            chart_match = re.search(r'export const TypeChart[^=]*=\s*({.*?});', content, re.DOTALL)
-            if chart_match:
-                chart_content = chart_match.group(1)
-                
-                # Parse type effectiveness data
-                type_pattern = r'(\w+):\s*{\s*damageTaken:\s*{([^{}]+)}'
-                types = re.findall(type_pattern, chart_content)
-                
-                for type_name, damage_data in types:
-                    effectiveness = {}
-                    damage_entries = re.findall(r'(\w+):\s*(\d+)', damage_data)
-                    for attacking_type, effectiveness_value in damage_entries:
-                        effectiveness[attacking_type] = int(effectiveness_value)
-                    
-                    self.typechart_data[type_name] = {
-                        'damageTaken': effectiveness
-                    }
-                    
+            print(f"\n=== LOADED TYPE CHART WITH {len(self.typechart_data)} TYPES ===")
+            
         except FileNotFoundError:
-            print("Warning: typechart.ts file not found")
+            print("Warning: typechart.json file not found")
+        except json.JSONDecodeError as e:
+            print(f"Error parsing type chart data: {e}")
         except Exception as e:
-            print(f"Error loading typechart data: {e}")
+            print(f"Error loading type chart data: {e}")
+            raise
     
     def get_move(self, move_name):
         """Get move data by name."""
