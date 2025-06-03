@@ -120,16 +120,7 @@ class Game:
             else:
                 turn_info['opponent_damage'] = actual_damage
             
-            # Handle status message if present
-            if status_message:
-                turn_info['battle_events'].append({
-                    'type': 'status',
-                    'message': status_message,
-                    'target': 'opponent' if is_player_attacking else 'player',
-                    'timestamp': len(turn_info['battle_events'])
-                })
-            
-            # Create move event
+            # Create move event with status message included
             move_event = {
                 'type': 'move',
                 'attacker_name': attacker.name,
@@ -141,7 +132,8 @@ class Game:
                 'defender_hp': defender.current_hp,
                 'attacker_max_hp': attacker.max_hp,
                 'defender_max_hp': defender.max_hp,
-                'timestamp': len(turn_info['battle_events'])
+                'timestamp': len(turn_info['battle_events']),
+                'status_message': status_message  # Include status message in move event
             }
             turn_info['battle_events'].append(move_event)
             

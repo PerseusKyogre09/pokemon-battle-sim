@@ -163,8 +163,8 @@ class Pokemon:
         elif status_effect == 'poison':
             return f"{self.name} was poisoned!"
         elif status_effect == 'paralysis':
-            # Reduce speed by 25%
-            original_speed = self.speed
+            # Reduce speed by 50% (handled in _calculate_stat)
+            # The actual speed stat is recalculated each time it's accessed
             self.speed = self._calculate_stat('speed')
             return f"{self.name} is paralyzed! It may be unable to move!"
         elif status_effect == 'burn':

@@ -122,6 +122,23 @@ class Move:
             debug_msg += f" vs {defending_pokemon.name} ({', '.join(defending_pokemon.types) if hasattr(defending_pokemon, 'types') else 'unknown'})"
         print(f"DEBUG: {debug_msg}")
         
+        # Check for paralysis (25% chance to be unable to move)
+        print(f"DEBUG: Checking status condition for {attacking_pokemon.name}. Current status: {getattr(attacking_pokemon, 'status_condition', 'None')}")
+        if hasattr(attacking_pokemon, 'status_condition') and attacking_pokemon.status_condition == 'paralysis':
+            print(f"\n=== PARALYSIS CHECK ===")
+            print(f"DEBUG: {attacking_pokemon.name} is paralyzed, checking for full paralysis...")
+            roll = random.random()
+            print(f"DEBUG: Rolled {roll:.3f} (needs < 0.25 to be paralyzed)")
+            if roll < 0.25:  # 25% chance to be fully paralyzed
+                print(f"DEBUG: {attacking_pokemon.name} is fully paralyzed and can't move!")
+                print(f"=== END PARALYSIS CHECK (PARALYZED) ===\n")
+                # Return the paralysis message as a status message (third return value)
+                return 0, None, f"{attacking_pokemon.name} is paralyzed and unable to move!"
+            else:
+                print(f"DEBUG: {attacking_pokemon.name} overcame paralysis and can attack!")
+                print(f"=== END PARALYSIS CHECK (CAN MOVE) ===\n")
+                # Continue with the move if not fully paralyzed
+        
         # Check if the move hits
         if not self._check_accuracy():
             return 0, f"{attacking_pokemon.name}'s {self.name} missed!", None

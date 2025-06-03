@@ -606,17 +606,32 @@ function clearBattleLog() {
 }
 
 function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
-    // Add to the main battle log at the top
-    const battleLog = document.getElementById('battle-log');
-    if (battleLog) {
-        const logList = battleLog.querySelector('ul');
-        if (logList) {
-            const logItem = document.createElement('li');
-            logItem.textContent = message;
-            logList.appendChild(logItem);
-            battleLog.scrollTop = battleLog.scrollHeight;
-        }
+    const stackTrace = new Error().stack;
+    console.log('=== ADDING LOG MESSAGE ===');
+    console.log('Message:', message);
+    console.log('isEffectiveness:', isEffectiveness);
+    console.log('isPlayer:', isPlayer);
+    console.log('Call stack:', stackTrace);
+    
+    if (!battleLogEl) {
+        console.error('Battle log element not found');
+        return;
     }
+    
+    // Add to main battle log
+    const messageEl = document.createElement('div');
+    messageEl.className = 'battle-log-message';
+    
+    if (isEffectiveness) {
+        messageEl.classList.add('effectiveness');
+    } else if (isPlayer !== null) {
+        messageEl.classList.add(isPlayer ? 'player' : 'opponent');
+    }
+    
+    messageEl.textContent = message;
+    console.log('Adding element to main log:', message);
+    battleLogEl.appendChild(messageEl);
+    battleLogEl.scrollTop = battleLogEl.scrollHeight;
     
     // Update the battle log text at the top
     const battleLogText = document.getElementById('battle-log-text');
@@ -643,6 +658,8 @@ function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
         rightBattleLog.querySelector('div').appendChild(logEntry);
         rightBattleLog.scrollTop = rightBattleLog.scrollHeight;
     }
+    
+    console.log('=== MESSAGE ADDED ===');
 }
 
 function disableMoveButtons(disabled) {
@@ -805,7 +822,13 @@ async function processMoveEvent(events, data) {
     
     // Process all non-faint events first
     for (const event of eventList) {
-        if (event.type !== 'fainted') {
+        // Skip status events completely as they're included in move events
+        if (event.type === 'status') {
+            console.log('Skipping status event - handled in move event');
+            continue;
+        }
+        
+        if (event.type !== 'faint' && event.type !== 'fainted') {
             switch (event.type) {
                 case 'move':
                     await handleMoveEvent(event, data);
@@ -823,7 +846,7 @@ async function processMoveEvent(events, data) {
     
     // Then process faint events if any
     for (const event of eventList) {
-        if (event.type === 'faint') {
+        if (event.type === 'faint' || event.type === 'fainted') {
             const battleOver = await handleFaintEvent(event, data);
             if (battleOver) return true; // End processing if battle is over
         }
@@ -833,36 +856,90 @@ async function processMoveEvent(events, data) {
 }
 
 async function handleMoveEvent(event, data) {
+    console.log('=== HANDLE MOVE EVENT ===');
+    console.log('Event:', JSON.parse(JSON.stringify(event)));
+    console.log('Event type:', event.type);
+    
     const isPlayer = event.is_player;
     const attacker = event.attacker_name ? capitalize(event.attacker_name) : 
                      (isPlayer ? data.player_name : `Opponent ${data.opponent_name}`);
     
-    // Log the move with the actual Pokémon name
-    addLogMessage(`${attacker} used ${event.move}!`, false, isPlayer);
+    // Log the full event for debugging
+    console.log('Full event object:', JSON.stringify(event, null, 2));
+    
+    // Check if this is a paralysis skip (damage is 0 and there's a status message about paralysis)
+    const isParalysisSkip = event.damage === 0 && 
+                           event.status_message && 
+                           event.status_message.toLowerCase().includes('paraly') && 
+                           (event.status_message.toLowerCase().includes('can\'t move') || 
+                            event.status_message.toLowerCase().includes('unable to move'));
+    
+    console.log('Paralysis check:', {
+        damage: event.damage,
+        hasStatusMessage: !!event.status_message,
+        message: event.status_message,
+        isParalysisSkip: isParalysisSkip
+    });
+    
+    if (isParalysisSkip) {
+        // Only show the paralysis message, not the move message
+        console.log('Adding paralysis skip message:', event.status_message);
+        addLogMessage(event.status_message, false, isPlayer);
+        return; // Skip the rest of the move handling
+    }
+    
+    // If we get here, it's a normal move
+    const moveMessage = `${attacker} used ${event.move}!`;
+    console.log('Adding move message:', moveMessage);
+    addLogMessage(moveMessage, false, isPlayer);
     
     // Execute attack animation
     await new Promise(resolve => setTimeout(resolve, 300));
     animateAttack(isPlayer);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Update HP based on the move's damage
-    if (isPlayer) {
-        // Player attacked opponent
-        data.opponent_hp = event.defender_hp;
-        updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
-    } else {
-        // Opponent attacked player
-        data.player_hp = event.defender_hp;
-        updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+    if (event.damage > 0) {
+        if (isPlayer) {
+            // Player attacked opponent
+            data.opponent_hp = event.defender_hp;
+            console.log(`Updating opponent HP: ${data.opponent_hp}/${data.opponent_max_hp}`);
+            updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+        } else {
+            // Opponent attacked player
+            data.player_hp = event.defender_hp;
+            console.log(`Updating player HP: ${data.player_hp}/${data.player_max_hp}`);
+            updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+        }
     }
     
+    // If there's a status message (not related to paralysis), show it
+    if (event.status_message) {
+        console.log('Adding status message:', event.status_message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        addLogMessage(event.status_message, false, isPlayer);
+    } else {
+        console.log('No status message in this event');
+    }
+    
+    console.log('=== END HANDLE MOVE EVENT ===');
     return false; // Continue processing events
 }
 
 function handleEffectivenessEvent(event, data) {
-    if (event.message) {
+    // Skip effectiveness messages that just repeat the move name
+    if (event.message && !event.message.toLowerCase().includes('used')) {
+        console.log('Adding effectiveness message:', event.message);
         addLogMessage(event.message, true, event.is_player);
+    } else if (event.message) {
+        console.log('Skipping duplicate move message:', event.message);
     }
+}
+
+function handleStatusEvent(event, data) {
+    // Status messages should now be handled in handleMoveEvent
+    // This function should not be called anymore
+    console.warn('Unexpected status event received:', event);
 }
 
 async function handleFaintEvent(event, data) {
