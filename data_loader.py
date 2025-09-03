@@ -179,31 +179,49 @@ class DataLoader:
             float: Effectiveness multiplier (0.0, 0.5, 1.0, or 2.0)
         """
         if not attacking_type or not defending_type:
+            print(f"\n=== TYPE EFFECTIVENESS DEBUG ===")
+            print(f"Missing type data - attacking: {attacking_type}, defending: {defending_type}")
             return 1.0
             
+        # Store original types for logging
+        original_attacking = attacking_type
+        original_defending = defending_type
+        
         # Convert to title case to match the type chart keys
         attacking_type = attacking_type.title()
         defending_type = defending_type.title()
         
-        # Get the defending type's damage taken data
-        defending_data = self.typechart_data.get(defending_type.lower(), {})
+        print(f"\n=== TYPE EFFECTIVENESS DEBUG ===")
+        print(f"Original types - attacking: {original_attacking}, defending: {original_defending}")
+        print(f"Formatted types - attacking: {attacking_type}, defending: {defending_type}")
+        
+        # Get the defending type's damage taken data (FIXED: use title case)
+        defending_data = self.typechart_data.get(defending_type, {})
         damage_taken = defending_data.get('damageTaken', {})
         
+        print(f"Defending type data found: {defending_type in self.typechart_data}")
+        print(f"Available types in typechart: {list(self.typechart_data.keys())[:10]}...")
+        
         # Get the effectiveness code
-        # 0 = normal, 1 = 2x, 2 = 0.5x, 3 = 0x (immune)
         effectiveness_code = damage_taken.get(attacking_type, 0)
         
+        print(f"Effectiveness code for {attacking_type} vs {defending_type}: {effectiveness_code}")
+        
         # Convert to multiplier
+        multiplier = 1.0
         if effectiveness_code == 0:  # Normal effectiveness (1x)
-            return 1.0
+            multiplier = 1.0
         elif effectiveness_code == 1:  # 2x effective
-            return 2.0
+            multiplier = 2.0
         elif effectiveness_code == 2:  # 0.5x effective
-            return 0.5
+            multiplier = 0.5
         elif effectiveness_code == 3:  # No effect (0x)
-            return 0.0
+            multiplier = 0.0
+        
+        print(f"Final effectiveness multiplier: {multiplier}")
+        print("=== END TYPE EFFECTIVENESS DEBUG ===\n")
             
-        return 1.0  # Default to normal effectiveness
+        return multiplier
     
     def get_move_power(self, move_name: str) -> int:
         """Get the base power of a move."""
