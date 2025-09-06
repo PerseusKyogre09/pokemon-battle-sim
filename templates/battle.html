@@ -73,6 +73,8 @@
                                 <span>Lv.100</span>
                             </div>
                         </div>
+                        <div class="status-indicators" id="player-status-indicators">
+                        </div>
                         <div class="hp-row">
                             <span class="hp-label">HP</span>
                             <div class="hp-bar-container">
@@ -102,6 +104,8 @@
                                 <span>Lv.100</span>
                             </div>
                         </div>
+                        <div class="status-indicators" id="opponent-status-indicators">
+                        </div>
                         <div class="hp-row">
                             <span class="hp-label">HP</span>
                             <div class="hp-bar-container">
@@ -116,12 +120,11 @@
             </div>
         </div>
         
-        <!-- Battle Controls Panel - New design based on the image -->
+        <!-- Battle Controls Panel -->
         <div class="battle-controls w-full mx-auto mb-6">
             <!-- Battle log header -->
             <h3 id="battle-log-text" class="battle-log-text pixel-font text-sm">Battle started! Choose your move.</h3>
             
-            <!-- Move buttons in a grid layout -->
             <div class="move-grid">
                 {% for move in player_moves %}
                     {% if loop.index <= 4 %}
@@ -155,7 +158,7 @@
             </div>
         </div>
         
-        <!-- Original Move buttons - hidden now -->
+        <!-- Original Move buttons -->
         <div class="max-w-3xl mx-auto mb-6 hidden">
             <h3 class="text-xl font-bold text-center mb-4 text-yellow-400">Select a Move:</h3>
             <div class="flex flex-wrap justify-center gap-3">
@@ -176,7 +179,7 @@
         </div>
         </div>
         
-        <!-- Right side (battle log panel) -->
+        <!-- Battle log panel -->
         <div class="w-80 flex-shrink-0 bg-gray-800 border-4 border-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col">
             <div class="bg-gray-900 px-4 py-3 border-b-4 border-gray-700">
                 <h3 class="text-sm font-bold text-yellow-400 pixel-font">BATTLE LOG</h3>
@@ -187,6 +190,11 @@
         </div>
     </div>
 
+    <script>
+        // Pass status effects data to JavaScript
+        window.playerStatusEffects = {{ player_status_effects | tojson }};
+        window.opponentStatusEffects = {{ opponent_status_effects | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/battle.js') }}"></script>
     
     <!-- Footer -->

@@ -295,6 +295,8 @@ def start_game():
             'opponent_sprite': game.opponent_pokemon.sprite_url,
             'player_hp': game.player_pokemon.current_hp,
             'opponent_hp': game.opponent_pokemon.current_hp,
+            'player_status_effects': game.player_pokemon.get_status_display(),
+            'opponent_status_effects': game.opponent_pokemon.get_status_display(),
             'player_moves': [{
                 'name': name, 
                 'power': move.power, 
@@ -368,6 +370,8 @@ def move():
         "player_max_hp": game.player_pokemon.max_hp,
         "opponent_max_hp": game.opponent_pokemon.max_hp,
         "player_moves_pp": player_moves_pp,
+        "player_status_effects": game.player_pokemon.get_status_display(),
+        "opponent_status_effects": game.opponent_pokemon.get_status_display(),
         "turn_info": {
             "player_first": turn_info.get('player_first', True),
             "player_move": turn_info.get('player_move', ''),

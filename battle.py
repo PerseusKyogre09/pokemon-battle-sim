@@ -5,11 +5,70 @@ class Battle:
         self.battle_log = []
         self.turn_count = 0
 
+    def _process_turn_start_effects(self, pokemon) -> list:
+        messages = []
+        try:
+            if hasattr(pokemon, 'process_turn_start_effects') and callable(getattr(pokemon, 'process_turn_start_effects', None)):
+                status_messages = pokemon.process_turn_start_effects()
+                if isinstance(status_messages, list):
+                    messages.extend(status_messages)
+                elif status_messages:
+                    messages.append(str(status_messages))
+        except Exception as e:
+            print(f"ERROR: Exception in _process_turn_start_effects for {getattr(pokemon, 'name', 'unknown')}: {e}")
+            import traceback
+            traceback.print_exc()
+        return messages
+
+    def _process_turn_end_effects(self, pokemon) -> list:
+        messages = []
+        try:
+            if hasattr(pokemon, 'process_turn_end_effects') and callable(getattr(pokemon, 'process_turn_end_effects', None)):
+                status_messages = pokemon.process_turn_end_effects()
+                if isinstance(status_messages, list):
+                    messages.extend(status_messages)
+                elif status_messages:  # Handle single string message
+                    messages.append(str(status_messages))
+            elif hasattr(pokemon, 'end_turn_status_effects') and callable(getattr(pokemon, 'end_turn_status_effects', None)):
+                # Fallback to legacy method
+                status_msg = pokemon.end_turn_status_effects()
+                if status_msg:
+                    messages.append(str(status_msg))
+        except Exception as e:
+            print(f"ERROR: Exception in _process_turn_end_effects for {getattr(pokemon, 'name', 'unknown')}: {e}")
+            import traceback
+            traceback.print_exc()
+        return messages
+
+    def _can_use_move(self, pokemon) -> tuple:
+        try:
+            if hasattr(pokemon, 'can_use_move') and callable(getattr(pokemon, 'can_use_move', None)):
+                result = pokemon.can_use_move()
+                if isinstance(result, tuple) and len(result) == 2:
+                    return result
+                else:
+                    print(f"WARNING: can_use_move returned invalid result: {result}")
+                    return True, ""
+            elif hasattr(pokemon, 'can_attack') and callable(getattr(pokemon, 'can_attack', None)):
+                # Fallback to legacy method
+                result = pokemon.can_attack()
+                if isinstance(result, tuple) and len(result) == 2:
+                    return result
+                else:
+                    print(f"WARNING: can_attack returned invalid result: {result}")
+                    return True, ""
+        except Exception as e:
+            print(f"ERROR: Exception in _can_use_move for {getattr(pokemon, 'name', 'unknown')}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Default to allowing move if all else fails
+        return True, ""
+
     def _process_attack(self, attacker, defender, move_name, move):
-        """Process an attack from one Pokémon to another."""
-        # Check if the attacker can attack this turn
-        can_attack, reason = attacker.can_attack()
-        if not can_attack:
+        # Check if the attacker can use a move this turn
+        can_use_move, reason = self._can_use_move(attacker)
+        if not can_use_move:
             self.battle_log.append(reason)
             return
             
@@ -30,13 +89,25 @@ class Battle:
             log_message = f"{attacker.name} used {move_name}!"
             self.battle_log.append(log_message)
         
-        # Add effectiveness message if any (and it's not already in the log)
+        # Add effectiveness message
         if effectiveness_msg and "used" not in effectiveness_msg:
             self.battle_log.append(effectiveness_msg)
             
-        # Add status effect message if any
-        if status_message:
-            # Apply the status effect to the defender
+        # Process status effects from the move
+        self._process_move_status_effects(move, attacker, defender, status_message)
+        
+        if move.pp == 0:
+            self.battle_log.append(f"{move_name} has no PP left!")
+
+    def _process_move_status_effects(self, move, attacker, defender, status_message):
+        # Handle status effects from the new move system
+        if hasattr(move, '_apply_status_effects'):
+            status_messages = move._apply_status_effects(attacker, defender)
+            for msg in status_messages:
+                if msg:
+                    self.battle_log.append(msg)
+        elif status_message:
+            # Handle legacy status effect application
             if hasattr(move, 'status_effect') and move.status_effect:
                 status_effect = move.status_effect
                 if isinstance(status_effect, dict):
@@ -47,38 +118,43 @@ class Battle:
                         self.battle_log.append(status_msg)
             else:
                 self.battle_log.append(status_message)
-            
-        # Handle end of turn status effects for defender
-        if not move.is_status_move or move.power > 0:  # Only trigger if not a pure status move
-            status_msg = defender.end_turn_status_effects()
-            if status_msg:
-                self.battle_log.append(status_msg)
-        
-        if move.pp == 0:
-            self.battle_log.append(f"{move_name} has no PP left!")
     
     def player_attack(self, move_name):
-        """Player's turn to attack."""
         move = self.player_pokemon.moves.get(move_name)
         if move:
-            # Handle player's turn start status effects
-            player_status_msg = self.player_pokemon.end_turn_status_effects()
-            if player_status_msg:
-                self.battle_log.append(player_status_msg)
+            # Process turn-start status effects for player
+            turn_start_messages = self._process_turn_start_effects(self.player_pokemon)
+            for msg in turn_start_messages:
+                if msg:
+                    self.battle_log.append(msg)
+            
+            # Check if player fainted from turn-start effects
+            if self.is_battle_over():
+                return
                 
             # Process the attack
             self._process_attack(self.player_pokemon, self.opponent_pokemon, move_name, move)
+            
+            # Process turn-end status effects for player
+            turn_end_messages = self._process_turn_end_effects(self.player_pokemon)
+            for msg in turn_end_messages:
+                if msg:
+                    self.battle_log.append(msg)
             
             # Only process opponent's turn if they're not fainted
             if not self.is_battle_over():
                 self.opponent_turn()
     
     def opponent_turn(self):
-        """Handle the opponent's entire turn."""
-        # Handle opponent's turn start status effects
-        opponent_status_msg = self.opponent_pokemon.end_turn_status_effects()
-        if opponent_status_msg:
-            self.battle_log.append(opponent_status_msg)
+        # Process turn-start status effects for opponent
+        turn_start_messages = self._process_turn_start_effects(self.opponent_pokemon)
+        for msg in turn_start_messages:
+            if msg:
+                self.battle_log.append(msg)
+        
+        # Check if opponent fainted from turn-start effects
+        if self.is_battle_over():
+            return
             
         # Only attack if not fainted from status effects
         if not self.is_battle_over():
@@ -87,9 +163,14 @@ class Battle:
             move_name = random.choice(list(self.opponent_pokemon.moves.keys()))
             move = self.opponent_pokemon.moves[move_name]
             self._process_attack(self.opponent_pokemon, self.player_pokemon, move_name, move)
+            
+        # Process turn-end status effects for opponent
+        turn_end_messages = self._process_turn_end_effects(self.opponent_pokemon)
+        for msg in turn_end_messages:
+            if msg:
+                self.battle_log.append(msg)
     
     def opponent_attack(self):
-        """Legacy method - use opponent_turn() instead."""
         self.opponent_turn()
 
     def is_battle_over(self):
@@ -99,17 +180,18 @@ class Battle:
         return self.battle_log
         
     def end_turn(self):
-        """Handle end-of-turn effects."""
         self.turn_count += 1
         
         # Process end-of-turn status effects for both Pokémon
-        player_status_msg = self.player_pokemon.end_turn_status_effects()
-        if player_status_msg:
-            self.battle_log.append(player_status_msg)
+        player_messages = self._process_turn_end_effects(self.player_pokemon)
+        for msg in player_messages:
+            if msg:
+                self.battle_log.append(msg)
             
-        opponent_status_msg = self.opponent_pokemon.end_turn_status_effects()
-        if opponent_status_msg:
-            self.battle_log.append(opponent_status_msg)
+        opponent_messages = self._process_turn_end_effects(self.opponent_pokemon)
+        for msg in opponent_messages:
+            if msg:
+                self.battle_log.append(msg)
             
         # Check for battle end conditions
         if self.player_pokemon.current_hp <= 0:

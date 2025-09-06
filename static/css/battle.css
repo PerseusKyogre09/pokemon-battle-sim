@@ -737,4 +737,112 @@ body {
     animation: faintPokemon 1.5s ease-in-out forwards !important;
 }
 
-/* Remove duplicate keyframes */
+/* Status Effect Indicators */
+.status-indicators {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.status-indicator {
+    font-family: 'Press Start 2P', cursive, monospace;
+    font-size: 6px;
+    padding: 1px 3px;
+    border-radius: 2px;
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    letter-spacing: 0;
+    line-height: 1.2;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-indicator.burn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border-color: #a93226;
+}
+
+.status-indicator.paralysis {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    border-color: #d68910;
+    color: #2c3e50;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.status-indicator.freeze {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-color: #2471a3;
+}
+
+.status-indicator.sleep {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    border-color: #7d3c98;
+}
+
+.status-indicator.poison {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    border-color: #6c3483;
+}
+
+.status-indicator.toxic {
+    background: linear-gradient(135deg, #6a1b9a, #4a148c);
+    border-color: #4a148c;
+    animation: toxicPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes toxicPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(106, 27, 154, 0.6);
+    }
+}
+
+@keyframes statusFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.status-indicator.fade-in {
+    animation: statusFadeIn 0.3s ease-out;
+}
+
+@keyframes statusFadeOut {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+}
+
+.status-indicator.fade-out {
+    animation: statusFadeOut 0.3s ease-in forwards;
+}

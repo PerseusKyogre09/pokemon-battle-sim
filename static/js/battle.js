@@ -56,6 +56,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start with an empty battle log
     addLogMessage("Battle started! Choose your move.");
     
+    // Initialize status displays
+    console.log('Initializing status displays...');
+    const playerStatusEffects = window.playerStatusEffects || [];
+    const opponentStatusEffects = window.opponentStatusEffects || [];
+    updateStatusDisplay('player', playerStatusEffects);
+    updateStatusDisplay('opponent', opponentStatusEffects);
+    
     // Initialize PP bars for all moves
     console.log('Initializing PP bars...');
     document.querySelectorAll('.move-button').forEach(button => {
@@ -662,6 +669,90 @@ function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
     console.log('=== MESSAGE ADDED ===');
 }
 
+// Status effect display functions
+function updateStatusDisplay(pokemonType, statusEffects) {
+    console.log(`Updating status display for ${pokemonType}:`, statusEffects);
+    
+    const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
+    if (!statusContainer) {
+        console.error(`Status container not found for ${pokemonType}`);
+        return;
+    }
+    
+    // Clear existing status indicators
+    statusContainer.innerHTML = '';
+    
+    // Add status indicators for each active status effect
+    if (statusEffects && statusEffects.length > 0) {
+        statusEffects.forEach(status => {
+            const indicator = createStatusIndicator(status);
+            statusContainer.appendChild(indicator);
+        });
+    }
+}
+
+function createStatusIndicator(status) {
+    const indicator = document.createElement('div');
+    indicator.className = `status-indicator ${status.type} fade-in`;
+    indicator.textContent = getStatusAbbreviation(status.type);
+    indicator.title = `${status.name}${status.duration > 0 ? ` (${status.duration} turns)` : ''}`;
+    
+    return indicator;
+}
+
+function getStatusAbbreviation(statusType) {
+    const abbreviations = {
+        'burn': 'BRN',
+        'paralysis': 'PAR',
+        'freeze': 'FRZ',
+        'sleep': 'SLP',
+        'poison': 'PSN',
+        'toxic': 'TOX'
+    };
+    
+    return abbreviations[statusType] || statusType.toUpperCase().substring(0, 3);
+}
+
+function addStatusIndicator(pokemonType, status) {
+    console.log(`Adding status indicator for ${pokemonType}:`, status);
+    
+    const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
+    if (!statusContainer) {
+        console.error(`Status container not found for ${pokemonType}`);
+        return;
+    }
+    
+    // Check if status already exists
+    const existingIndicator = statusContainer.querySelector(`.status-indicator.${status.type}`);
+    if (existingIndicator) {
+        console.log(`Status ${status.type} already exists for ${pokemonType}`);
+        return;
+    }
+    
+    const indicator = createStatusIndicator(status);
+    statusContainer.appendChild(indicator);
+}
+
+function removeStatusIndicator(pokemonType, statusType) {
+    console.log(`Removing status indicator ${statusType} for ${pokemonType}`);
+    
+    const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
+    if (!statusContainer) {
+        console.error(`Status container not found for ${pokemonType}`);
+        return;
+    }
+    
+    const indicator = statusContainer.querySelector(`.status-indicator.${statusType}`);
+    if (indicator) {
+        indicator.classList.add('fade-out');
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        }, 300);
+    }
+}
+
 function disableMoveButtons(disabled) {
     const moveButtons = document.querySelectorAll('.move-button');
     moveButtons.forEach(button => {
@@ -794,6 +885,14 @@ async function makeMove(move) {
             updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
             updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
             
+            // Update status displays
+            if (data.player_status_effects !== undefined) {
+                updateStatusDisplay('player', data.player_status_effects);
+            }
+            if (data.opponent_status_effects !== undefined) {
+                updateStatusDisplay('opponent', data.opponent_status_effects);
+            }
+            
             // Check if battle is over after processing all events
             if (battleOver) {
                 disableMoveButtons(true);
@@ -822,12 +921,6 @@ async function processMoveEvent(events, data) {
     
     // Process all non-faint events first
     for (const event of eventList) {
-        // Skip status events completely as they're included in move events
-        if (event.type === 'status') {
-            console.log('Skipping status event - handled in move event');
-            continue;
-        }
-        
         if (event.type !== 'faint' && event.type !== 'fainted') {
             switch (event.type) {
                 case 'move':
@@ -835,6 +928,9 @@ async function processMoveEvent(events, data) {
                     break;
                 case 'effectiveness':
                     handleEffectivenessEvent(event, data);
+                    break;
+                case 'status':
+                    handleStatusEvent(event, data);
                     break;
                 default:
                     console.warn('Unknown event type:', event.type);
@@ -867,23 +963,27 @@ async function handleMoveEvent(event, data) {
     // Log the full event for debugging
     console.log('Full event object:', JSON.stringify(event, null, 2));
     
-    // Check if this is a paralysis skip (damage is 0 and there's a status message about paralysis)
-    const isParalysisSkip = event.damage === 0 && 
-                           event.status_message && 
-                           event.status_message.toLowerCase().includes('paraly') && 
-                           (event.status_message.toLowerCase().includes('can\'t move') || 
-                            event.status_message.toLowerCase().includes('unable to move'));
+    // Check if this is a status skip (damage is 0 and there's a status message about being unable to move)
+    const isStatusSkip = event.damage === 0 && 
+                        event.status_message && 
+                        (event.status_message.toLowerCase().includes('paraly') || 
+                         event.status_message.toLowerCase().includes('asleep') ||
+                         event.status_message.toLowerCase().includes('fast asleep') ||
+                         event.status_message.toLowerCase().includes('frozen')) &&
+                        (event.status_message.toLowerCase().includes('can\'t move') || 
+                         event.status_message.toLowerCase().includes('unable to move') ||
+                         event.status_message.toLowerCase().includes('fast asleep'));
     
-    console.log('Paralysis check:', {
+    console.log('Status skip check:', {
         damage: event.damage,
         hasStatusMessage: !!event.status_message,
         message: event.status_message,
-        isParalysisSkip: isParalysisSkip
+        isStatusSkip: isStatusSkip
     });
     
-    if (isParalysisSkip) {
-        // Only show the paralysis message, not the move message
-        console.log('Adding paralysis skip message:', event.status_message);
+    if (isStatusSkip) {
+        // Only show the status prevention message, not the move message
+        console.log('Adding status skip message:', event.status_message);
         addLogMessage(event.status_message, false, isPlayer);
         return; // Skip the rest of the move handling
     }
@@ -937,9 +1037,19 @@ function handleEffectivenessEvent(event, data) {
 }
 
 function handleStatusEvent(event, data) {
-    // Status messages should now be handled in handleMoveEvent
-    // This function should not be called anymore
-    console.warn('Unexpected status event received:', event);
+    console.log('=== HANDLE STATUS EVENT ===');
+    console.log('Status event:', JSON.parse(JSON.stringify(event)));
+    
+    // Display the status message
+    if (event.message) {
+        console.log('Adding status message:', event.message);
+        const isPlayer = event.target === 'player';
+        addLogMessage(event.message, false, isPlayer);
+    } else {
+        console.warn('Status event has no message:', event);
+    }
+    
+    console.log('=== END HANDLE STATUS EVENT ===');
 }
 
 async function handleFaintEvent(event, data) {

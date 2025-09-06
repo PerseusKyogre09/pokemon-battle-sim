@@ -53,22 +53,53 @@ class Game:
         print(f"DEBUG: Opponent Pokémon created with types: {self.opponent_pokemon.types}")
 
     def process_turn(self, move_name):
-        """
-        Process a turn of battle, handling move execution, damage calculation,
-        and battle events.
-        
-        Args:
-            move_name: Name of the move the player is using
-            
-        Returns:
-            dict: Dictionary containing turn information including battle events
-        """
         turn_info = {
             'player_move': move_name,
             'player_damage': 0,
             'opponent_damage': 0,
             'battle_events': []  # Will store all battle events in order
         }
+        
+        # Process turn-start effects for both Pokemon
+        player_start_messages = self.player_pokemon.process_turn_start_effects()
+        for msg in player_start_messages:
+            if msg:
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': msg,
+                    'target': 'player',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+        
+        opponent_start_messages = self.opponent_pokemon.process_turn_start_effects()
+        for msg in opponent_start_messages:
+            if msg:
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': msg,
+                    'target': 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+        
+        # Check if either Pokemon fainted from turn-start effects
+        if self.player_pokemon.current_hp <= 0:
+            self.battle_over = True
+            turn_info['battle_events'].append({
+                'type': 'faint',
+                'pokemon_name': self.player_pokemon.name,
+                'is_player': True,
+                'timestamp': len(turn_info['battle_events'])
+            })
+            return turn_info
+        elif self.opponent_pokemon.current_hp <= 0:
+            self.battle_over = True
+            turn_info['battle_events'].append({
+                'type': 'faint',
+                'pokemon_name': self.opponent_pokemon.name,
+                'is_player': False,
+                'timestamp': len(turn_info['battle_events'])
+            })
+            return turn_info
         
         # Get player's selected move
         player_move = self.player_pokemon.moves.get(move_name)
@@ -90,7 +121,7 @@ class Game:
                 'timestamp': len(turn_info['battle_events'])
             })
         
-        # Determine who goes first based on speed (with random tie-breaker)
+        # Determine who goes first based on speed
         if self.player_pokemon.speed > self.opponent_pokemon.speed:
             player_first = True
         elif self.player_pokemon.speed < self.opponent_pokemon.speed:
@@ -107,6 +138,19 @@ class Game:
             """Helper function to execute a move and return damage and effectiveness."""
             # Skip if no move (shouldn't happen, but just in case)
             if not move:
+                return False
+            
+            # Check if the attacker can use a move this turn
+            can_use_move, prevention_message = attacker.can_use_move()
+            if not can_use_move:
+                # Pokemon is prevented from using move
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': prevention_message,
+                    'target': 'player' if is_player_attacking else 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                print(f"DEBUG: {attacker.name} is prevented from using {move_name}: {prevention_message}")
                 return False
                 
             damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
@@ -154,7 +198,7 @@ class Game:
             # Decrement PP after successful move
             move.pp -= 1
             
-            # Return whether the defender fainted, but don't create the event yet
+            # Return whether the defender fainted
             return defender.current_hp <= 0
         
         try:
@@ -197,6 +241,48 @@ class Game:
                 print(f"DEBUG: {pokemon.name} fainted!")
         except Exception as e:
             print(f"Error during turn processing: {e}")
+        
+        # Process turn-end effects for both Pokemon
+        if not self.battle_over:
+            player_end_messages = self.player_pokemon.process_turn_end_effects()
+            for msg in player_end_messages:
+                if msg:
+                    turn_info['battle_events'].append({
+                        'type': 'status',
+                        'message': msg,
+                        'target': 'player',
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
+            opponent_end_messages = self.opponent_pokemon.process_turn_end_effects()
+            for msg in opponent_end_messages:
+                if msg:
+                    turn_info['battle_events'].append({
+                        'type': 'status',
+                        'message': msg,
+                        'target': 'opponent',
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
+            # Check if either Pokemon fainted from turn-end effects
+            if self.player_pokemon.current_hp <= 0 and not self.battle_over:
+                self.battle_over = True
+                turn_info['battle_events'].append({
+                    'type': 'faint',
+                    'pokemon_name': self.player_pokemon.name,
+                    'is_player': True,
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                print(f"DEBUG: {self.player_pokemon.name} fainted from status effects!")
+            elif self.opponent_pokemon.current_hp <= 0 and not self.battle_over:
+                self.battle_over = True
+                turn_info['battle_events'].append({
+                    'type': 'faint',
+                    'pokemon_name': self.opponent_pokemon.name,
+                    'is_player': False,
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                print(f"DEBUG: {self.opponent_pokemon.name} fainted from status effects!")
             
         return turn_info
 

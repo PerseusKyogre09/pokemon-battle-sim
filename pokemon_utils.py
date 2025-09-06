@@ -1,27 +1,10 @@
-"""
-Pokemon utility functions for enhanced battle mechanics using TypeScript datasets.
-"""
-
 from data_loader import data_loader
 import random
 from typing import List, Dict, Any, Tuple
 
 class PokemonUtils:
-    """Utility class for Pokemon-related operations."""
-    
     @staticmethod
     def get_effective_pokemon_moves(pokemon_name: str, level: int = 100, count: int = 4) -> List[Dict[str, Any]]:
-        """
-        Get the most effective moves for a Pokemon based on level and power.
-        
-        Args:
-            pokemon_name: Name of the Pokemon
-            level: Level of the Pokemon (affects move availability)
-            count: Number of moves to return
-            
-        Returns:
-            List of move dictionaries with enhanced data
-        """
         available_moves = data_loader.get_pokemon_moves(pokemon_name.lower(), 20)  # Get more moves to filter
         
         if not available_moves:
@@ -74,20 +57,6 @@ class PokemonUtils:
     @staticmethod
     def calculate_damage(attacker_level: int, attacker_attack: int, defender_defense: int, 
                         move_power: int, type_effectiveness: float, stab: bool = False) -> int:
-        """
-        Calculate damage using a simplified Pokemon damage formula.
-        
-        Args:
-            attacker_level: Level of attacking Pokemon
-            attacker_attack: Attack stat of attacking Pokemon
-            defender_defense: Defense stat of defending Pokemon
-            move_power: Base power of the move
-            type_effectiveness: Type effectiveness multiplier
-            stab: Same Type Attack Bonus
-            
-        Returns:
-            Calculated damage
-        """
         if move_power <= 0:
             return 0
         
@@ -109,16 +78,6 @@ class PokemonUtils:
     
     @staticmethod
     def get_ai_move_choice(pokemon_moves: Dict[str, Any], opponent_type: str) -> str:
-        """
-        Simple AI for choosing moves based on type effectiveness.
-        
-        Args:
-            pokemon_moves: Dictionary of available moves
-            opponent_type: Type of the opponent Pokemon
-            
-        Returns:
-            Name of the chosen move
-        """
         if not pokemon_moves:
             return 'struggle'
         
@@ -142,15 +101,6 @@ class PokemonUtils:
     
     @staticmethod
     def get_type_advantages(pokemon_type: str) -> Dict[str, List[str]]:
-        """
-        Get what types this Pokemon is strong/weak against.
-        
-        Args:
-            pokemon_type: Type of the Pokemon
-            
-        Returns:
-            Dictionary with 'strong_against' and 'weak_against' lists
-        """
         strong_against = []
         weak_against = []
         
@@ -173,15 +123,6 @@ class PokemonUtils:
     
     @staticmethod
     def get_random_pokemon_with_moves(level: int = 100) -> Tuple[str, List[Dict[str, Any]]]:
-        """
-        Get a random Pokemon with appropriate moves.
-        
-        Args:
-            level: Level of the Pokemon
-            
-        Returns:
-            Tuple of (pokemon_name, moves_list)
-        """
         # List of common Pokemon that should be in our dataset
         common_pokemon = [
             'pikachu', 'charmander', 'squirtle', 'bulbasaur', 'caterpie', 'weedle',

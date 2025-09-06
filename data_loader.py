@@ -15,7 +15,6 @@ class DataLoader:
         self._load_typechart()
     
     def _extract_status_effect(self, move_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract status effect information from move data."""
         # Check for direct status effect
         if 'status' in move_data and move_data['status']:
             return {
@@ -42,7 +41,6 @@ class DataLoader:
         return None
 
     def _load_moves(self):
-        """Load moves data from moves.json file."""
         try:
             with open('datasets/moves.json', 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
@@ -82,7 +80,6 @@ class DataLoader:
             raise
     
     def _load_learnsets(self):
-        """Load Pokémon learnset data from learnsets.json file."""
         try:
             with open('datasets/learnsets.json', 'r', encoding='utf-8') as f:
                 learnsets_data = json.load(f)
@@ -102,7 +99,6 @@ class DataLoader:
             raise
     
     def _load_typechart(self):
-        """Load type chart data from typechart.json file."""
         try:
             with open('datasets/typechart.json', 'r', encoding='utf-8') as f:
                 self.typechart_data = json.load(f)
@@ -118,7 +114,6 @@ class DataLoader:
             raise
     
     def get_move(self, move_name):
-        """Get move data by name."""
         if not move_name:
             print("\n=== MOVE LOOKUP FAILED ===")
             print("No move name provided")
@@ -158,9 +153,18 @@ class DataLoader:
         return move_data
     
     def get_pokemon_moves(self, pokemon_name: str, limit: int = 4) -> List[str]:
-        """Get available moves for a Pokemon."""
-        learnset = self.learnsets_data.get(pokemon_name.lower(), {}).get('learnset', {})
-        available_moves = list(learnset.keys())
+        pokemon_data = self.learnsets_data.get(pokemon_name.lower(), {})
+        
+        # Handle case where pokemon_data might be a list instead of dict
+        if isinstance(pokemon_data, list):
+            # If it's a list, assume it's the moves list directly
+            available_moves = pokemon_data
+        elif isinstance(pokemon_data, dict):
+            # If it's a dict, get the learnset
+            learnset = pokemon_data.get('learnset', {})
+            available_moves = list(learnset.keys()) if isinstance(learnset, dict) else []
+        else:
+            available_moves = []
         
         # Filter moves that exist in our moves database
         valid_moves = [move for move in available_moves if move in self.moves_data]
@@ -168,16 +172,6 @@ class DataLoader:
         return valid_moves[:limit]
     
     def get_type_effectiveness(self, attacking_type: str, defending_type: str) -> float:
-        """
-        Get type effectiveness multiplier.
-        
-        Args:
-            attacking_type: The type of the attacking move
-            defending_type: The type of the defending Pokémon
-            
-        Returns:
-            float: Effectiveness multiplier (0.0, 0.5, 1.0, or 2.0)
-        """
         if not attacking_type or not defending_type:
             print(f"\n=== TYPE EFFECTIVENESS DEBUG ===")
             print(f"Missing type data - attacking: {attacking_type}, defending: {defending_type}")
@@ -224,7 +218,6 @@ class DataLoader:
         return multiplier
     
     def get_move_power(self, move_name: str) -> int:
-        """Get the base power of a move."""
         print(f"\n=== GET MOVE POWER ===")
         print(f"Getting power for move: {move_name}")
         move_data = self.get_move_data(move_name)
@@ -233,7 +226,6 @@ class DataLoader:
         return power
         
     def get_effectiveness_message(self, effectiveness: float) -> str:
-        """Get the appropriate effectiveness message based on the multiplier."""
         if effectiveness == 0:
             return "It had no effect..."
         elif effectiveness < 1:
@@ -243,16 +235,6 @@ class DataLoader:
         return ""
     
     def calculate_effectiveness(self, move_type: str, target_types: list) -> tuple[float, str]:
-        """
-        Calculate the effectiveness of a move against a target with given types.
-        
-        Args:
-            move_type: The type of the move being used
-            target_types: List of types of the target Pokémon
-            
-        Returns:
-            tuple: (effectiveness_multiplier, effectiveness_message)
-        """
         if not move_type or not target_types:
             return 1.0, ""
             
@@ -277,20 +259,10 @@ class DataLoader:
         return effectiveness, message
     
     def get_move_type(self, move_name: str) -> str:
-        """Get the type of a move."""
         move_data = self.get_move_data(move_name)
         return move_data.get('type', 'normal').lower() if move_data else 'normal'
         
     def get_move_data(self, move_name: str) -> Optional[Dict[str, Any]]:
-        """
-        Get move data by name.
-        
-        Args:
-            move_name: Name of the move to look up
-            
-        Returns:
-            dict: Move data or None if not found
-        """
         if not move_name:
             return None
             
