@@ -963,16 +963,13 @@ async function handleMoveEvent(event, data) {
     // Log the full event for debugging
     console.log('Full event object:', JSON.stringify(event, null, 2));
     
-    // Check if this is a status skip (damage is 0 and there's a status message about being unable to move)
+    // Check if this is a status skip (Pokemon prevented from moving due to status)
+    // This should only trigger for prevention messages, not status application messages
     const isStatusSkip = event.damage === 0 && 
                         event.status_message && 
-                        (event.status_message.toLowerCase().includes('paraly') || 
-                         event.status_message.toLowerCase().includes('asleep') ||
-                         event.status_message.toLowerCase().includes('fast asleep') ||
-                         event.status_message.toLowerCase().includes('frozen')) &&
-                        (event.status_message.toLowerCase().includes('can\'t move') || 
-                         event.status_message.toLowerCase().includes('unable to move') ||
-                         event.status_message.toLowerCase().includes('fast asleep'));
+                        (event.status_message.toLowerCase().includes('can\'t move!') || 
+                         event.status_message.toLowerCase().includes('fast asleep.') ||
+                         event.status_message.toLowerCase().includes('frozen solid!'));
     
     console.log('Status skip check:', {
         damage: event.damage,
