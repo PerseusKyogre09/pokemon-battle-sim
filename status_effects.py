@@ -38,7 +38,19 @@ class StatusEffect:
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and self.status_type in pokemon.status_effects:
+            # Pokemon already has this specific status
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} already has {status}!")
+            return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name.lower())
+        
+        if self.is_major and hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
+            # Generic failure case
             return ""
             
         # Apply the status effect
@@ -164,6 +176,8 @@ STATUS_EFFECTS_CONFIG = {
         'messages': {
             'apply': "{pokemon} was burned!",
             'damage': "{pokemon} is hurt by its burn!",
+            'fail_already_has': "{pokemon} is already burned!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     },
     StatusType.PARALYSIS.value: {
@@ -177,6 +191,8 @@ STATUS_EFFECTS_CONFIG = {
         'messages': {
             'apply': "{pokemon} is paralyzed! It may be unable to move!",
             'prevent_move': "{pokemon} is paralyzed! It can't move!",
+            'fail_already_has': "{pokemon} is already paralyzed!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     },
     StatusType.FREEZE.value: {
@@ -189,7 +205,9 @@ STATUS_EFFECTS_CONFIG = {
         'messages': {
             'apply': "{pokemon} was frozen solid!",
             'prevent_move': "{pokemon} is frozen solid!",
-            'recover': "{pokemon} thawed out!"
+            'recover': "{pokemon} thawed out!",
+            'fail_already_has': "{pokemon} is already frozen!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     },
     StatusType.SLEEP.value: {
@@ -202,7 +220,9 @@ STATUS_EFFECTS_CONFIG = {
         'messages': {
             'apply': "{pokemon} fell asleep!",
             'prevent_move': "{pokemon} is fast asleep.",
-            'recover': "{pokemon} woke up!"
+            'recover': "{pokemon} woke up!",
+            'fail_already_has': "{pokemon} is already asleep!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     },
     StatusType.POISON.value: {
@@ -213,7 +233,9 @@ STATUS_EFFECTS_CONFIG = {
         'recovery_chance': 0,
         'messages': {
             'apply': "{pokemon} was poisoned!",
-            'damage': "{pokemon} is hurt by poison!"
+            'damage': "{pokemon} is hurt by poison!",
+            'fail_already_has': "{pokemon} is already poisoned!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     },
     StatusType.TOXIC.value: {
@@ -224,7 +246,9 @@ STATUS_EFFECTS_CONFIG = {
         'recovery_chance': 0,
         'messages': {
             'apply': "{pokemon} was badly poisoned!",
-            'damage': "{pokemon} is hurt by poison!"
+            'damage': "{pokemon} is hurt by poison!",
+            'fail_already_has': "{pokemon} is already badly poisoned!",
+            'fail_major_status': "{pokemon} already has a major status condition!"
         }
     }
 }
@@ -265,6 +289,17 @@ class BurnStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and StatusType.BURN.value in pokemon.status_effects:
+            # Pokemon already has burn
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already burned!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             
@@ -318,6 +353,17 @@ class ParalysisStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and StatusType.PARALYSIS.value in pokemon.status_effects:
+            # Pokemon already has paralysis
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already paralyzed!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             
@@ -378,6 +424,17 @@ class FreezeStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and StatusType.FREEZE.value in pokemon.status_effects:
+            # Pokemon already has freeze
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already frozen!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             
@@ -456,6 +513,17 @@ class SleepStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and StatusType.SLEEP.value in pokemon.status_effects:
+            # Pokemon already has sleep
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already asleep!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             
@@ -534,6 +602,17 @@ class PoisonStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects') and StatusType.POISON.value in pokemon.status_effects:
+            # Pokemon already has poison
+            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already poisoned!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             
@@ -603,6 +682,21 @@ class ToxicStatusEffect(StatusEffect):
         return True
     
     def apply(self, pokemon) -> str:
+        # Check for specific failure reasons and return appropriate messages
+        if hasattr(pokemon, 'status_effects'):
+            if StatusType.TOXIC.value in pokemon.status_effects:
+                # Pokemon already has toxic
+                message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already badly poisoned!")
+                return message_template.format(pokemon=pokemon.name.capitalize())
+            elif StatusType.POISON.value in pokemon.status_effects:
+                # Pokemon already has regular poison
+                return "{pokemon} is already poisoned!".format(pokemon=pokemon.name.capitalize())
+        
+        if hasattr(pokemon, 'major_status') and pokemon.major_status:
+            # Pokemon already has a major status condition
+            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
+            return message_template.format(pokemon=pokemon.name.capitalize())
+        
         if not self.can_apply(pokemon):
             return ""
             

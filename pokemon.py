@@ -197,20 +197,24 @@ class Pokemon:
             return ""
         
         if status_effect:
-            if status_effect.can_apply(self):
-                try:
-                    message = status_effect.apply(self)
+            try:
+                # Check if status can be applied before calling apply
+                can_apply_before = status_effect.can_apply(self)
+                message = status_effect.apply(self)
+                
+                # Only update stats and legacy status if the application was successful
+                # (status was actually applied, not just a failure message returned)
+                if can_apply_before and message:
                     # Update backward compatibility attributes
                     self._update_legacy_status()
                     # Recalculate stats to apply status effect modifications
                     self._recalculate_stats()
-                    return message
-                except Exception as e:
-                    print(f"ERROR: Failed to apply status effect {status_type} to {self.name}: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    return ""
-            else:
+                
+                return message
+            except Exception as e:
+                print(f"ERROR: Failed to apply status effect {status_type} to {self.name}: {e}")
+                import traceback
+                traceback.print_exc()
                 return ""
         
         return ""
