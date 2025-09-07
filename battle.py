@@ -106,9 +106,11 @@ class Battle:
             for msg in status_messages:
                 if msg:
                     self.battle_log.append(msg)
-        elif status_message:
-            # Handle legacy status effect application
-            if hasattr(move, 'status_effect') and move.status_effect:
+        
+        # Always add the status message if it exists (includes healing messages)
+        if status_message:
+            # Handle legacy status effect application for moves with status_effect
+            if hasattr(move, 'status_effect') and move.status_effect and defender:
                 status_effect = move.status_effect
                 if isinstance(status_effect, dict):
                     status_effect = status_effect.get('type')
@@ -116,8 +118,9 @@ class Battle:
                     status_msg = defender.apply_status_effect(status_effect)
                     if status_msg:
                         self.battle_log.append(status_msg)
-            else:
-                self.battle_log.append(status_message)
+            
+            # Always add the status message (which includes healing messages)
+            self.battle_log.append(status_message)
     
     def player_attack(self, move_name):
         move = self.player_pokemon.moves.get(move_name)

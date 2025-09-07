@@ -1264,8 +1264,9 @@ async function handleMoveEvent(event, data) {
     animateAttack(isPlayer);
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Update HP based on the move's damage
+    // Update HP based on the move's damage or healing
     if (event.damage > 0) {
+        // Damaging move - update defender's HP
         if (isPlayer) {
             // Player attacked opponent
             data.opponent_hp = event.defender_hp;
@@ -1276,6 +1277,25 @@ async function handleMoveEvent(event, data) {
             data.player_hp = event.defender_hp;
             console.log(`Updating player HP: ${data.player_hp}/${data.player_max_hp}`);
             updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+        }
+    }
+    
+    // Also check for healing moves (attacker's HP may have changed)
+    if (event.attacker_hp !== undefined) {
+        if (isPlayer) {
+            // Check if player's HP changed (healing move)
+            if (data.player_hp !== event.attacker_hp) {
+                data.player_hp = event.attacker_hp;
+                console.log(`Updating player HP (healing): ${data.player_hp}/${data.player_max_hp}`);
+                updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
+            }
+        } else {
+            // Check if opponent's HP changed (healing move)
+            if (data.opponent_hp !== event.attacker_hp) {
+                data.opponent_hp = event.attacker_hp;
+                console.log(`Updating opponent HP (healing): ${data.opponent_hp}/${data.opponent_max_hp}`);
+                updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
+            }
         }
     }
     

@@ -26,6 +26,9 @@ class Move:
         
         # Keep old status_effect for backward compatibility
         self.status_effect = status_effect
+        
+        # Parse healing properties from move data
+        self.is_healing_move, self.heal_amount, self.drain_ratio = self._parse_healing_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -56,6 +59,63 @@ class Move:
                 status_chance = status_info.get('chance', 100)
         
         return primary_status, secondary_status, status_chance
+    
+    def _parse_healing_data(self) -> Tuple[bool, Optional[List[int]], Optional[List[int]]]:
+        """Parse healing and drain data from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return False, None, None
+        
+        # Get the raw move data to access heal and drain properties
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return False, None, None
+        
+        is_healing = False
+        heal_amount = None
+        drain_ratio = None
+        
+        # Check for direct healing moves (heal property)
+        if 'heal' in raw_move_data and isinstance(raw_move_data['heal'], list):
+            is_healing = True
+            heal_amount = raw_move_data['heal']
+        
+        # Check for HP-draining moves (drain property)
+        if 'drain' in raw_move_data and isinstance(raw_move_data['drain'], list):
+            is_healing = True
+            drain_ratio = raw_move_data['drain']
+        
+        # Also check flags for heal flag
+        if 'flags' in raw_move_data and isinstance(raw_move_data['flags'], dict):
+            if raw_move_data['flags'].get('heal') == 1:
+                is_healing = True
+        
+        return is_healing, heal_amount, drain_ratio
+    
+    def _get_raw_move_data(self) -> Optional[Dict[str, Any]]:
+        """Get raw move data directly from the JSON dataset"""
+        try:
+            import json
+            with open('datasets/moves.json', 'r', encoding='utf-8') as f:
+                moves_data = json.load(f)
+            
+            # Try different variations of the move name
+            move_key = self.name.lower().replace(' ', '').replace('-', '')
+            
+            # Direct lookup
+            if move_key in moves_data:
+                return moves_data[move_key]
+            
+            # Search by name field
+            for key, data in moves_data.items():
+                if data.get('name', '').lower() == self.name.lower():
+                    return data
+            
+            return None
+        except Exception as e:
+            print(f"ERROR: Failed to get raw move data for {self.name}: {e}")
+            return None
     
     def _normalize_status_type(self, status_code: str) -> Optional[str]:
         if not status_code:
@@ -108,6 +168,176 @@ class Move:
         
         return messages
     
+    def _calculate_heal_amount(self, user, damage_dealt: int = 0) -> int:
+        """
+        Calculate the amount of HP to heal based on move type.
+        
+        Args:
+            user: The Pokemon using the healing move
+            damage_dealt: Amount of damage dealt (for HP-draining moves)
+            
+        Returns:
+            int: Amount of HP to heal (0 if no healing should occur)
+        """
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for healing calculation")
+                return 0
+            
+            if damage_dealt < 0:
+                print(f"WARNING: Negative damage_dealt ({damage_dealt}) provided, using 0")
+                damage_dealt = 0
+            
+            # Check if this is actually a healing move
+            if not self.is_healing_move:
+                return 0
+            
+            # Handle direct healing moves (heal property)
+            if self.heal_amount is not None:
+                try:
+                    if not isinstance(self.heal_amount, list) or len(self.heal_amount) != 2:
+                        print(f"ERROR: Invalid heal_amount format for {self.name}: {self.heal_amount}")
+                        return 0
+                    
+                    numerator, denominator = self.heal_amount
+                    if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
+                        print(f"ERROR: Non-numeric heal_amount values for {self.name}: {self.heal_amount}")
+                        return 0
+                    
+                    if denominator == 0:
+                        print(f"ERROR: Zero denominator in heal_amount for {self.name}")
+                        return 0
+                    
+                    # Calculate healing as fraction of max HP
+                    heal_fraction = numerator / denominator
+                    heal_amount = int(user.max_hp * heal_fraction)
+                    
+                    # Ensure healing amount is at least 1 if fraction is positive
+                    if heal_fraction > 0 and heal_amount == 0:
+                        heal_amount = 1
+                    
+                    return max(0, heal_amount)
+                    
+                except (TypeError, ValueError, ZeroDivisionError) as e:
+                    print(f"ERROR: Failed to calculate direct healing for {self.name}: {e}")
+                    return 0
+            
+            # Handle HP-draining moves (drain property)
+            elif self.drain_ratio is not None:
+                try:
+                    if not isinstance(self.drain_ratio, list) or len(self.drain_ratio) != 2:
+                        print(f"ERROR: Invalid drain_ratio format for {self.name}: {self.drain_ratio}")
+                        return 0
+                    
+                    numerator, denominator = self.drain_ratio
+                    if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
+                        print(f"ERROR: Non-numeric drain_ratio values for {self.name}: {self.drain_ratio}")
+                        return 0
+                    
+                    if denominator == 0:
+                        print(f"ERROR: Zero denominator in drain_ratio for {self.name}")
+                        return 0
+                    
+                    # Only heal if damage was actually dealt
+                    if damage_dealt <= 0:
+                        return 0
+                    
+                    # Calculate healing as fraction of damage dealt
+                    drain_fraction = numerator / denominator
+                    heal_amount = int(damage_dealt * drain_fraction)
+                    
+                    # Ensure healing amount is at least 1 if fraction is positive and damage was dealt
+                    if drain_fraction > 0 and damage_dealt > 0 and heal_amount == 0:
+                        heal_amount = 1
+                    
+                    return max(0, heal_amount)
+                    
+                except (TypeError, ValueError, ZeroDivisionError) as e:
+                    print(f"ERROR: Failed to calculate drain healing for {self.name}: {e}")
+                    return 0
+            
+            # If marked as healing move but no heal_amount or drain_ratio, return 0
+            else:
+                print(f"WARNING: {self.name} marked as healing move but no heal_amount or drain_ratio found")
+                return 0
+                
+        except Exception as e:
+            print(f"ERROR: Unexpected error in _calculate_heal_amount for {self.name}: {e}")
+            return 0
+
+    def _apply_healing_effects(self, user, target, damage_dealt: int = 0) -> List[str]:
+        """
+        Apply healing effects and return battle messages.
+        
+        Args:
+            user: The Pokemon using the healing move
+            target: The target Pokemon (may be None for self-targeting moves)
+            damage_dealt: Amount of damage dealt (for HP-draining moves)
+            
+        Returns:
+            List[str]: List of battle messages describing healing effects
+        """
+        messages = []
+        
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for healing effects")
+                return messages
+            
+            # Check if this is actually a healing move
+            if not self.is_healing_move:
+                return messages
+            
+            # Calculate the amount to heal
+            heal_amount = self._calculate_heal_amount(user, damage_dealt)
+            
+            if heal_amount <= 0:
+                # For draining moves that miss or deal no damage, no healing occurs
+                if self.drain_ratio is not None and damage_dealt <= 0:
+                    return messages  # No message needed for failed draining moves
+                
+                # For direct healing moves, show message even if no healing occurs
+                if self.heal_amount is not None:
+                    if user.current_hp >= user.max_hp:
+                        messages.append(f"{user.name} is already at full health!")
+                    return messages
+                
+                return messages
+            
+            # Store HP before healing for message generation
+            hp_before = user.current_hp
+            
+            # Apply healing using Pokemon's heal method
+            user.heal(heal_amount)
+            
+            # Calculate actual healing that occurred (in case of full HP cap)
+            actual_heal = user.current_hp - hp_before
+            
+            # Generate appropriate battle messages
+            if actual_heal <= 0:
+                # Pokemon was already at full HP
+                messages.append(f"{user.name} is already at full health!")
+            else:
+                # Generate healing message based on move type
+                if self.heal_amount is not None:
+                    # Direct healing move
+                    messages.append(f"{user.name} recovered {actual_heal} HP!")
+                elif self.drain_ratio is not None:
+                    # HP-draining move
+                    messages.append(f"{user.name} drained {actual_heal} HP from {target.name if target else 'the target'}!")
+                else:
+                    # Generic healing message
+                    messages.append(f"{user.name} recovered {actual_heal} HP!")
+            
+        except Exception as e:
+            print(f"ERROR: Failed to apply healing effects for {self.name}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return messages
+
     def _apply_single_status_effect(self, target, status_effect: Dict[str, Any]) -> str:
         if not status_effect:
             return ""
@@ -176,9 +406,15 @@ class Move:
             if defending_pokemon:
                 status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
             
-            # Combine status messages into a single string
-            status_message = " ".join(status_messages) if status_messages else None
-            return 0, f"{attacking_pokemon.name} used {self.name}!", status_message
+            # Apply healing effects for status moves (like Recover)
+            healing_messages = []
+            if attacking_pokemon:
+                healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, 0)
+            
+            # Combine status and healing messages
+            all_messages = status_messages + healing_messages
+            combined_message = " ".join(all_messages) if all_messages else None
+            return 0, f"{attacking_pokemon.name} used {self.name}!", combined_message
         
         # If we get here, it's a damaging move
         base_damage = self.power
@@ -224,8 +460,8 @@ class Move:
                 attack_name = 'Attack'
                 defense_name = 'Defense'
             else:  # 'special' or 'status' (though status moves are handled earlier)
-                attack_stat = getattr(attacking_pokemon, 'spa', 1)  # Special Attack
-                defense_stat = getattr(defending_pokemon, 'spd', 1)  # Special Defense
+                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)  # Special Attack
+                defense_stat = getattr(defending_pokemon, 'special_defense', 1)  # Special Defense
                 attack_name = 'Special Attack'
                 defense_name = 'Special Defense'
             
@@ -282,10 +518,16 @@ class Move:
         if defending_pokemon:
             status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
         
-        # Combine status messages into a single string
-        status_message = " ".join(status_messages) if status_messages else None
+        # Apply healing effects after damage calculation
+        healing_messages = []
+        if attacking_pokemon:
+            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
         
-        return base_damage, effectiveness_message, status_message
+        # Combine status and healing messages
+        all_messages = status_messages + healing_messages
+        combined_message = " ".join(all_messages) if all_messages else None
+        
+        return base_damage, effectiveness_message, combined_message
             
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -300,7 +542,10 @@ class Move:
             'primary_status': self.primary_status,
             'secondary_status': self.secondary_status,
             'status_chance': self.status_chance,
-            'is_status_move': self.is_status_move
+            'is_status_move': self.is_status_move,
+            'is_healing_move': self.is_healing_move,
+            'heal_amount': self.heal_amount,
+            'drain_ratio': self.drain_ratio
         }
         
     @classmethod
@@ -322,5 +567,13 @@ class Move:
             move.secondary_status = data['secondary_status']
         if 'status_chance' in data:
             move.status_chance = data['status_chance']
+        
+        # Restore healing data if available
+        if 'is_healing_move' in data:
+            move.is_healing_move = data['is_healing_move']
+        if 'heal_amount' in data:
+            move.heal_amount = data['heal_amount']
+        if 'drain_ratio' in data:
+            move.drain_ratio = data['drain_ratio']
             
         return move
