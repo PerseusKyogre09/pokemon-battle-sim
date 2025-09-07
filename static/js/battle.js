@@ -58,10 +58,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize status displays
     console.log('Initializing status displays...');
-    const playerStatusEffects = window.playerStatusEffects || [];
-    const opponentStatusEffects = window.opponentStatusEffects || [];
-    updateStatusDisplay('player', playerStatusEffects);
-    updateStatusDisplay('opponent', opponentStatusEffects);
+    // Pass raw data to updateStatusDisplay - validation will happen inside the function
+    updateStatusDisplay('player', window.playerStatusEffects);
+    updateStatusDisplay('opponent', window.opponentStatusEffects);
     
     // Initialize PP bars for all moves
     console.log('Initializing PP bars...');
@@ -669,9 +668,74 @@ function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
     console.log('=== MESSAGE ADDED ===');
 }
 
+// Status effect validation function
+function validateStatusEffects(statusEffects) {
+    console.log('=== VALIDATING STATUS EFFECTS ===');
+    console.log('Input:', statusEffects);
+    
+    // Handle null, undefined, or non-array inputs
+    if (!statusEffects) {
+        console.log('Status effects is null/undefined, returning empty array');
+        return [];
+    }
+    
+    if (!Array.isArray(statusEffects)) {
+        console.warn('Status effects is not an array:', typeof statusEffects, statusEffects);
+        return [];
+    }
+    
+    // Validate each status effect object
+    const validatedEffects = statusEffects.filter(status => {
+        if (!status || typeof status !== 'object') {
+            console.warn('Invalid status effect (not an object):', status);
+            return false;
+        }
+        
+        // Check required properties
+        if (!status.type || typeof status.type !== 'string') {
+            console.warn('Status effect missing or invalid type:', status);
+            return false;
+        }
+        
+        if (!status.name || typeof status.name !== 'string') {
+            console.warn('Status effect missing or invalid name:', status);
+            return false;
+        }
+        
+        // Validate optional properties with defaults
+        if (status.is_major !== undefined && typeof status.is_major !== 'boolean') {
+            console.warn('Status effect has invalid is_major property:', status);
+            status.is_major = true; // Default to major status
+        }
+        
+        if (status.duration !== undefined && (typeof status.duration !== 'number' || isNaN(status.duration))) {
+            console.warn('Status effect has invalid duration:', status);
+            status.duration = -1; // Default to permanent
+        }
+        
+        if (status.counter !== undefined && (typeof status.counter !== 'number' || isNaN(status.counter))) {
+            console.warn('Status effect has invalid counter:', status);
+            status.counter = 0; // Default counter
+        }
+        
+        return true;
+    });
+    
+    console.log(`Validated ${validatedEffects.length} out of ${statusEffects.length} status effects`);
+    console.log('=== END STATUS VALIDATION ===');
+    
+    return validatedEffects;
+}
+
 // Status effect display functions
 function updateStatusDisplay(pokemonType, statusEffects) {
-    console.log(`Updating status display for ${pokemonType}:`, statusEffects);
+    console.log(`=== STATUS DISPLAY UPDATE ===`);
+    console.log(`Pokemon: ${pokemonType}`);
+    console.log(`New status effects (raw):`, statusEffects);
+    
+    // Validate status effects data before processing
+    const validatedStatusEffects = validateStatusEffects(statusEffects);
+    console.log(`Validated status effects:`, validatedStatusEffects);
     
     const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
     if (!statusContainer) {
@@ -679,16 +743,62 @@ function updateStatusDisplay(pokemonType, statusEffects) {
         return;
     }
     
-    // Clear existing status indicators
-    statusContainer.innerHTML = '';
+    // Get current status effects for comparison
+    const currentIndicators = Array.from(statusContainer.querySelectorAll('.status-indicator'));
+    const currentStatuses = currentIndicators.map(indicator => {
+        const classList = Array.from(indicator.classList);
+        // Find the status type class (not 'status-indicator' or 'fade-in')
+        const statusType = classList.find(cls => cls !== 'status-indicator' && cls !== 'fade-in');
+        return statusType;
+    }).filter(Boolean);
     
-    // Add status indicators for each active status effect
-    if (statusEffects && statusEffects.length > 0) {
-        statusEffects.forEach(status => {
-            const indicator = createStatusIndicator(status);
-            statusContainer.appendChild(indicator);
+    console.log(`Current status effects for ${pokemonType}:`, currentStatuses);
+    
+    // Determine what's being added and removed using validated data
+    const newStatuses = validatedStatusEffects.map(status => status.type);
+    const addedStatuses = newStatuses.filter(status => !currentStatuses.includes(status));
+    const removedStatuses = currentStatuses.filter(status => !newStatuses.includes(status));
+    
+    // Log status changes
+    if (addedStatuses.length > 0) {
+        console.log(`✅ Status effects ADDED to ${pokemonType}:`, addedStatuses);
+    }
+    if (removedStatuses.length > 0) {
+        console.log(`❌ Status effects REMOVED from ${pokemonType}:`, removedStatuses);
+    }
+    if (addedStatuses.length === 0 && removedStatuses.length === 0) {
+        console.log(`🔄 No status changes for ${pokemonType}`);
+    }
+    
+    // Enhanced status indicator management - remove indicators that are no longer active
+    if (removedStatuses.length > 0) {
+        console.log(`Removing ${removedStatuses.length} status indicators with animations`);
+        // Don't await here to avoid blocking the UI update
+        removeMultipleStatusIndicators(pokemonType, removedStatuses).catch(error => {
+            console.error('Error removing status indicators:', error);
         });
     }
+    
+    // Add only new status indicators (don't clear existing ones)
+    if (addedStatuses.length > 0) {
+        console.log(`Adding ${addedStatuses.length} new status indicators for ${pokemonType}`);
+        addedStatuses.forEach(statusType => {
+            const statusData = validatedStatusEffects.find(s => s.type === statusType);
+            if (statusData) {
+                console.log(`  Adding ${statusType} (${statusData.name})`);
+                const indicator = createStatusIndicator(statusData);
+                statusContainer.appendChild(indicator);
+            }
+        });
+    }
+    
+    // Clear all indicators only if there are no status effects
+    if (validatedStatusEffects.length === 0 && currentStatuses.length > 0) {
+        console.log(`No active status effects for ${pokemonType} - clearing container`);
+        statusContainer.innerHTML = '';
+    }
+    
+    console.log(`=== END STATUS DISPLAY UPDATE ===`);
 }
 
 function createStatusIndicator(status) {
@@ -733,24 +843,161 @@ function addStatusIndicator(pokemonType, status) {
     statusContainer.appendChild(indicator);
 }
 
+// Enhanced function to remove multiple status indicators with proper cleanup
+async function removeMultipleStatusIndicators(pokemonType, statusTypesToRemove) {
+    console.log(`=== REMOVING MULTIPLE STATUS INDICATORS ===`);
+    console.log(`Pokemon: ${pokemonType}, Statuses to remove:`, statusTypesToRemove);
+    
+    if (!Array.isArray(statusTypesToRemove) || statusTypesToRemove.length === 0) {
+        console.log('No status indicators to remove');
+        return Promise.resolve();
+    }
+    
+    // Remove all indicators in parallel and wait for all animations to complete
+    const removalPromises = statusTypesToRemove.map(statusType => 
+        removeStatusIndicator(pokemonType, statusType).catch(error => {
+            console.error(`Failed to remove ${statusType}:`, error);
+            // Don't let one failure stop the others
+            return Promise.resolve();
+        })
+    );
+    
+    try {
+        await Promise.all(removalPromises);
+        console.log(`✅ All status indicators removed for ${pokemonType}`);
+    } catch (error) {
+        console.error(`Error removing multiple status indicators:`, error);
+    }
+    
+    console.log(`=== END MULTIPLE REMOVAL ===`);
+}
+
 function removeStatusIndicator(pokemonType, statusType) {
-    console.log(`Removing status indicator ${statusType} for ${pokemonType}`);
+    console.log(`=== REMOVING STATUS INDICATOR ===`);
+    console.log(`Pokemon: ${pokemonType}, Status: ${statusType}`);
+    
+    // Validate input parameters
+    if (!pokemonType || typeof pokemonType !== 'string') {
+        console.error('Invalid pokemonType provided to removeStatusIndicator:', pokemonType);
+        return Promise.reject(new Error('Invalid pokemonType'));
+    }
+    
+    if (!statusType || typeof statusType !== 'string') {
+        console.error('Invalid statusType provided to removeStatusIndicator:', statusType);
+        return Promise.reject(new Error('Invalid statusType'));
+    }
     
     const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
     if (!statusContainer) {
         console.error(`Status container not found for ${pokemonType}`);
-        return;
+        return Promise.reject(new Error(`Status container not found for ${pokemonType}`));
     }
     
     const indicator = statusContainer.querySelector(`.status-indicator.${statusType}`);
-    if (indicator) {
-        indicator.classList.add('fade-out');
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.parentNode.removeChild(indicator);
-            }
-        }, 300);
+    if (!indicator) {
+        console.log(`Status indicator ${statusType} not found for ${pokemonType} - already removed or never existed`);
+        return Promise.resolve(); // Not an error, just already removed
     }
+    
+    // Return a promise that resolves when the animation completes
+    return new Promise((resolve, reject) => {
+        try {
+            console.log(`Starting fade-out animation for ${statusType}`);
+            
+            // Add fade-out class for animation
+            indicator.classList.add('fade-out');
+            
+            // Set up animation completion handler
+            const handleAnimationEnd = (event) => {
+                // Make sure this is the right element and animation
+                if (event.target === indicator && event.animationName === 'fadeOut') {
+                    console.log(`Fade-out animation completed for ${statusType}`);
+                    cleanup();
+                }
+            };
+            
+            // Set up timeout as fallback in case animation events don't fire
+            const timeoutId = setTimeout(() => {
+                console.log(`Fade-out timeout reached for ${statusType}, forcing cleanup`);
+                cleanup();
+            }, 500); // Slightly longer than expected animation duration
+            
+            const cleanup = () => {
+                try {
+                    // Remove event listener
+                    indicator.removeEventListener('animationend', handleAnimationEnd);
+                    
+                    // Clear timeout
+                    clearTimeout(timeoutId);
+                    
+                    // Remove the indicator from DOM if it still exists
+                    if (indicator.parentNode) {
+                        console.log(`Removing ${statusType} indicator from DOM`);
+                        indicator.parentNode.removeChild(indicator);
+                    }
+                    
+                    console.log(`✅ Successfully removed status indicator ${statusType} for ${pokemonType}`);
+                    resolve();
+                } catch (cleanupError) {
+                    console.error(`Error during cleanup of ${statusType}:`, cleanupError);
+                    reject(cleanupError);
+                }
+            };
+            
+            // Listen for animation end event
+            indicator.addEventListener('animationend', handleAnimationEnd);
+            
+        } catch (error) {
+            console.error(`Error setting up removal animation for ${statusType}:`, error);
+            reject(error);
+        }
+    });
+}
+
+// Enhanced status indicator lifecycle management
+function clearAllStatusIndicators(pokemonType) {
+    console.log(`=== CLEARING ALL STATUS INDICATORS ===`);
+    console.log(`Pokemon: ${pokemonType}`);
+    
+    const statusContainer = document.getElementById(`${pokemonType}-status-indicators`);
+    if (!statusContainer) {
+        console.error(`Status container not found for ${pokemonType}`);
+        return Promise.resolve();
+    }
+    
+    // Get all current status indicators
+    const indicators = Array.from(statusContainer.querySelectorAll('.status-indicator'));
+    
+    if (indicators.length === 0) {
+        console.log(`No status indicators to clear for ${pokemonType}`);
+        return Promise.resolve();
+    }
+    
+    console.log(`Clearing ${indicators.length} status indicators for ${pokemonType}`);
+    
+    // Extract status types from indicators
+    const statusTypes = indicators.map(indicator => {
+        const classList = Array.from(indicator.classList);
+        return classList.find(cls => cls !== 'status-indicator' && cls !== 'fade-in' && cls !== 'fade-out');
+    }).filter(Boolean);
+    
+    // Use the enhanced removal function
+    return removeMultipleStatusIndicators(pokemonType, statusTypes);
+}
+
+// Function to handle status indicator cleanup when Pokemon faints
+async function handlePokemonFaintStatusCleanup(pokemonType) {
+    console.log(`=== POKEMON FAINT STATUS CLEANUP ===`);
+    console.log(`Cleaning up status indicators for fainted ${pokemonType}`);
+    
+    try {
+        await clearAllStatusIndicators(pokemonType);
+        console.log(`✅ Status cleanup completed for fainted ${pokemonType}`);
+    } catch (error) {
+        console.error(`Error during faint status cleanup for ${pokemonType}:`, error);
+    }
+    
+    console.log(`=== END FAINT CLEANUP ===`);
 }
 
 function disableMoveButtons(disabled) {
@@ -796,11 +1043,13 @@ function animateAttack(isPlayer) {
     }, 200);
 }
 
-// Function to animate a Pokémon fainting with distorted cry
+// Function to animate a Pokémon fainting with distorted cry and status cleanup
 async function animateFaint(isPlayer) {
     const pokemonElement = isPlayer ? 
         document.getElementById("player") : 
         document.getElementById("opponent");
+    
+    const pokemonType = isPlayer ? 'player' : 'opponent';
     
     // Get the Pokémon name from the cry audio element
     const pokemonName = isPlayer ? 
@@ -818,12 +1067,24 @@ async function animateFaint(isPlayer) {
     // Add the faint animation class
     pokemonElement.classList.add('faint-animation');
     
-    // Return a promise that resolves when the animation is complete
-    return new Promise(resolve => {
+    // Start status cleanup immediately when faint animation begins
+    const statusCleanupPromise = handlePokemonFaintStatusCleanup(pokemonType);
+    
+    // Return a promise that resolves when both animation and status cleanup are complete
+    const animationPromise = new Promise(resolve => {
         setTimeout(() => {
             resolve();
         }, 1500); // Animation takes 1.5 seconds
     });
+    
+    // Wait for both the animation and status cleanup to complete
+    try {
+        await Promise.all([animationPromise, statusCleanupPromise]);
+        console.log(`✅ Faint animation and status cleanup completed for ${pokemonType}`);
+    } catch (error) {
+        console.error(`Error during faint animation or status cleanup for ${pokemonType}:`, error);
+        // Still resolve to not block the game flow
+    }
 }
 
 async function makeMove(move) {
@@ -885,12 +1146,17 @@ async function makeMove(move) {
             updateHealthBar('#player-health-bar', data.player_hp, data.player_max_hp);
             updateHealthBar('#opponent-health-bar', data.opponent_hp, data.opponent_max_hp);
             
-            // Update status displays
-            if (data.player_status_effects !== undefined) {
+            // Update status displays - always call to ensure synchronization
+            try {
+                console.log('Updating status displays after move response');
+                // Pass raw data to updateStatusDisplay - validation will happen inside the function
                 updateStatusDisplay('player', data.player_status_effects);
-            }
-            if (data.opponent_status_effects !== undefined) {
                 updateStatusDisplay('opponent', data.opponent_status_effects);
+            } catch (error) {
+                console.error('Error updating status displays:', error);
+                // Attempt to update with empty arrays as fallback
+                updateStatusDisplay('player', []);
+                updateStatusDisplay('opponent', []);
             }
             
             // Check if battle is over after processing all events
@@ -931,6 +1197,9 @@ async function processMoveEvent(events, data) {
                     break;
                 case 'status':
                     handleStatusEvent(event, data);
+                    break;
+                case 'status_change':
+                    await handleStatusChangeEvent(event, data);
                     break;
                 default:
                     console.warn('Unknown event type:', event.type);
@@ -1047,6 +1316,123 @@ function handleStatusEvent(event, data) {
     }
     
     console.log('=== END HANDLE STATUS EVENT ===');
+}
+
+async function handleStatusChangeEvent(event, data) {
+    console.log('=== HANDLE STATUS CHANGE EVENT ===');
+    console.log('Status change event:', JSON.parse(JSON.stringify(event)));
+    
+    const pokemonType = event.pokemon; // 'player' or 'opponent'
+    const eventType = event.event_type; // 'status_applied' or 'status_removed'
+    const statusType = event.status_type; // e.g., 'sleep', 'burn', etc.
+    const statusName = event.status_name; // e.g., 'Sleep', 'Burn', etc.
+    const pokemonName = event.pokemon_name;
+    
+    console.log(`Processing ${eventType} for ${pokemonType}: ${statusType} (${statusName})`);
+    
+    if (eventType === 'status_applied') {
+        // Add visual feedback for status application
+        console.log(`Adding status indicator for ${statusType} on ${pokemonType}`);
+        
+        // Create status object for the indicator
+        const statusObj = {
+            type: statusType,
+            name: statusName,
+            is_major: true, // Assume major for visual purposes
+            duration: -1,
+            counter: 0
+        };
+        
+        // Add the status indicator with animation
+        addStatusIndicator(pokemonType, statusObj);
+        
+        // Add visual notification (optional - could be a brief animation or effect)
+        await addStatusChangeNotification(pokemonType, statusName, 'applied');
+        
+    } else if (eventType === 'status_removed') {
+        // Remove status indicator with animation
+        console.log(`Removing status indicator for ${statusType} from ${pokemonType}`);
+        
+        try {
+            await removeStatusIndicator(pokemonType, statusType);
+            console.log(`✅ Successfully removed ${statusType} indicator from ${pokemonType}`);
+        } catch (error) {
+            console.error(`Error removing ${statusType} indicator from ${pokemonType}:`, error);
+        }
+        
+        // Add visual notification for status removal
+        await addStatusChangeNotification(pokemonType, statusName, 'removed');
+    }
+    
+    console.log('=== END HANDLE STATUS CHANGE EVENT ===');
+}
+
+async function addStatusChangeNotification(pokemonType, statusName, changeType) {
+    console.log(`Adding status change notification: ${statusName} ${changeType} for ${pokemonType}`);
+    
+    // Get the Pokemon element to show the notification near
+    const pokemonElement = document.getElementById(pokemonType);
+    if (!pokemonElement) {
+        console.warn(`Pokemon element not found for ${pokemonType}`);
+        return;
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `status-change-notification ${changeType}`;
+    notification.textContent = changeType === 'applied' ? `+${statusName}` : `-${statusName}`;
+    
+    // Position the notification near the Pokemon
+    const pokemonRect = pokemonElement.getBoundingClientRect();
+    notification.style.position = 'absolute';
+    notification.style.left = `${pokemonRect.left + pokemonRect.width / 2}px`;
+    notification.style.top = `${pokemonRect.top - 20}px`;
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.zIndex = '1000';
+    notification.style.pointerEvents = 'none';
+    notification.style.fontSize = '14px';
+    notification.style.fontWeight = 'bold';
+    notification.style.padding = '4px 8px';
+    notification.style.borderRadius = '4px';
+    notification.style.color = 'white';
+    notification.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    
+    // Set color based on change type
+    if (changeType === 'applied') {
+        notification.style.backgroundColor = 'rgba(231, 76, 60, 0.9)'; // Red for status applied
+    } else {
+        notification.style.backgroundColor = 'rgba(46, 204, 113, 0.9)'; // Green for status removed
+    }
+    
+    // Add to document
+    document.body.appendChild(notification);
+    
+    // Animate the notification
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(-50%) translateY(10px)';
+    
+    // Fade in and move up
+    setTimeout(() => {
+        notification.style.transition = 'all 0.3s ease-out';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(-50%) translateY(-10px)';
+    }, 10);
+    
+    // Fade out and remove after delay
+    setTimeout(() => {
+        notification.style.transition = 'all 0.3s ease-in';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(-50%) translateY(-30px)';
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 1500);
+    
+    // Add a small delay for the animation
+    await new Promise(resolve => setTimeout(resolve, 200));
 }
 
 async function handleFaintEvent(event, data) {

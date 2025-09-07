@@ -51,6 +51,10 @@ class StatusEffect:
         
         if self.is_major:
             pokemon.major_status = self.status_type
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', self.status_type, self.name)
             
         # Return application message
         message_template = self.config.get('messages', {}).get('apply', "{pokemon} was affected by {status}!")
@@ -138,6 +142,10 @@ class StatusEffect:
         
         if hasattr(pokemon, 'major_status') and pokemon.major_status == self.status_type:
             pokemon.major_status = None
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_removed', self.status_type, self.name)
         
         # Return recovery message
         message_template = self.config.get('messages', {}).get('recover', "{pokemon} recovered from {status}!")
@@ -269,6 +277,10 @@ class BurnStatusEffect(StatusEffect):
         # Apply burn status
         pokemon.status_effects[StatusType.BURN.value] = self
         pokemon.major_status = StatusType.BURN.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.BURN.value, 'Burn')
             
         # Return application message
         return "{pokemon} was burned!".format(pokemon=pokemon.name)
@@ -318,6 +330,10 @@ class ParalysisStatusEffect(StatusEffect):
         # Apply paralysis status
         pokemon.status_effects[StatusType.PARALYSIS.value] = self
         pokemon.major_status = StatusType.PARALYSIS.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.PARALYSIS.value, 'Paralysis')
             
         # Return application message
         return "{pokemon} is paralyzed! It may be unable to move!".format(pokemon=pokemon.name)
@@ -374,6 +390,10 @@ class FreezeStatusEffect(StatusEffect):
         # Apply freeze status
         pokemon.status_effects[StatusType.FREEZE.value] = self
         pokemon.major_status = StatusType.FREEZE.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.FREEZE.value, 'Freeze')
             
         # Return application message
         return "{pokemon} was frozen solid!".format(pokemon=pokemon.name)
@@ -385,6 +405,10 @@ class FreezeStatusEffect(StatusEffect):
         
         if hasattr(pokemon, 'major_status') and pokemon.major_status == StatusType.FREEZE.value:
             pokemon.major_status = None
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_removed', StatusType.FREEZE.value, 'Freeze')
         
         # Return thaw message
         return "{pokemon} thawed out!".format(pokemon=pokemon.name)
@@ -444,6 +468,10 @@ class SleepStatusEffect(StatusEffect):
         # Apply sleep status
         pokemon.status_effects[StatusType.SLEEP.value] = self
         pokemon.major_status = StatusType.SLEEP.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.SLEEP.value, 'Sleep')
             
         # Return application message
         return "{pokemon} fell asleep!".format(pokemon=pokemon.name)
@@ -455,6 +483,10 @@ class SleepStatusEffect(StatusEffect):
         
         if hasattr(pokemon, 'major_status') and pokemon.major_status == StatusType.SLEEP.value:
             pokemon.major_status = None
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_removed', StatusType.SLEEP.value, 'Sleep')
         
         # Return wake up message
         return "{pokemon} woke up!".format(pokemon=pokemon.name)
@@ -514,6 +546,10 @@ class PoisonStatusEffect(StatusEffect):
         # Apply poison status
         pokemon.status_effects[StatusType.POISON.value] = self
         pokemon.major_status = StatusType.POISON.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.POISON.value, 'Poison')
             
         # Return application message
         return "{pokemon} was poisoned!".format(pokemon=pokemon.name)
@@ -579,6 +615,10 @@ class ToxicStatusEffect(StatusEffect):
         # Apply toxic status
         pokemon.status_effects[StatusType.TOXIC.value] = self
         pokemon.major_status = StatusType.TOXIC.value
+        
+        # Generate status change event
+        if hasattr(pokemon, '_add_status_change_event'):
+            pokemon._add_status_change_event('status_applied', StatusType.TOXIC.value, 'Badly Poisoned')
             
         # Return application message
         return "{pokemon} was badly poisoned!".format(pokemon=pokemon.name)

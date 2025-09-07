@@ -22,6 +22,7 @@ class Pokemon:
         self.status_effects = {}  # Dict of status_type -> StatusEffect
         self.major_status = None  # Reference to current major status
         self.volatile_statuses = set()  # Set of volatile status types
+        self.status_change_events = []  # Track status change events for this turn
         
         # Keep old attributes for backward compatibility
         self.status_condition = None
@@ -226,6 +227,9 @@ class Pokemon:
             if self.major_status == status_type:
                 self.major_status = None
             
+            # Generate status change event
+            self._add_status_change_event('status_removed', status_type, status_effect.name)
+            
             # Update backward compatibility attributes
             self._update_legacy_status()
             # Recalculate stats to remove status effect modifications
@@ -292,6 +296,22 @@ class Pokemon:
                 return False, message
         
         return True, ""
+    
+    def _add_status_change_event(self, event_type: str, status_type: str, status_name: str):
+        """Add a status change event to track for this turn."""
+        event = {
+            'type': event_type,
+            'status_type': status_type,
+            'status_name': status_name,
+            'pokemon_name': self.name
+        }
+        self.status_change_events.append(event)
+    
+    def get_status_change_events(self) -> list:
+        """Get and clear status change events for this turn."""
+        events = self.status_change_events.copy()
+        self.status_change_events.clear()
+        return events
     
     def _update_legacy_status(self):
         """Update legacy status attributes for backward compatibility."""

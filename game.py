@@ -283,6 +283,31 @@ class Game:
                     'timestamp': len(turn_info['battle_events'])
                 })
                 print(f"DEBUG: {self.opponent_pokemon.name} fainted from status effects!")
+        
+        # Collect status change events from both Pokemon
+        player_status_events = self.player_pokemon.get_status_change_events()
+        for event in player_status_events:
+            turn_info['battle_events'].append({
+                'type': 'status_change',
+                'event_type': event['type'],
+                'status_type': event['status_type'],
+                'status_name': event['status_name'],
+                'pokemon': 'player',
+                'pokemon_name': event['pokemon_name'],
+                'timestamp': len(turn_info['battle_events'])
+            })
+        
+        opponent_status_events = self.opponent_pokemon.get_status_change_events()
+        for event in opponent_status_events:
+            turn_info['battle_events'].append({
+                'type': 'status_change',
+                'event_type': event['type'],
+                'status_type': event['status_type'],
+                'status_name': event['status_name'],
+                'pokemon': 'opponent',
+                'pokemon_name': event['pokemon_name'],
+                'timestamp': len(turn_info['battle_events'])
+            })
             
         return turn_info
 
