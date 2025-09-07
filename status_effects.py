@@ -58,7 +58,7 @@ class StatusEffect:
             
         # Return application message
         message_template = self.config.get('messages', {}).get('apply', "{pokemon} was affected by {status}!")
-        return message_template.format(pokemon=pokemon.name, status=self.name)
+        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name)
     
     def process_turn_start(self, pokemon) -> List[str]:
         messages = []
@@ -101,7 +101,7 @@ class StatusEffect:
             if damage > 0:
                 pokemon.current_hp = max(0, pokemon.current_hp - damage)
                 damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by {status}!")
-                messages.append(damage_message.format(pokemon=pokemon.name, status=self.name))
+                messages.append(damage_message.format(pokemon=pokemon.name.capitalize(), status=self.name))
         
         return messages
     
@@ -116,13 +116,13 @@ class StatusEffect:
             prevention_chance = self.config.get('move_prevention_chance', 0)
             if random.random() < prevention_chance:
                 message = self.config.get('messages', {}).get('prevent_move', "{pokemon} can't move!")
-                return True, message.format(pokemon=pokemon.name)
+                return True, message.format(pokemon=pokemon.name.capitalize())
             return False, ""
         
         # Handle guaranteed move prevention (freeze, sleep)
         if self.status_type in [StatusType.FREEZE.value, StatusType.SLEEP.value]:
             message = self.config.get('messages', {}).get('prevent_move', "{pokemon} can't move!")
-            return True, message.format(pokemon=pokemon.name)
+            return True, message.format(pokemon=pokemon.name.capitalize())
         
         return False, ""
     
@@ -149,7 +149,7 @@ class StatusEffect:
         
         # Return recovery message
         message_template = self.config.get('messages', {}).get('recover', "{pokemon} recovered from {status}!")
-        return message_template.format(pokemon=pokemon.name, status=self.name)
+        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name)
 
 
 # Status Effects Configuration Dictionary
@@ -243,7 +243,7 @@ class BurnStatusEffect(StatusEffect):
         if damage > 0:
             pokemon.current_hp = max(0, pokemon.current_hp - damage)
             damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by its burn!")
-            messages.append(damage_message.format(pokemon=pokemon.name))
+            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
         return messages
     
@@ -283,7 +283,7 @@ class BurnStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.BURN.value, 'Burn')
             
         # Return application message
-        return "{pokemon} was burned!".format(pokemon=pokemon.name)
+        return "{pokemon} was burned!".format(pokemon=pokemon.name.capitalize())
 
 
 class ParalysisStatusEffect(StatusEffect):
@@ -295,7 +295,7 @@ class ParalysisStatusEffect(StatusEffect):
         # 25% chance to prevent move usage
         prevention_chance = 0.25
         if random.random() < prevention_chance:
-            message = "{pokemon} is paralyzed! It can't move!".format(pokemon=pokemon.name)
+            message = "{pokemon} is paralyzed! It can't move!".format(pokemon=pokemon.name.capitalize())
             return True, message
         
         return False, ""
@@ -336,7 +336,7 @@ class ParalysisStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.PARALYSIS.value, 'Paralysis')
             
         # Return application message
-        return "{pokemon} is paralyzed! It may be unable to move!".format(pokemon=pokemon.name)
+        return "{pokemon} is paralyzed! It may be unable to move!".format(pokemon=pokemon.name.capitalize())
     
     def process_turn_start(self, pokemon) -> List[str]:
         return []
@@ -350,7 +350,7 @@ class FreezeStatusEffect(StatusEffect):
         super().__init__(StatusType.FREEZE.value, **kwargs)
     
     def affects_move_usage(self, pokemon) -> Tuple[bool, str]:
-        message = "{pokemon} is frozen solid!".format(pokemon=pokemon.name)
+        message = "{pokemon} is frozen solid!".format(pokemon=pokemon.name.capitalize())
         return True, message
     
     def process_turn_start(self, pokemon) -> List[str]:
@@ -396,7 +396,7 @@ class FreezeStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.FREEZE.value, 'Freeze')
             
         # Return application message
-        return "{pokemon} was frozen solid!".format(pokemon=pokemon.name)
+        return "{pokemon} was frozen solid!".format(pokemon=pokemon.name.capitalize())
     
     def _recover_status(self, pokemon) -> str:
         # Remove freeze status from Pokemon
@@ -411,7 +411,7 @@ class FreezeStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_removed', StatusType.FREEZE.value, 'Freeze')
         
         # Return thaw message
-        return "{pokemon} thawed out!".format(pokemon=pokemon.name)
+        return "{pokemon} thawed out!".format(pokemon=pokemon.name.capitalize())
 
 
 class SleepStatusEffect(StatusEffect):
@@ -425,7 +425,7 @@ class SleepStatusEffect(StatusEffect):
         super().__init__(StatusType.SLEEP.value, **kwargs)
     
     def affects_move_usage(self, pokemon) -> Tuple[bool, str]:
-        message = "{pokemon} is fast asleep.".format(pokemon=pokemon.name)
+        message = "{pokemon} is fast asleep.".format(pokemon=pokemon.name.capitalize())
         return True, message
     
     def process_turn_start(self, pokemon) -> List[str]:
@@ -474,7 +474,7 @@ class SleepStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.SLEEP.value, 'Sleep')
             
         # Return application message
-        return "{pokemon} fell asleep!".format(pokemon=pokemon.name)
+        return "{pokemon} fell asleep!".format(pokemon=pokemon.name.capitalize())
     
     def _recover_status(self, pokemon) -> str:
         # Remove sleep status from Pokemon
@@ -489,7 +489,7 @@ class SleepStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_removed', StatusType.SLEEP.value, 'Sleep')
         
         # Return wake up message
-        return "{pokemon} woke up!".format(pokemon=pokemon.name)
+        return "{pokemon} woke up!".format(pokemon=pokemon.name.capitalize())
 
 
 class PoisonStatusEffect(StatusEffect):
@@ -509,7 +509,7 @@ class PoisonStatusEffect(StatusEffect):
         if damage > 0:
             pokemon.current_hp = max(1, pokemon.current_hp - damage)
             damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-            messages.append(damage_message.format(pokemon=pokemon.name))
+            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
         return messages
     
@@ -552,7 +552,7 @@ class PoisonStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.POISON.value, 'Poison')
             
         # Return application message
-        return "{pokemon} was poisoned!".format(pokemon=pokemon.name)
+        return "{pokemon} was poisoned!".format(pokemon=pokemon.name.capitalize())
 
 
 class ToxicStatusEffect(StatusEffect):
@@ -577,7 +577,7 @@ class ToxicStatusEffect(StatusEffect):
         if damage > 0:
             pokemon.current_hp = max(1, pokemon.current_hp - damage)
             damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-            messages.append(damage_message.format(pokemon=pokemon.name))
+            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
         return messages
     
@@ -621,7 +621,7 @@ class ToxicStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_applied', StatusType.TOXIC.value, 'Badly Poisoned')
             
         # Return application message
-        return "{pokemon} was badly poisoned!".format(pokemon=pokemon.name)
+        return "{pokemon} was badly poisoned!".format(pokemon=pokemon.name.capitalize())
 
 
 def create_status_effect(status_type: str, **kwargs) -> Optional[StatusEffect]:
