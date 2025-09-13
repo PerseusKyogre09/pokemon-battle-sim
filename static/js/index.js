@@ -11,8 +11,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const movesContainer = document.getElementById('moves-container');
     const pokemonId = document.getElementById('pokemon-id');
     const startBattleButton = document.getElementById('start-battle');
+    const setSelection = document.getElementById('set-selection');
+    const prevSetButton = document.getElementById('prev-set');
+    const nextSetButton = document.getElementById('next-set');
+    const setCounter = document.getElementById('set-counter');
+    const setInfo = document.getElementById('set-info');
     
     let selectedPokemon = null;
+    let availableSets = [];
+    let currentSetIndex = 0;
     
     // Debounce function to limit API calls
     function debounce(func, delay) {
@@ -127,7 +134,60 @@ document.addEventListener('DOMContentLoaded', function() {
         return '#F44336';
     }
     
-    // Fetch moves for a Pokémon
+    // Fetch all available sets for a Pokémon
+    async function fetchPokemonSets(pokemonName) {
+        try {
+            const response = await fetch(`/get_all_sets/${pokemonName.toLowerCase()}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.sets && data.sets.length > 0) {
+                    return data.sets;
+                }
+            }
+            
+            // Fallback to basic moveset if no sets found
+            const fallbackResponse = await fetch(`/get_moveset/${pokemonName.toLowerCase()}`);
+            if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                if (fallbackData.moves && fallbackData.moves.length > 0) {
+                    return [{
+                        format: 'fallback',
+                        set_name: 'Default Set',
+                        moves: fallbackData.moves,
+                        item: '',
+                        ability: '',
+                        nature: '',
+                        evs: {}
+                    }];
+                }
+            }
+            
+            // Final fallback
+            return [{
+                format: 'fallback',
+                set_name: 'Basic Set',
+                moves: ['Tackle', 'Growl', 'Scratch', 'Leer'],
+                item: '',
+                ability: '',
+                nature: '',
+                evs: {}
+            }];
+            
+        } catch (error) {
+            console.error('Error fetching Pokémon sets:', error);
+            return [{
+                format: 'fallback',
+                set_name: 'Basic Set',
+                moves: ['Tackle', 'Growl', 'Scratch', 'Leer'],
+                item: '',
+                ability: '',
+                nature: '',
+                evs: {}
+            }];
+        }
+    }
+
+    // Fetch moves for a Pokémon (legacy function for backward compatibility)
     async function fetchPokemonMoves(pokemonName) {
         try {
             // First try to get moves from the local moveset data
@@ -181,6 +241,53 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Update set selection UI
+    function updateSetSelection() {
+        if (availableSets.length <= 1) {
+            setSelection.classList.add('hidden');
+            return;
+        }
+        
+        setSelection.classList.remove('hidden');
+        setCounter.textContent = `${currentSetIndex + 1} / ${availableSets.length}`;
+        
+        // Update navigation buttons
+        prevSetButton.disabled = currentSetIndex === 0;
+        nextSetButton.disabled = currentSetIndex === availableSets.length - 1;
+        
+        // Update set info
+        const currentSet = availableSets[currentSetIndex];
+        let setInfoText = `${currentSet.set_name}`;
+        if (currentSet.format !== 'fallback') {
+            setInfoText += ` (${currentSet.format})`;
+        }
+        if (currentSet.item) {
+            setInfoText += ` • ${currentSet.item}`;
+        }
+        if (currentSet.ability) {
+            setInfoText += ` • ${currentSet.ability}`;
+        }
+        if (currentSet.nature) {
+            setInfoText += ` • ${currentSet.nature}`;
+        }
+        setInfo.textContent = setInfoText;
+        
+        // Update moves display
+        updateMovesDisplay();
+    }
+    
+    // Update moves display based on current set
+    function updateMovesDisplay() {
+        movesContainer.innerHTML = '';
+        const currentSet = availableSets[currentSetIndex];
+        currentSet.moves.forEach(move => {
+            const moveElement = document.createElement('div');
+            moveElement.className = 'bg-gray-700 px-3 py-1 rounded text-sm text-center';
+            moveElement.textContent = move.charAt(0).toUpperCase() + move.slice(1);
+            movesContainer.appendChild(moveElement);
+        });
+    }
+    
     // Show selected Pokemon
     async function showSelectedPokemon(pokemon) {
         selectedPokemon = pokemon;
@@ -208,9 +315,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Fetch additional data in parallel
-            const [speciesData, moves] = await Promise.all([
+            const [speciesData, sets] = await Promise.all([
                 fetchPokemonSpecies(pokemon.id),
-                fetchPokemonMoves(pokemon.name)
+                fetchPokemonSets(pokemon.name)
             ]);
             
             // Update Pokedex entry
@@ -237,14 +344,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 statsContainer.appendChild(statItem);
             });
             
-            // Update moves
-            movesContainer.innerHTML = '';
-            moves.forEach(move => {
-                const moveElement = document.createElement('div');
-                moveElement.className = 'bg-gray-700 px-3 py-1 rounded text-sm text-center';
-                moveElement.textContent = move.charAt(0).toUpperCase() + move.slice(1);
-                movesContainer.appendChild(moveElement);
-            });
+            // Update sets and moves
+            availableSets = sets;
+            currentSetIndex = 0;
+            updateSetSelection();
             
             // Show the selected Pokemon section and enable start button
             selectedPokemonDiv.classList.remove('hidden');
@@ -285,6 +388,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Set navigation event listeners
+    prevSetButton.addEventListener('click', () => {
+        if (currentSetIndex > 0) {
+            currentSetIndex--;
+            updateSetSelection();
+        }
+    });
+    
+    nextSetButton.addEventListener('click', () => {
+        if (currentSetIndex < availableSets.length - 1) {
+            currentSetIndex++;
+            updateSetSelection();
+        }
+    });
+    
     // Start battle button click handler
     startBattleButton.addEventListener('click', () => {
         if (!selectedPokemon) return;
@@ -298,12 +416,18 @@ document.addEventListener('DOMContentLoaded', function() {
         form.method = 'POST';
         form.action = '/start';  // Matches the Flask route
         
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'pokemon';
-        input.value = selectedPokemon.name;
+        const pokemonInput = document.createElement('input');
+        pokemonInput.type = 'hidden';
+        pokemonInput.name = 'pokemon';
+        pokemonInput.value = selectedPokemon.name;
         
-        form.appendChild(input);
+        const setInput = document.createElement('input');
+        setInput.type = 'hidden';
+        setInput.name = 'selected_set';
+        setInput.value = JSON.stringify(availableSets[currentSetIndex]);
+        
+        form.appendChild(pokemonInput);
+        form.appendChild(setInput);
         document.body.appendChild(form);
         form.submit();  // This will redirect to battle.html after form submission
     });

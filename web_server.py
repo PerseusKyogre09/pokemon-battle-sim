@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, Response
 from game import Game
 from data_loader import data_loader
-from moveset import get_strategic_moveset
+from moveset import get_strategic_moveset, get_all_pokemon_sets
 import requests
 
 app = Flask(__name__)
@@ -224,6 +224,61 @@ def get_moveset(pokemon_name):
             'error': str(e)
         }), 500
 
+@app.route('/get_all_sets/<pokemon_name>')
+def get_all_sets(pokemon_name):
+    try:
+        # Get all available sets for the Pokémon
+        all_sets = get_all_pokemon_sets(pokemon_name, debug=False)
+        
+        if all_sets:
+            # Flatten all sets into a single list with format and set name info
+            flattened_sets = []
+            for format_name, sets in all_sets.items():
+                for set_name, set_data in sets.items():
+                    moves = set_data.get('moves', [])[:4]  # Take first 4 moves
+                    if moves:
+                        flattened_sets.append({
+                            'format': format_name,
+                            'set_name': set_name,
+                            'moves': moves,
+                            'item': set_data.get('item', ''),
+                            'ability': set_data.get('ability', ''),
+                            'nature': set_data.get('nature', ''),
+                            'evs': set_data.get('evs', {})
+                        })
+            
+            return jsonify({
+                'success': True,
+                'sets': flattened_sets
+            })
+        else:
+            # Fallback to basic moveset if no sets found
+            moveset = get_strategic_moveset(pokemon_name, debug=False)
+            if moveset:
+                return jsonify({
+                    'success': True,
+                    'sets': [{
+                        'format': 'fallback',
+                        'set_name': 'Default Set',
+                        'moves': moveset[:4],
+                        'item': '',
+                        'ability': '',
+                        'nature': '',
+                        'evs': {}
+                    }]
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No sets found for this Pokémon'
+                })
+    except Exception as e:
+        print(f"Error getting all sets for {pokemon_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Start webpage with Pokémon selection
 @app.route('/', methods=['GET'])
 def index():
@@ -268,6 +323,7 @@ def start_game():
     
     try:
         player_pokemon = request.form.get('pokemon', 'pikachu').lower()
+        selected_set_data = request.form.get('selected_set', '')
         
         # Get Pokémon data
         player_data = get_pokemon_data(player_pokemon)
@@ -277,9 +333,82 @@ def start_game():
         player_moves = get_pokemon_moves(player_data)
         opponent_moves = get_pokemon_moves(opponent_data)
         
+        # If a specific set was selected, use those moves instead
+        if selected_set_data:
+            try:
+                import json
+                selected_set = json.loads(selected_set_data)
+                if 'moves' in selected_set and selected_set['moves']:
+                    print(f"Using selected set: {selected_set.get('set_name', 'Unknown')} from {selected_set.get('format', 'Unknown')}")
+                    print(f"Selected set moves: {selected_set['moves']}")
+                    # Convert the selected set moves to the format expected by the game
+                    player_moves = []
+                    for move_name in selected_set['moves']:
+                        # Get move data from our dataset or API
+                        clean_move_name = move_name.lower().replace(' ', '-')
+                        move_data = data_loader.get_move(clean_move_name)
+                        
+                        if move_data:
+                            move_power = move_data.get('basePower', 75)
+                            move_type = move_data.get('type', 'normal')
+                            move_pp = data_loader.get_move_pp(clean_move_name) or 15
+                        else:
+                            # Fallback values
+                            move_power = 75
+                            move_type = 'normal'
+                            move_pp = 15
+                        
+                        move_obj = {
+                            'name': move_name,
+                            'power': move_power,
+                            'type': move_type,
+                            'pp': move_pp,
+                            'max_pp': move_pp
+                        }
+                        player_moves.append(move_obj)
+                        print(f"Added move: {move_obj}")
+                    
+                    print(f"Final player_moves from selected set: {len(player_moves)} moves")
+                else:
+                    print("Selected set has no moves, using default moves")
+            except Exception as e:
+                print(f"Error processing selected set: {e}")
+                # Fall back to default moves if there's an error
+        
         # Initialize the game
         game = Game()
         game.start_battle(player_data, opponent_data, player_moves, opponent_moves)
+        
+        # Debug sprite URLs
+        print(f"DEBUG: Player sprite URL: {game.player_pokemon.sprite_url}")
+        print(f"DEBUG: Opponent sprite URL: {game.opponent_pokemon.sprite_url}")
+        print(f"DEBUG: Player moves count: {len(game.player_pokemon.moves)}")
+        print(f"DEBUG: Player moves: {list(game.player_pokemon.moves.keys())}")
+        
+        # Fallback sprite URLs if None or empty
+        player_sprite = game.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
+        opponent_sprite = game.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
+        
+        # Additional fallback for player sprite - prioritize Showdown Gen 5 animated back sprites
+        if not player_sprite:
+            # Fallback to Showdown Gen 5 animated back sprites (highest priority)
+            pokemon_name = player_data.get('name', '').lower()
+            player_sprite = f"https://play.pokemonshowdown.com/sprites/gen5ani-back/{pokemon_name}.gif"
+        if not player_sprite:
+            player_sprite = player_data.get('sprites', {}).get('other', {}).get('showdown', {}).get('back_default', '')
+        if not player_sprite:
+            player_sprite = player_data.get('sprites', {}).get('other', {}).get('official-artwork', {}).get('front_default', '')
+        if not player_sprite:
+            player_sprite = player_data.get('sprites', {}).get('front_default', '')
+        
+        # Additional fallback for opponent sprite  
+        if not opponent_sprite:
+            opponent_sprite = opponent_data.get('sprites', {}).get('other', {}).get('official-artwork', {}).get('front_default', '')
+        if not opponent_sprite:
+            opponent_sprite = opponent_data.get('sprites', {}).get('front_default', '')
+        
+        print(f"DEBUG: Final player sprite: {player_sprite}")
+        print(f"DEBUG: Final opponent sprite: {opponent_sprite}")
         
         # Prepare data for the battle template
         battle_data = {
@@ -291,8 +420,8 @@ def start_game():
                 **game.opponent_pokemon.to_dict(),
                 'id': opponent_data.get('id', 6)  # Default to Charizard's ID if not found
             },
-            'player_sprite': game.player_pokemon.sprite_url,
-            'opponent_sprite': game.opponent_pokemon.sprite_url,
+            'player_sprite': player_sprite,
+            'opponent_sprite': opponent_sprite,
             'player_hp': game.player_pokemon.current_hp,
             'opponent_hp': game.opponent_pokemon.current_hp,
             'player_status_effects': game.player_pokemon.get_status_display(),

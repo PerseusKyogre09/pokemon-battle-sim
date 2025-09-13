@@ -39,6 +39,89 @@ def get_strategic_moveset(pokemon_name: str, format_name: str = None, debug: boo
         # If there's an error, try fallback
         return get_fallback_moveset(pokemon_name, debug)
 
+def get_all_pokemon_sets(pokemon_name: str, debug: bool = True) -> Optional[dict]:
+    """
+    Get all available sets for a Pokemon across all formats from gen8_stats_sets.json
+    Returns a dictionary with format names as keys and sets as values
+    """
+    try:
+        if debug:
+            print(f"\nGetting all sets for: {pokemon_name}")
+            
+        # Normalize the Pokémon name
+        normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())
+        
+        # Get the directory of the current script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
+        
+        if not os.path.exists(file_path):
+            if debug:
+                print("Error: gen8_stats_sets.json not found!")
+            return None
+            
+        with open(file_path, 'r', encoding='utf-8') as f:
+            sets_data = json.load(f)
+        
+        if not isinstance(sets_data, dict):
+            if debug:
+                print("Error: Invalid data format in JSON file")
+            return None
+        
+        all_sets = {}
+        
+        # Check all formats
+        for format_name, format_data in sets_data.items():
+            if not isinstance(format_data, dict) or 'stats' not in format_data:
+                continue
+                
+            stats_data = format_data['stats']
+            
+            # Try to find the Pokémon in this format
+            pokemon_key = None
+            
+            # Special case for Urshifu forms
+            if 'urshifu' in pokemon_name.lower():
+                if 'rapid' in pokemon_name.lower():
+                    pokemon_key = 'Urshifu-Rapid-Strike'
+                else:
+                    pokemon_key = 'Urshifu'
+            # Try exact match first
+            elif pokemon_name in stats_data:
+                pokemon_key = pokemon_name
+            else:
+                # Try case-insensitive match
+                for key in stats_data.keys():
+                    if key.lower() == pokemon_name.lower():
+                        pokemon_key = key
+                        break
+                
+                # If still not found, try partial match
+                if pokemon_key is None:
+                    for key in stats_data.keys():
+                        if pokemon_name.lower() in key.lower():
+                            pokemon_key = key
+                            break
+            
+            if pokemon_key and pokemon_key in stats_data:
+                pokemon_sets = stats_data[pokemon_key]
+                if pokemon_sets:
+                    all_sets[format_name] = pokemon_sets
+                    if debug:
+                        print(f"Found {len(pokemon_sets)} sets in {format_name}")
+        
+        if debug:
+            print(f"Total formats with sets: {len(all_sets)}")
+            
+        return all_sets if all_sets else None
+            
+    except Exception as e:
+        if debug:
+            import traceback
+            print(f"Error in get_all_pokemon_sets for {pokemon_name}: {e}")
+            traceback.print_exc()
+        return None
+
 def fetch_sets(pokemon_name: str, format_name: str = None, debug: bool = True) -> Optional[List[str]]:
 # Normalize the Pokémon name to lowercase
     normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())

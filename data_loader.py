@@ -262,6 +262,10 @@ class DataLoader:
     def get_move_type(self, move_name: str) -> str:
         move_data = self.get_move_data(move_name)
         return move_data.get('type', 'normal').lower() if move_data else 'normal'
+    
+    def get_move_pp(self, move_name: str) -> int:
+        move_data = self.get_move_data(move_name)
+        return move_data.get('pp', 15) if move_data else 15
         
     def get_move_data(self, move_name: str) -> Optional[Dict[str, Any]]:
         if not move_name:

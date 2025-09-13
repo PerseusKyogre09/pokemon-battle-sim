@@ -53,6 +53,26 @@
                             <!-- Moves Section -->
                             <div class="mt-4">
                                 <h3 class="text-lg font-semibold text-yellow-300 mb-2 border-b border-gray-700 pb-1 text-center">MOVES</h3>
+                                
+                                <!-- Set Selection -->
+                                <div id="set-selection" class="mb-4 hidden">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="text-sm font-semibold text-gray-300">SET SELECTION</h4>
+                                        <div class="flex items-center space-x-2">
+                                            <button id="prev-set" class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                                ←
+                                            </button>
+                                            <span id="set-counter" class="text-xs text-gray-400">1 / 1</span>
+                                            <button id="next-set" class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                                →
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="set-info" class="bg-gray-900 p-2 rounded text-xs text-gray-300 mb-2">
+                                        <!-- Set details will be shown here -->
+                                    </div>
+                                </div>
+                                
                                 <div id="moves-container" class="grid grid-cols-2 gap-2 min-w-[200px] mb-4">
                                     <!-- Moves will be added here -->
                                 </div>
