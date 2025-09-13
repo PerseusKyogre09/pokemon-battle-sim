@@ -30,6 +30,9 @@ class Move:
         
         # Parse healing properties from move data
         self.is_healing_move, self.heal_amount, self.drain_ratio = self._parse_healing_data()
+        
+        # Parse multi-hit properties from move data
+        self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -97,6 +100,66 @@ class Move:
                 is_healing = True
         
         return is_healing, heal_amount, drain_ratio
+    
+    def _parse_multihit_data(self) -> Tuple[bool, Optional[Union[int, List[int]]]]:
+        """Parse multi-hit data from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return False, None
+        
+        # Get the raw move data to access multihit property
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return False, None
+        
+        # Check for multihit property
+        if 'multihit' in raw_move_data:
+            multihit_data = raw_move_data['multihit']
+            if isinstance(multihit_data, int):
+                # Fixed number of hits (e.g., Triple Kick = 3)
+                return True, multihit_data
+            elif isinstance(multihit_data, list) and len(multihit_data) == 2:
+                # Range of hits (e.g., Spike Cannon = [2,5])
+                return True, multihit_data
+            else:
+                print(f"WARNING: Invalid multihit data format for {self.name}: {multihit_data}")
+                return False, None
+        
+        return False, None
+    
+    def _determine_hit_count(self) -> int:
+        """Determine how many times a multi-hit move should hit"""
+        if not self.is_multihit_move or not self.multihit_data:
+            return 1
+        
+        if isinstance(self.multihit_data, int):
+            # Fixed number of hits
+            return self.multihit_data
+        elif isinstance(self.multihit_data, list) and len(self.multihit_data) == 2:
+            # Range of hits - use Pokemon's standard probability distribution
+            min_hits, max_hits = self.multihit_data
+            
+            # Standard multi-hit move probability distribution:
+            # 2 hits: 35% chance
+            # 3 hits: 35% chance  
+            # 4 hits: 15% chance
+            # 5 hits: 15% chance
+            if max_hits == 5:
+                rand = random.randint(1, 100)
+                if rand <= 35:
+                    return 2
+                elif rand <= 70:
+                    return 3
+                elif rand <= 85:
+                    return 4
+                else:
+                    return 5
+            else:
+                # For other ranges, use uniform distribution
+                return random.randint(min_hits, max_hits)
+        
+        return 1
     
     def _get_raw_move_data(self) -> Optional[Dict[str, Any]]:
         """Get raw move data directly from the JSON dataset"""
@@ -421,7 +484,11 @@ class Move:
             combined_message = " ".join(all_messages) if all_messages else None
             return 0, f"{attacking_pokemon.name} used {self.name}!", combined_message
         
-        # If we get here, it's a damaging move
+        # Handle multi-hit moves
+        if self.is_multihit_move:
+            return self._use_multihit_move(attacking_pokemon, defending_pokemon)
+        
+        # If we get here, it's a single-hit damaging move
         base_damage = self.power
         effectiveness_message = ""
         
@@ -533,6 +600,121 @@ class Move:
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
+    
+    def _use_multihit_move(self, attacking_pokemon, defending_pokemon) -> Tuple[int, str, Optional[str]]:
+        """Handle multi-hit moves like Pin Missile, Rock Blast, etc."""
+        if not attacking_pokemon or not defending_pokemon:
+            return 0, f"{attacking_pokemon.name} used {self.name}!", None
+        
+        # Determine number of hits
+        hit_count = self._determine_hit_count()
+        print(f"DEBUG: {self.name} will hit {hit_count} times")
+        
+        # Get the move type in lowercase for comparison
+        move_type = self.type.lower()
+        
+        # Get defending Pokémon's types, handling both single and dual types
+        if hasattr(defending_pokemon, 'types') and isinstance(defending_pokemon.types, list) and defending_pokemon.types:
+            defending_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in defending_pokemon.types]
+        else:
+            # Fallback for backward compatibility
+            defending_types = [getattr(defending_pokemon, 'type', 'normal').lower()]
+        
+        # Calculate effectiveness against each of the target's types
+        effectiveness = 1.0
+        effectiveness_breakdown = {}
+        
+        for target_type in defending_types:
+            type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
+            effectiveness_breakdown[target_type] = type_effectiveness
+            effectiveness *= type_effectiveness
+        
+        effectiveness = round(effectiveness, 2)
+        
+        # Debug logging
+        print(f"DEBUG: {attacking_pokemon.name}'s {self.name} ({move_type}) vs {defending_pokemon.name} ({', '.join(defending_types)}):")
+        for t, eff in effectiveness_breakdown.items():
+            print(f"  - Against {t}: {eff}x")
+        print(f"  Total effectiveness: {effectiveness}x")
+        
+        if effectiveness == 0:
+            return 0, "It had no effect...", None
+        
+        # Determine attack and defense stats based on move category
+        if self.category == 'physical':
+            attack_stat = getattr(attacking_pokemon, 'attack', 1)
+            defense_stat = getattr(defending_pokemon, 'defense', 1)
+        else:  # 'special'
+            attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+            defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+        
+        # Calculate damage for each hit
+        total_damage = 0
+        level = 100
+        
+        for hit_num in range(1, hit_count + 1):
+            # Check accuracy for each hit (some moves check accuracy per hit)
+            if not self._check_accuracy():
+                print(f"DEBUG: Hit {hit_num} missed!")
+                continue
+            
+            # Calculate base damage for this hit
+            damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
+            damage = int(damage)
+            
+            # Apply effectiveness
+            damage = int(damage * effectiveness)
+            
+            # Apply STAB (Same Type Attack Bonus)
+            if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
+                attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
+                if move_type in attacker_types:
+                    damage = int(damage * 1.5)
+            
+            # Check for critical hit (6.25% chance by default)
+            crit_chance = 1/16
+            is_critical = random.random() < crit_chance
+            
+            if is_critical:
+                damage = int(damage * 1.5)
+                print(f"DEBUG: Critical hit on hit {hit_num}!")
+            
+            # Apply random damage variation (85% to 100% of calculated damage)
+            damage_multiplier = random.uniform(0.85, 1.0)
+            damage = max(1, int(damage * damage_multiplier))
+            
+            print(f"DEBUG: Hit {hit_num}: {damage} damage")
+            total_damage += damage
+        
+        # Generate effectiveness message
+        effectiveness_message = ""
+        if effectiveness < 1:
+            effectiveness_message = "It's not very effective..."
+        elif effectiveness > 1:
+            effectiveness_message = "It's super effective!"
+        
+        # Generate hit count message
+        hit_message = f"Hit {hit_count} time{'s' if hit_count != 1 else ''}!"
+        
+        # Combine messages
+        combined_message = f"{hit_message} {effectiveness_message}".strip()
+        
+        # Apply status effects after damage calculation
+        status_messages = []
+        if defending_pokemon:
+            status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
+        
+        # Apply healing effects after damage calculation
+        healing_messages = []
+        if attacking_pokemon:
+            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, total_damage)
+        
+        # Combine all messages
+        all_messages = status_messages + healing_messages
+        if all_messages:
+            combined_message = f"{combined_message} {' '.join(all_messages)}"
+        
+        return total_damage, combined_message, None
             
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -550,7 +732,9 @@ class Move:
             'is_status_move': self.is_status_move,
             'is_healing_move': self.is_healing_move,
             'heal_amount': self.heal_amount,
-            'drain_ratio': self.drain_ratio
+            'drain_ratio': self.drain_ratio,
+            'is_multihit_move': self.is_multihit_move,
+            'multihit_data': self.multihit_data
         }
         
     @classmethod
@@ -580,5 +764,11 @@ class Move:
             move.heal_amount = data['heal_amount']
         if 'drain_ratio' in data:
             move.drain_ratio = data['drain_ratio']
+        
+        # Restore multi-hit data if available
+        if 'is_multihit_move' in data:
+            move.is_multihit_move = data['is_multihit_move']
+        if 'multihit_data' in data:
+            move.multihit_data = data['multihit_data']
             
         return move

@@ -80,8 +80,18 @@ class Battle:
             self.battle_log.append(effectiveness_msg)
             return
             
-        # Only deal damage if the move is not a status move and has power > 0
-        if not move.is_status_move and move.power > 0:
+        # Handle multi-hit moves differently
+        if move.is_multihit_move and damage > 0:
+            # Multi-hit moves return combined message with hit count and effectiveness
+            defender.take_damage(damage)
+            log_message = f"{attacker.name} used {move_name}! {defender.name} lost {damage} HP (Now: {defender.current_hp}/{defender.max_hp})"
+            self.battle_log.append(log_message.strip())
+            
+            # Add the multi-hit message (contains hit count and effectiveness)
+            if effectiveness_msg:
+                self.battle_log.append(effectiveness_msg)
+        # Handle regular moves
+        elif not move.is_status_move and move.power > 0:
             defender.take_damage(damage)
             log_message = f"{attacker.name} used {move_name}! {defender.name} lost {damage} HP (Now: {defender.current_hp}/{defender.max_hp})"
             self.battle_log.append(log_message.strip())
@@ -89,8 +99,8 @@ class Battle:
             log_message = f"{attacker.name} used {move_name}!"
             self.battle_log.append(log_message)
         
-        # Add effectiveness message
-        if effectiveness_msg and "used" not in effectiveness_msg:
+        # Add effectiveness message for single-hit moves
+        if not move.is_multihit_move and effectiveness_msg and "used" not in effectiveness_msg:
             self.battle_log.append(effectiveness_msg)
             
         # Process status effects from the move
