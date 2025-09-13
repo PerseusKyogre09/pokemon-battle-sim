@@ -5,7 +5,7 @@ import random
 class Move:
     def __init__(self, name: str, power: int, pp: int, move_type: str = 'normal', 
                  accuracy: Union[int, bool] = 100, category: str = 'physical',
-                 status_effect: Optional[Dict[str, Any]] = None):
+                 status_effect: Optional[Dict[str, Any]] = None, priority: int = 0):
         self.name = name
         self.power = power
         self.pp = pp
@@ -14,6 +14,7 @@ class Move:
         self.accuracy = accuracy
         self.category = category.lower()
         self.is_status_move = category.lower() == 'status' or power == 0
+        self.priority = priority  # Higher priority moves go first
         
         # Parse status effects from move data if not provided
         if status_effect is None:
@@ -35,6 +36,10 @@ class Move:
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return None, None, 0
+            
+        # Set priority from move data if available
+        if 'priority' in move_data:
+            self.priority = move_data['priority']
         
         primary_status = None
         secondary_status = None

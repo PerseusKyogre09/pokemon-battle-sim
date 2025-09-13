@@ -121,18 +121,27 @@ class Game:
                 'timestamp': len(turn_info['battle_events'])
             })
         
-        # Determine who goes first based on speed
-        if self.player_pokemon.speed > self.opponent_pokemon.speed:
+        # Determine who goes first based on move priority and speed
+        player_priority = player_move.priority if player_move else 0
+        opponent_priority = opponent_move.priority if opponent_move else 0
+        
+        # Priority comparison (higher priority goes first)
+        if player_priority > opponent_priority:
             player_first = True
-        elif self.player_pokemon.speed < self.opponent_pokemon.speed:
+        elif player_priority < opponent_priority:
             player_first = False
         else:
-            # In case of tie, random choice (50/50)
-            import random
-            player_first = random.choice([True, False])
-            
+            # If same priority, compare speeds
+            if self.player_pokemon.speed > self.opponent_pokemon.speed:
+                player_first = True
+            elif self.player_pokemon.speed < self.opponent_pokemon.speed:
+                player_first = False
+            else:
+                # In case of tie, random choice (50/50)
+                player_first = random.choice([True, False])
+        
         turn_info['player_first'] = player_first
-        print(f"DEBUG: Turn order - Player first: {player_first} (Player speed: {self.player_pokemon.speed}, Opponent speed: {self.opponent_pokemon.speed})")
+        print(f"DEBUG: Turn order - Player first: {player_first} (Player priority: {player_priority}, Opponent priority: {opponent_priority}, Player speed: {self.player_pokemon.speed}, Opponent speed: {self.opponent_pokemon.speed})")
         
         def execute_move(attacker, defender, move, move_name, is_player_attacking):
             """Helper function to execute a move and return damage and effectiveness."""

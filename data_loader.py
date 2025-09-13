@@ -65,7 +65,8 @@ class DataLoader:
                     'category': move_data.get('category', 'status' if move_data.get('basePower', 0) == 0 else 'physical').lower(),
                     'num': int(move_data.get('num', 0)),
                     'status_effect': status_effect,
-                    'is_status_move': move_data.get('category', '').lower() == 'status' or move_data.get('basePower', 0) == 0
+                    'is_status_move': move_data.get('category', '').lower() == 'status' or move_data.get('basePower', 0) == 0,
+                    'priority': int(move_data.get('priority', 0))  # Add priority field, default to 0 if not specified
                 }
                 
                 # Store by both the move key and the move name for easier lookup
