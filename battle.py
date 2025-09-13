@@ -1,3 +1,5 @@
+from data_loader import data_loader
+
 class Battle:
     def __init__(self, player_pokemon, opponent_pokemon):
         self.player_pokemon = player_pokemon
@@ -65,6 +67,89 @@ class Battle:
         # Default to allowing move if all else fails
         return True, ""
 
+    def _process_multihit_attack(self, attacker, defender, move_name, move):
+        """Process multi-hit moves with progressive damage display"""
+        # Log the move usage
+        self.battle_log.append(f"{attacker.name} used {move_name}!")
+        
+        # Get individual hit information
+        hits = move.get_multihit_hits(attacker, defender)
+        
+        if not hits:
+            self.battle_log.append("It had no effect...")
+            return
+        
+        # Process each hit individually
+        total_damage = 0
+        successful_hits = 0
+        
+        for hit in hits:
+            if hit['missed']:
+                self.battle_log.append(f"Hit {hit['hit_number']} missed!")
+                continue
+            
+            # Deal damage for this hit
+            defender.take_damage(hit['damage'])
+            total_damage += hit['damage']
+            successful_hits += 1
+            
+            # Log this hit
+            hit_message = f"Hit {hit['hit_number']} dealt {hit['damage']} damage!"
+            if hit['critical']:
+                hit_message += " Critical hit!"
+            self.battle_log.append(hit_message)
+            
+            # Check if defender fainted
+            if defender.current_hp <= 0:
+                self.battle_log.append(f"{defender.name} fainted!")
+                break
+        
+        # Log total damage and effectiveness
+        if successful_hits > 0:
+            effectiveness_msg = self._get_effectiveness_message(move, attacker, defender)
+            if effectiveness_msg:
+                self.battle_log.append(effectiveness_msg)
+            
+            # Log hit count summary
+            hit_count_msg = f"Hit {successful_hits} time{'s' if successful_hits != 1 else ''}!"
+            self.battle_log.append(hit_count_msg)
+        
+        # Apply status effects after all hits
+        status_messages = move._apply_status_effects(attacker, defender)
+        for status_msg in status_messages:
+            if status_msg.strip():
+                self.battle_log.append(status_msg)
+        
+        # Apply healing effects
+        healing_messages = move._apply_healing_effects(attacker, defender, total_damage)
+        for healing_msg in healing_messages:
+            if healing_msg.strip():
+                self.battle_log.append(healing_msg)
+
+    def _get_effectiveness_message(self, move, attacker, defender):
+        """Get effectiveness message for a move"""
+        # Get the move type in lowercase for comparison
+        move_type = move.type.lower()
+        
+        # Get defending Pokémon's types
+        if hasattr(defender, 'types') and isinstance(defender.types, list) and defender.types:
+            defending_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in defender.types]
+        else:
+            defending_types = [getattr(defender, 'type', 'normal').lower()]
+        
+        # Calculate effectiveness
+        effectiveness = 1.0
+        for target_type in defending_types:
+            type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
+            effectiveness *= type_effectiveness
+        effectiveness = round(effectiveness, 2)
+        
+        if effectiveness < 1:
+            return "It's not very effective..."
+        elif effectiveness > 1:
+            return "It's super effective!"
+        return ""
+
     def _process_attack(self, attacker, defender, move_name, move):
         # Check if the attacker can use a move this turn
         can_use_move, reason = self._can_use_move(attacker)
@@ -81,15 +166,9 @@ class Battle:
             return
             
         # Handle multi-hit moves differently
-        if move.is_multihit_move and damage > 0:
-            # Multi-hit moves return combined message with hit count and effectiveness
-            defender.take_damage(damage)
-            log_message = f"{attacker.name} used {move_name}! {defender.name} lost {damage} HP (Now: {defender.current_hp}/{defender.max_hp})"
-            self.battle_log.append(log_message.strip())
-            
-            # Add the multi-hit message (contains hit count and effectiveness)
-            if effectiveness_msg:
-                self.battle_log.append(effectiveness_msg)
+        if move.is_multihit_move:
+            self._process_multihit_attack(attacker, defender, move_name, move)
+            return
         # Handle regular moves
         elif not move.is_status_move and move.power > 0:
             defender.take_damage(damage)

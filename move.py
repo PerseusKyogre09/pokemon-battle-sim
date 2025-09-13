@@ -715,6 +715,89 @@ class Move:
             combined_message = f"{combined_message} {' '.join(all_messages)}"
         
         return total_damage, combined_message, None
+    
+    def get_multihit_hits(self, attacking_pokemon, defending_pokemon) -> List[Dict[str, Any]]:
+        """Get individual hit information for multi-hit moves (for progressive damage display)"""
+        if not self.is_multihit_move or not attacking_pokemon or not defending_pokemon:
+            return []
+        
+        # Determine number of hits
+        hit_count = self._determine_hit_count()
+        
+        # Get the move type in lowercase for comparison
+        move_type = self.type.lower()
+        
+        # Get defending Pokémon's types
+        if hasattr(defending_pokemon, 'types') and isinstance(defending_pokemon.types, list) and defending_pokemon.types:
+            defending_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in defending_pokemon.types]
+        else:
+            defending_types = [getattr(defending_pokemon, 'type', 'normal').lower()]
+        
+        # Calculate effectiveness
+        effectiveness = 1.0
+        for target_type in defending_types:
+            type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
+            effectiveness *= type_effectiveness
+        effectiveness = round(effectiveness, 2)
+        
+        if effectiveness == 0:
+            return []
+        
+        # Determine attack and defense stats
+        if self.category == 'physical':
+            attack_stat = getattr(attacking_pokemon, 'attack', 1)
+            defense_stat = getattr(defending_pokemon, 'defense', 1)
+        else:
+            attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+            defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+        
+        # Calculate each hit
+        hits = []
+        level = 100
+        
+        for hit_num in range(1, hit_count + 1):
+            # Check accuracy for each hit
+            if not self._check_accuracy():
+                hits.append({
+                    'hit_number': hit_num,
+                    'damage': 0,
+                    'missed': True,
+                    'critical': False
+                })
+                continue
+            
+            # Calculate base damage for this hit
+            damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
+            damage = int(damage)
+            
+            # Apply effectiveness
+            damage = int(damage * effectiveness)
+            
+            # Apply STAB
+            if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
+                attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
+                if move_type in attacker_types:
+                    damage = int(damage * 1.5)
+            
+            # Check for critical hit
+            crit_chance = 1/16
+            is_critical = random.random() < crit_chance
+            
+            if is_critical:
+                damage = int(damage * 1.5)
+            
+            # Apply random damage variation
+            damage_multiplier = random.uniform(0.85, 1.0)
+            damage = max(1, int(damage * damage_multiplier))
+            
+            hits.append({
+                'hit_number': hit_num,
+                'damage': damage,
+                'missed': False,
+                'critical': is_critical
+            })
+        
+        return hits
             
     def to_dict(self) -> Dict[str, Any]:
         return {
