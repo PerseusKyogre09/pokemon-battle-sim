@@ -33,6 +33,9 @@ class Move:
         
         # Parse multi-hit properties from move data
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
+        
+        # Parse stat modifications from move data
+        self.stat_modifications, self.targets_self = self._parse_stat_modifications()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -127,6 +130,60 @@ class Move:
                 return False, None
         
         return False, None
+    
+    def _parse_stat_modifications(self) -> Tuple[Optional[Dict[str, int]], bool]:
+        """Parse stat modifications from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return None, False
+        
+        # Get the raw move data to access boosts property
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return None, False
+        
+        stat_modifications = None
+        targets_self = False
+        
+        # Check for boosts property
+        if 'boosts' in raw_move_data and isinstance(raw_move_data['boosts'], dict):
+            # Map dataset stat abbreviations to Pokemon class stat names
+            stat_name_mapping = {
+                'atk': 'attack',
+                'def': 'defense',
+                'spa': 'special_attack',
+                'spd': 'special_defense',
+                'spe': 'speed',
+                'accuracy': 'accuracy',
+                'evasion': 'evasion'
+            }
+            
+            # Convert abbreviated stat names to full names
+            stat_modifications = {}
+            for stat_abbrev, change in raw_move_data['boosts'].items():
+                if stat_abbrev in stat_name_mapping and isinstance(change, int):
+                    full_stat_name = stat_name_mapping[stat_abbrev]
+                    stat_modifications[full_stat_name] = change
+            
+            # Only keep stat_modifications if we found valid entries
+            if not stat_modifications:
+                stat_modifications = None
+        
+        # Determine target based on move's target property
+        if 'target' in raw_move_data:
+            target = raw_move_data['target']
+            # Self-targeting moves
+            if target in ['self']:
+                targets_self = True
+            # Opponent-targeting moves
+            elif target in ['normal', 'allAdjacentFoes', 'allEnemies', 'adjacentFoe', 'randomNormal']:
+                targets_self = False
+            # For other targets, default to opponent targeting
+            else:
+                targets_self = False
+        
+        return stat_modifications, targets_self
     
     def _determine_hit_count(self) -> int:
         """Determine how many times a multi-hit move should hit"""
@@ -406,6 +463,49 @@ class Move:
         
         return messages
 
+    def _apply_stat_modifications(self, user, target) -> List[str]:
+        """
+        Apply stat modifications to appropriate targets and return battle messages.
+        
+        Args:
+            user: The Pokemon using the move
+            target: The target Pokemon (may be None for self-targeting moves)
+            
+        Returns:
+            List[str]: List of battle messages describing stat modifications
+        """
+        messages = []
+        
+        try:
+            # Check if this move has stat modifications
+            if not self.stat_modifications or not isinstance(self.stat_modifications, dict):
+                return messages
+            
+            # Determine the target Pokemon for stat modifications
+            if self.targets_self:
+                modification_target = user
+            else:
+                modification_target = target
+            
+            # Validate that we have a valid target
+            if not modification_target or not hasattr(modification_target, 'modify_stat_stage'):
+                return messages
+            
+            # Apply each stat modification
+            for stat_name, change in self.stat_modifications.items():
+                if isinstance(change, int) and change != 0:
+                    # Apply the stat stage change and get the result message
+                    message = modification_target.modify_stat_stage(stat_name, change)
+                    if message:  # Only add non-empty messages
+                        messages.append(message)
+            
+        except Exception as e:
+            print(f"ERROR: Failed to apply stat modifications for {self.name}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return messages
+
     def _apply_single_status_effect(self, target, status_effect: Dict[str, Any]) -> str:
         if not status_effect:
             return ""
@@ -479,8 +579,13 @@ class Move:
             if attacking_pokemon:
                 healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, 0)
             
-            # Combine status and healing messages
-            all_messages = status_messages + healing_messages
+            # Apply stat modifications for status moves
+            stat_modification_messages = []
+            if self.stat_modifications:
+                stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+            
+            # Combine status, healing, and stat modification messages
+            all_messages = status_messages + healing_messages + stat_modification_messages
             combined_message = " ".join(all_messages) if all_messages else None
             return 0, f"{attacking_pokemon.name} used {self.name}!", combined_message
         
@@ -595,8 +700,13 @@ class Move:
         if attacking_pokemon:
             healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
         
-        # Combine status and healing messages
-        all_messages = status_messages + healing_messages
+        # Apply stat modifications after damage calculation
+        stat_modification_messages = []
+        if self.stat_modifications:
+            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+        
+        # Combine status, healing, and stat modification messages
+        all_messages = status_messages + healing_messages + stat_modification_messages
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
@@ -709,8 +819,13 @@ class Move:
         if attacking_pokemon:
             healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, total_damage)
         
+        # Apply stat modifications after damage calculation
+        stat_modification_messages = []
+        if self.stat_modifications:
+            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+        
         # Combine all messages
-        all_messages = status_messages + healing_messages
+        all_messages = status_messages + healing_messages + stat_modification_messages
         if all_messages:
             combined_message = f"{combined_message} {' '.join(all_messages)}"
         
@@ -817,7 +932,9 @@ class Move:
             'heal_amount': self.heal_amount,
             'drain_ratio': self.drain_ratio,
             'is_multihit_move': self.is_multihit_move,
-            'multihit_data': self.multihit_data
+            'multihit_data': self.multihit_data,
+            'stat_modifications': self.stat_modifications,
+            'targets_self': self.targets_self
         }
         
     @classmethod
@@ -853,5 +970,11 @@ class Move:
             move.is_multihit_move = data['is_multihit_move']
         if 'multihit_data' in data:
             move.multihit_data = data['multihit_data']
+        
+        # Restore stat modification data if available
+        if 'stat_modifications' in data:
+            move.stat_modifications = data['stat_modifications']
+        if 'targets_self' in data:
+            move.targets_self = data['targets_self']
             
         return move

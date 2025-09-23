@@ -501,6 +501,8 @@ def move():
         "player_moves_pp": player_moves_pp,
         "player_status_effects": game.player_pokemon.get_status_display(),
         "opponent_status_effects": game.opponent_pokemon.get_status_display(),
+        "player_stat_stages": game.player_pokemon.get_current_stat_stages(),
+        "opponent_stat_stages": game.opponent_pokemon.get_current_stat_stages(),
         "turn_info": {
             "player_first": turn_info.get('player_first', True),
             "player_move": turn_info.get('player_move', ''),

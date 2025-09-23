@@ -5,7 +5,7 @@ import random
 
 class Pokemon:
     def __init__(self, name, type_, sprite_url, stats, moves=None, level=100):
-        self.name = name
+        self.name = self._format_pokemon_name(name) if isinstance(name, str) else name
         # Handle both single type (string) and multiple types (list)
         if isinstance(type_, list):
             self.types = [t.lower() for t in type_]
@@ -114,13 +114,88 @@ class Pokemon:
                     self.moves[move_name].max_pp = move.get('max_pp', move_pp)
         #scaled to level 100 (since pokeapi wasnt setting pokemons to level 100 automatically for some reason)
 
+    def _format_pokemon_name(self, name):
+        """Format Pokemon name with proper capitalization for display.
+        
+        Handles special cases like:
+        - ho-oh -> Ho-Oh
+        - mr-mime -> Mr. Mime  
+        - nidoran-m -> Nidoran♂
+        - nidoran-f -> Nidoran♀
+        """
+        if not name:
+            return name
+            
+        # Handle special cases (check both original and lowercase)
+        name_lower = name.lower()
+        special_cases = {
+            'ho-oh': 'Ho-Oh',
+            'mr-mime': 'Mr. Mime',
+            'mime-jr': 'Mime Jr.',
+            'nidoran-m': 'Nidoran♂',
+            'nidoran-f': 'Nidoran♀',
+            'farfetch\'d': 'Farfetch\'d',
+            'sirfetch\'d': 'Sirfetch\'d'
+        }
+        
+        if name_lower in special_cases:
+            return special_cases[name_lower]
+        
+        # Handle hyphenated names (capitalize each part)
+        if '-' in name:
+            parts = name.split('-')
+            return '-'.join(part.capitalize() for part in parts)
+        
+        # Handle apostrophes (like Farfetch'd variants)
+        if '\'' in name:
+            parts = name.split('\'')
+            return '\''.join(part.capitalize() for part in parts)
+        
+        # Default capitalization - only capitalize if all lowercase or all uppercase
+        if name.islower() or name.isupper():
+            return name.capitalize()
+        else:
+            # If it has mixed case, assume it's already properly formatted
+            return name
+
     def take_damage(self, damage):
         """Apply damage to the Pokémon, ensuring HP doesn't go below 0."""
+        old_hp = self.current_hp
         self.current_hp = max(0, self.current_hp - damage)
+        
+        # If Pokemon just fainted (HP went from >0 to 0), reset stat stages
+        if old_hp > 0 and self.current_hp <= 0:
+            self.reset_stats()
         
     def heal(self, amount):
         """Heal the Pokémon by the specified amount, ensuring HP doesn't exceed max HP."""
         self.current_hp = min(self.max_hp, self.current_hp + amount)
+
+    def get_stat_stage_multiplier(self, stage):
+        """Get the multiplier for a given stat stage (-6 to +6).
+        
+        Returns the standard Pokemon stat stage multiplier:
+        Stage -6: 2/8 = 0.25 (25%)
+        Stage -5: 2/7 ≈ 0.286 (28.6%)
+        Stage -4: 2/6 ≈ 0.333 (33.3%)
+        Stage -3: 2/5 = 0.4 (40%)
+        Stage -2: 2/4 = 0.5 (50%)
+        Stage -1: 2/3 ≈ 0.667 (66.7%)
+        Stage 0: 2/2 = 1.0 (100%)
+        Stage +1: 3/2 = 1.5 (150%)
+        Stage +2: 4/2 = 2.0 (200%)
+        Stage +3: 5/2 = 2.5 (250%)
+        Stage +4: 6/2 = 3.0 (300%)
+        Stage +5: 7/2 = 3.5 (350%)
+        Stage +6: 8/2 = 4.0 (400%)
+        """
+        # Clamp stage to valid range
+        stage = max(-6, min(6, stage))
+        
+        if stage >= 0:
+            return (2 + stage) / 2
+        else:
+            return 2 / (2 - stage)
 
     def _calculate_stat(self, stat_name):
         """Calculate a stat based on base stat, level, and stat stages."""
@@ -136,12 +211,10 @@ class Pokemon:
         else:
             stat = base
             
-        # Apply stat stages
+        # Apply stat stage multiplier
         stage = self.stat_stages.get(stat_name, 0)
-        if stage > 0:
-            stat = int(stat * (2 + stage) / 2)
-        elif stage < 0:
-            stat = int(stat * 2 / (2 - stage))
+        multiplier = self.get_stat_stage_multiplier(stage)
+        stat = int(stat * multiplier)
             
         # Apply status effect modifiers using new system
         stat = self.get_modified_stat_value(stat_name, stat)
@@ -381,6 +454,15 @@ class Pokemon:
         
     def is_fainted(self):
         return self.current_hp <= 0
+    
+    def faint(self):
+        """Handle Pokemon fainting, including stat stage reset."""
+        self.current_hp = 0
+        self.reset_stats()
+    
+    def switch_out(self):
+        """Handle Pokemon switching out, including stat stage reset."""
+        self.reset_stats()
         
     def can_attack(self):
         """Check if the Pokémon can attack this turn."""
@@ -400,6 +482,82 @@ class Pokemon:
             return False, f"{self.name} is fast asleep."
         return True, ""
         
+    def generate_stat_modification_message(self, stat_name, requested_change, actual_change):
+        """Generate appropriate message for stat stage modifications.
+        
+        Args:
+            stat_name (str): Name of the stat that was modified
+            requested_change (int): The change that was requested
+            actual_change (int): The actual change that occurred (may be different due to limits)
+            
+        Returns:
+            str: Appropriate message describing the stat modification result
+        """
+        stat_display = stat_name.replace('_', ' ')
+        
+        # Handle cases where no change occurred due to limits
+        if actual_change == 0:
+            if requested_change >= 0:
+                return f"{self.name}'s {stat_display} won't go any higher!"
+            else:
+                return f"{self.name}'s {stat_display} won't go any lower!"
+        
+        # Generate message based on the magnitude of actual change
+        if actual_change > 0:
+            if actual_change == 1:
+                return f"{self.name}'s {stat_display} rose!"
+            elif actual_change == 2:
+                return f"{self.name}'s {stat_display} rose sharply!"
+            else:  # 3 or more
+                return f"{self.name}'s {stat_display} rose drastically!"
+        else:  # actual_change < 0
+            if actual_change == -1:
+                return f"{self.name}'s {stat_display} fell!"
+            elif actual_change == -2:
+                return f"{self.name}'s {stat_display} fell harshly!"
+            else:  # -3 or less
+                return f"{self.name}'s {stat_display} fell severely!"
+
+    def modify_stat_stage(self, stat_name, change):
+        """Safely apply stat stage changes with validation and limit checking.
+        
+        Args:
+            stat_name (str): Name of the stat to modify ('attack', 'defense', etc.)
+            change (int): Amount to change the stat stage by (positive or negative)
+            
+        Returns:
+            str: Message describing the result of the stat modification
+        """
+        # Validate stat name
+        if stat_name not in self.stat_stages:
+            return ""  # Silently ignore invalid stats
+            
+        # Get current stage and calculate new stage
+        current_stage = self.stat_stages[stat_name]
+        new_stage = current_stage + change
+        
+        # Clamp to valid range (-6 to +6)
+        clamped_stage = max(-6, min(6, new_stage))
+        actual_change = clamped_stage - current_stage
+        
+        # Generate message using the dedicated message generation system
+        message = self.generate_stat_modification_message(stat_name, change, actual_change)
+        
+        # Apply the change if there was an actual change
+        if actual_change != 0:
+            self.stat_stages[stat_name] = clamped_stage
+            self._recalculate_stats()
+        
+        return message
+    
+    def get_current_stat_stages(self):
+        """Return current stat stages for UI display.
+        
+        Returns:
+            dict: Copy of current stat stages dictionary
+        """
+        return self.stat_stages.copy()
+
     def reset_stats(self):
         """Reset stat stages and recalculate stats."""
         for stat in self.stat_stages:
@@ -432,5 +590,6 @@ class Pokemon:
             'moves': {name: move.to_dict() for name, move in self.moves.items()},
             'status_effects': self.get_status_display(),
             'major_status': self.major_status,
-            'status_condition': self.status_condition  # For backward compatibility
+            'status_condition': self.status_condition,  # For backward compatibility
+            'stat_stages': self.get_current_stat_stages()
         }

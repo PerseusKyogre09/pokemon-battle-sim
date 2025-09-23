@@ -125,6 +125,9 @@ class Battle:
         for healing_msg in healing_messages:
             if healing_msg.strip():
                 self.battle_log.append(healing_msg)
+        
+        # Apply stat modifications after all hits
+        self._process_move_stat_modifications(move, attacker, defender)
 
     def _get_effectiveness_message(self, move, attacker, defender):
         """Get effectiveness message for a move"""
@@ -185,6 +188,9 @@ class Battle:
         # Process status effects from the move
         self._process_move_status_effects(move, attacker, defender, status_message)
         
+        # Process stat modifications from the move
+        self._process_move_stat_modifications(move, attacker, defender)
+        
         if move.pp == 0:
             self.battle_log.append(f"{move_name} has no PP left!")
 
@@ -210,6 +216,13 @@ class Battle:
             
             # Always add the status message (which includes healing messages)
             self.battle_log.append(status_message)
+    
+    def _process_move_stat_modifications(self, move, attacker, defender):
+        """Process and display stat modification messages from moves"""
+        # Note: Stat modifications are now handled directly in Move.use_move()
+        # This method is kept for backward compatibility but no longer applies modifications
+        # The stat modification messages are included in the status_message returned by use_move()
+        pass
     
     def player_attack(self, move_name):
         move = self.player_pokemon.moves.get(move_name)
