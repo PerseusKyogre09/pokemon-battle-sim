@@ -91,6 +91,7 @@ music/
 !datasets/learnsets.json
 !datasets/moves.json
 !datasets/typechart.json
+!datasets/moves_desc.json
 
 # Temporary files
 *.tmp
