@@ -33,6 +33,9 @@ class Move:
         
         # Parse multi-hit properties from move data
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
+        
+        # Parse priority counter properties from move data
+        self.is_priority_counter, self.priority_counter_conditions = self._parse_priority_counter_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -128,6 +131,49 @@ class Move:
         
         return False, None
     
+    def _parse_priority_counter_data(self) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Parse priority counter data from move dataset during initialization"""
+        # Get the raw move data to access description and other properties
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return False, None
+        
+        # Check if this move is a priority counter based on its description
+        desc = raw_move_data.get('desc', '').lower()
+        short_desc = raw_move_data.get('shortDesc', '').lower()
+        
+        # Define priority counter conditions based on known moves
+        priority_counter_conditions = {
+            'sucker punch': {
+                'counters': ['physical', 'special'],  # Move categories that can be countered
+                'fails_against': ['status'],
+                'priority_when_successful': 1,
+                'failure_message': "But it failed!",
+                'success_condition': 'target_uses_attacking_move'
+            }
+        }
+        
+        move_name_lower = self.name.lower()
+        
+        # Check if this is a known priority counter move
+        if move_name_lower in priority_counter_conditions:
+            return True, priority_counter_conditions[move_name_lower]
+        
+        # Check for priority counter patterns in description
+        # Sucker Punch pattern: "Fails if the target did not select a physical attack, special attack"
+        if ('fails if' in desc and 'attack' in desc and 'target' in desc) or \
+           ('fails if target is not attacking' in short_desc):
+            # This appears to be a priority counter move
+            return True, {
+                'counters': ['physical', 'special'],
+                'fails_against': ['status'],
+                'priority_when_successful': self.priority,
+                'failure_message': "But it failed!",
+                'success_condition': 'target_uses_attacking_move'
+            }
+        
+        return False, None
+    
     def _determine_hit_count(self) -> int:
         """Determine how many times a multi-hit move should hit"""
         if not self.is_multihit_move or not self.multihit_data:
@@ -185,6 +231,148 @@ class Move:
             print(f"ERROR: Failed to get raw move data for {self.name}: {e}")
             return None
     
+    def is_priority_counter_move(self) -> bool:
+        """
+        Determine if this move is a priority counter move.
+        
+        Returns:
+            bool: True if this move is a priority counter (like Sucker Punch), False otherwise
+        """
+        return self.is_priority_counter
+    
+    def can_counter_move(self, target_move: 'Move') -> bool:
+        """
+        Determine if this priority counter move can successfully counter the target move.
+        
+        Args:
+            target_move: The move that the target Pokemon is using
+            
+        Returns:
+            bool: True if this move can counter the target move, False otherwise
+        """
+        if not self.is_priority_counter:
+            return False
+        
+        if not target_move:
+            return False
+        
+        # Import here to avoid circular imports
+        from priority_system import SuckerPunchHandler
+        
+        # Use SuckerPunchHandler for Sucker Punch logic
+        if self.name.lower() == 'sucker punch':
+            handler = SuckerPunchHandler()
+            return handler.check_success_condition(target_move)
+        
+        # Fallback to original logic for other priority counters
+        if self.priority_counter_conditions:
+            # Get the categories this move can counter
+            counters = self.priority_counter_conditions.get('counters', [])
+            fails_against = self.priority_counter_conditions.get('fails_against', [])
+            
+            # Check if target move category is in the list of categories this move counters
+            target_category = target_move.category.lower()
+            
+            # Priority counter succeeds if target uses a move in the 'counters' list
+            if target_category in counters:
+                return True
+            
+            # Priority counter fails if target uses a move in the 'fails_against' list
+            if target_category in fails_against:
+                return False
+        
+        # Default behavior: counter succeeds against attacking moves, fails against status moves
+        return not target_move.is_status_move
+    
+    def get_priority_counter_failure_message(self) -> str:
+        """
+        Get the failure message for when this priority counter move fails.
+        
+        Returns:
+            str: The failure message to display when the priority counter fails
+        """
+        if not self.is_priority_counter:
+            return ""
+        
+        # Import here to avoid circular imports
+        from priority_system import SuckerPunchHandler
+        
+        # Use SuckerPunchHandler for Sucker Punch logic
+        if self.name.lower() == 'sucker punch':
+            handler = SuckerPunchHandler()
+            return handler.get_failure_message()
+        
+        # Fallback to original logic for other priority counters
+        if self.priority_counter_conditions:
+            return self.priority_counter_conditions.get('failure_message', "But it failed!")
+        
+        return "But it failed!"
+    
+    def validate_move_category_for_counter(self, target_move: 'Move') -> Tuple[bool, str]:
+        """
+        Validate if the target move's category allows this priority counter to succeed.
+        
+        Args:
+            target_move: The move that the target Pokemon is using
+            
+        Returns:
+            Tuple[bool, str]: (success, message) where success indicates if counter succeeds
+                             and message provides explanation
+        """
+        if not self.is_priority_counter:
+            return True, ""  # Not a priority counter, no validation needed
+        
+        if not target_move:
+            return False, self.get_priority_counter_failure_message()
+        
+        # Import here to avoid circular imports
+        from priority_system import SuckerPunchHandler
+        
+        # Use SuckerPunchHandler for Sucker Punch logic
+        if self.name.lower() == 'sucker punch':
+            handler = SuckerPunchHandler()
+            return handler.validate_target_move_category(target_move)
+        
+        # Fallback to original logic for other priority counters
+        can_counter = self.can_counter_move(target_move)
+        
+        if can_counter:
+            return True, f"{self.name} intercepted {target_move.name}!"
+        else:
+            return False, self.get_priority_counter_failure_message()
+    
+    def get_effective_priority_against_move(self, target_move: Optional['Move']) -> int:
+        """
+        Get the effective priority of this move when used against a specific target move.
+        For priority counters, this may be different from the base priority.
+        
+        Args:
+            target_move: The move that the target Pokemon is using
+            
+        Returns:
+            int: The effective priority value for this move
+        """
+        if not self.is_priority_counter or not target_move:
+            return self.priority
+        
+        # Import here to avoid circular imports
+        from priority_system import SuckerPunchHandler
+        
+        # Use SuckerPunchHandler for Sucker Punch logic
+        if self.name.lower() == 'sucker punch':
+            handler = SuckerPunchHandler()
+            return handler.get_effective_priority(target_move)
+        
+        # Fallback to original logic for other priority counters
+        # If this is a priority counter and it can counter the target move,
+        # it gets its counter priority
+        if self.can_counter_move(target_move):
+            if self.priority_counter_conditions:
+                return self.priority_counter_conditions.get('priority_when_successful', self.priority)
+        
+        # If it can't counter, it might fail entirely (handled elsewhere)
+        return self.priority
+
     def _normalize_status_type(self, status_code: str) -> Optional[str]:
         if not status_code:
             return None
@@ -808,6 +996,7 @@ class Move:
             'type': self.type,
             'accuracy': self.accuracy,
             'category': self.category,
+            'priority': self.priority,
             'status_effect': self.status_effect,  # Keep for backward compatibility
             'primary_status': self.primary_status,
             'secondary_status': self.secondary_status,
@@ -817,7 +1006,9 @@ class Move:
             'heal_amount': self.heal_amount,
             'drain_ratio': self.drain_ratio,
             'is_multihit_move': self.is_multihit_move,
-            'multihit_data': self.multihit_data
+            'multihit_data': self.multihit_data,
+            'is_priority_counter': self.is_priority_counter,
+            'priority_counter_conditions': self.priority_counter_conditions
         }
         
     @classmethod
@@ -853,5 +1044,11 @@ class Move:
             move.is_multihit_move = data['is_multihit_move']
         if 'multihit_data' in data:
             move.multihit_data = data['multihit_data']
+        
+        # Restore priority counter data if available
+        if 'is_priority_counter' in data:
+            move.is_priority_counter = data['is_priority_counter']
+        if 'priority_counter_conditions' in data:
+            move.priority_counter_conditions = data['priority_counter_conditions']
             
         return move

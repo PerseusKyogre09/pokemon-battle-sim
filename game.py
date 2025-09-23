@@ -1,10 +1,13 @@
 from pokemon import Pokemon
+from priority_system import PriorityResolver, create_battle_action
+import random
 
 class Game:
     def __init__(self):
         self.player_pokemon = None
         self.opponent_pokemon = None
         self.battle_over = False
+        self.priority_resolver = PriorityResolver()
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
         # Get player's back sprite (prefer Gen 5 animated, fallback to default)
         player_sprite = (
@@ -121,32 +124,70 @@ class Game:
                 'timestamp': len(turn_info['battle_events'])
             })
         
-        # Determine who goes first based on move priority and speed
-        player_priority = player_move.priority if player_move else 0
-        opponent_priority = opponent_move.priority if opponent_move else 0
+        # Create battle actions for priority resolution
+        player_action = create_battle_action(
+            self.player_pokemon, 
+            player_move, 
+            self.opponent_pokemon, 
+            self.priority_resolver
+        )
         
-        # Priority comparison (higher priority goes first)
-        if player_priority > opponent_priority:
-            player_first = True
-        elif player_priority < opponent_priority:
-            player_first = False
+        opponent_action = create_battle_action(
+            self.opponent_pokemon, 
+            opponent_move, 
+            self.player_pokemon, 
+            self.priority_resolver
+        ) if opponent_move else None
+        
+        # Resolve turn order using comprehensive priority system
+        if opponent_action:
+            action_order = self.priority_resolver.resolve_turn_order(player_action, opponent_action)
+            player_first = action_order[0].pokemon == self.player_pokemon
         else:
-            # If same priority, compare speeds
-            if self.player_pokemon.speed > self.opponent_pokemon.speed:
-                player_first = True
-            elif self.player_pokemon.speed < self.opponent_pokemon.speed:
-                player_first = False
-            else:
-                # In case of tie, random choice (50/50)
-                player_first = random.choice([True, False])
+            # If opponent has no move, player goes first
+            action_order = [player_action]
+            player_first = True
         
         turn_info['player_first'] = player_first
-        print(f"DEBUG: Turn order - Player first: {player_first} (Player priority: {player_priority}, Opponent priority: {opponent_priority}, Player speed: {self.player_pokemon.speed}, Opponent speed: {self.opponent_pokemon.speed})")
+        turn_info['action_order'] = action_order
         
-        def execute_move(attacker, defender, move, move_name, is_player_attacking):
+        # Add priority explanation messages before move execution
+        if len(action_order) == 2:
+            first_action = action_order[0]
+            second_action = action_order[1]
+            
+            # Add turn order explanation message
+            priority_explanation = self._get_priority_explanation_message(first_action, second_action)
+            if priority_explanation:
+                turn_info['battle_events'].append({
+                    'type': 'priority_explanation',
+                    'message': priority_explanation,
+                    'timestamp': len(turn_info['battle_events'])
+                })
+        
+        # Check for priority counter failures and add appropriate messages
+        for action in action_order:
+            if action.effective_priority == -999:  # Priority counter failed
+                failure_message = self.priority_resolver.get_priority_counter_failure_message(action.move)
+                turn_info['battle_events'].append({
+                    'type': 'priority_counter_failure',
+                    'message': f"{action.pokemon.name} used {action.move.name}! {failure_message}",
+                    'target': 'player' if action.pokemon == self.player_pokemon else 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+        
+        print(f"DEBUG: Turn order resolved - Player first: {player_first}")
+        
+        def execute_move(attacker, defender, move, move_name, is_player_attacking, action=None):
             """Helper function to execute a move and return damage and effectiveness."""
             # Skip if no move (shouldn't happen, but just in case)
             if not move:
+                return False
+            
+            # Check for priority counter failure
+            if action and action.effective_priority == -999:
+                # Priority counter failed - move doesn't execute
+                print(f"DEBUG: {attacker.name}'s {move_name} failed due to priority counter conditions")
                 return False
             
             # Check if the attacker can use a move this turn
@@ -161,6 +202,19 @@ class Game:
                 })
                 print(f"DEBUG: {attacker.name} is prevented from using {move_name}: {prevention_message}")
                 return False
+            
+            # Add priority counter success message if applicable
+            if action and action.is_priority_counter and action.effective_priority != -999:
+                success_message = self.priority_resolver.get_priority_counter_success_message(
+                    move, attacker.name, defender.name, action.counter_target_move.name if action.counter_target_move else "unknown move"
+                )
+                if success_message:
+                    turn_info['battle_events'].append({
+                        'type': 'priority_counter_success',
+                        'message': success_message,
+                        'target': 'player' if is_player_attacking else 'opponent',
+                        'timestamp': len(turn_info['battle_events'])
+                    })
                 
             damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
             prev_hp = defender.current_hp
@@ -213,28 +267,32 @@ class Game:
         try:
             fainted_pokemon = None
             
-            if player_first:
-                # Player goes first
-                if execute_move(self.player_pokemon, self.opponent_pokemon, player_move, move_name, True):
-                    fainted_pokemon = (self.opponent_pokemon, False)  # (pokemon, is_player)
-                    self.battle_over = True
+            # Execute moves in priority order
+            for action in action_order:
+                # Skip if battle is already over
+                if self.battle_over:
+                    break
                 
-                # Opponent goes second if they have PP and player didn't faint
-                if opponent_move and not self.battle_over and not self.player_pokemon.is_fainted():
-                    if execute_move(self.opponent_pokemon, self.player_pokemon, opponent_move, opponent_move_name, False):
-                        fainted_pokemon = (self.player_pokemon, True)
-                        self.battle_over = True
-            else:
-                # Opponent goes first if they have PP
-                if opponent_move:
-                    if execute_move(self.opponent_pokemon, self.player_pokemon, opponent_move, opponent_move_name, False):
-                        fainted_pokemon = (self.player_pokemon, True)
-                        self.battle_over = True
+                # Skip if the attacking Pokemon has fainted
+                if action.pokemon.is_fainted():
+                    continue
                 
-                # Player goes second if not fainted
-                if not self.battle_over and not self.opponent_pokemon.is_fainted():
-                    if execute_move(self.player_pokemon, self.opponent_pokemon, player_move, move_name, True):
-                        fainted_pokemon = (self.opponent_pokemon, False)
+                # Determine if this is the player's action
+                is_player_action = action.pokemon == self.player_pokemon
+                move_to_use = action.move
+                move_name_to_use = move_to_use.name if move_to_use else "unknown"
+                
+                # Get the correct move name for display
+                if is_player_action:
+                    move_name_to_use = move_name
+                else:
+                    move_name_to_use = opponent_move_name
+                
+                # Execute the move
+                if move_to_use:
+                    target_pokemon = action.target
+                    if execute_move(action.pokemon, target_pokemon, move_to_use, move_name_to_use, is_player_action, action):
+                        fainted_pokemon = (target_pokemon, target_pokemon == self.player_pokemon)
                         self.battle_over = True
             
             # Add faint event after all other events if a Pokémon fainted
@@ -319,6 +377,60 @@ class Game:
             })
             
         return turn_info
+
+    def _get_priority_explanation_message(self, first_action, second_action):
+        """
+        Generate an explanation message for why moves executed in a specific order.
+        
+        Args:
+            first_action: The action that goes first
+            second_action: The action that goes second
+            
+        Returns:
+            str: Explanation message, or None if no explanation needed
+        """
+        first_priority = first_action.effective_priority
+        second_priority = second_action.effective_priority
+        first_name = first_action.pokemon.name.capitalize()
+        second_name = second_action.pokemon.name.capitalize()
+        first_move = first_action.move.name
+        second_move = second_action.move.name
+        
+        # Priority counter success
+        if first_action.is_priority_counter and first_priority != -999:
+            return f"{first_name}'s {first_move} intercepted {second_name}'s {second_move}!"
+        
+        # Different priority levels
+        if first_priority > second_priority:
+            if first_priority > 0:
+                return f"{first_name}'s {first_move} has higher priority (+{first_priority}) and goes first!"
+            elif second_priority < 0:
+                return f"{second_name}'s {second_move} has negative priority ({second_priority}) and goes last!"
+            else:
+                return f"{first_name}'s {first_move} has priority (+{first_priority}) and goes first!"
+        
+        # Same priority, speed determines order
+        elif first_priority == second_priority and first_priority != 0:
+            first_speed = getattr(first_action.pokemon, 'speed', 0)
+            second_speed = getattr(second_action.pokemon, 'speed', 0)
+            if first_speed > second_speed:
+                return f"Both moves have priority {'+' + str(first_priority) if first_priority >= 0 else str(first_priority)}, but {first_name} is faster!"
+            elif second_speed > first_speed:
+                return f"Both moves have priority {'+' + str(first_priority) if first_priority >= 0 else str(first_priority)}, but {first_name} got lucky!"
+            else:
+                return f"Both moves have priority {'+' + str(first_priority) if first_priority >= 0 else str(first_priority)}, turn order was random!"
+        
+        # Normal speed-based order (both priority 0)
+        elif first_priority == second_priority == 0:
+            first_speed = getattr(first_action.pokemon, 'speed', 0)
+            second_speed = getattr(second_action.pokemon, 'speed', 0)
+            if abs(first_speed - second_speed) > 10:  # Only explain if speed difference is significant
+                if first_speed > second_speed:
+                    return f"{first_name} is faster and goes first!"
+                else:
+                    return f"{first_name} got lucky and goes first!"
+        
+        return None
 
     def is_battle_over(self):
         return self.player_pokemon.is_fainted() or self.opponent_pokemon.is_fainted()

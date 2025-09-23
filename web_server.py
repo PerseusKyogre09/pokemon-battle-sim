@@ -431,7 +431,9 @@ def start_game():
                 'power': move.power, 
                 'type': move.type,
                 'pp': getattr(move, 'pp', 15),
-                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15))
+                'max_pp': getattr(move, 'max_pp', getattr(move, 'pp', 15)),
+                'priority': getattr(move, 'priority', 0),
+                'is_priority_counter': getattr(move, 'is_priority_counter', False)
             } for name, move in game.player_pokemon.moves.items()]
         }
         

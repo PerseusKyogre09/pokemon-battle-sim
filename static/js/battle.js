@@ -41,6 +41,7 @@ function updateMovePP(moveName, newPP) {
 let isTurnInProgress = false;
 let battleLogEl;
 let battleStarted = false; // Set to false initially until animation completes
+let selectedMove = null; // Track currently selected move for turn order preview
 
 // Initialize the battle when the page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -121,6 +122,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else {
         console.error('Health bar elements not found');
+    }
+    
+    // Initialize priority display
+    console.log('Initializing priority display...');
+    try {
+        displayPriorityValues();
+        updateMoveButtonInteractions();
+    } catch (error) {
+        console.error('Error initializing priority display:', error);
     }
     
     // Get DOM elements and store in a global object for the function
@@ -554,6 +564,15 @@ async function startBattleSequence() {
         console.log('17. Setting battle as started');
         battleStarted = true;
         console.log('18. Battle started flag set to:', battleStarted);
+        
+        // Initialize priority display after battle starts
+        console.log('19. Initializing priority display after battle start...');
+        try {
+            displayPriorityValues();
+            updateMoveButtonInteractions();
+        } catch (error) {
+            console.error('Error initializing priority display:', error);
+        }
     }
 }
 
@@ -611,12 +630,13 @@ function clearBattleLog() {
     }
 }
 
-function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
+function addLogMessage(message, isEffectiveness = false, isPlayer = null, isPriorityRelated = false) {
     const stackTrace = new Error().stack;
     console.log('=== ADDING LOG MESSAGE ===');
     console.log('Message:', message);
     console.log('isEffectiveness:', isEffectiveness);
     console.log('isPlayer:', isPlayer);
+    console.log('isPriorityRelated:', isPriorityRelated);
     console.log('Call stack:', stackTrace);
     
     if (!battleLogEl) {
@@ -642,7 +662,11 @@ function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
     // Update the battle log text at the top
     const battleLogText = document.getElementById('battle-log-text');
     if (battleLogText) {
-        battleLogText.textContent = message;
+        if (isPriorityRelated) {
+            battleLogText.innerHTML = `<span style="color: #f1c40f;">${message}</span>`;
+        } else {
+            battleLogText.textContent = message;
+        }
     }
     
     // Add to the right-side battle log panel
@@ -652,15 +676,24 @@ function addLogMessage(message, isEffectiveness = false, isPlayer = null) {
         logEntry.className = 'log-entry';
         
         // Add appropriate class based on message type
-        if (isEffectiveness) {
+        if (isPriorityRelated) {
+            logEntry.classList.add('priority-message');
+            logEntry.textContent = message;
+            logEntry.style.color = '#f1c40f';
+            logEntry.style.borderLeftColor = '#f1c40f';
+        } else if (isEffectiveness) {
             logEntry.classList.add('effectiveness');
+            logEntry.textContent = message;
         } else if (isPlayer === true) {
             logEntry.classList.add('player-move');
+            logEntry.textContent = message;
         } else if (isPlayer === false) {
             logEntry.classList.add('opponent-move');
+            logEntry.textContent = message;
+        } else {
+            logEntry.textContent = message;
         }
         
-        logEntry.textContent = message;
         rightBattleLog.querySelector('div').appendChild(logEntry);
         rightBattleLog.scrollTop = rightBattleLog.scrollHeight;
     }
@@ -1201,6 +1234,15 @@ async function processMoveEvent(events, data) {
                 case 'status_change':
                     await handleStatusChangeEvent(event, data);
                     break;
+                case 'priority_explanation':
+                    handlePriorityExplanationEvent(event, data);
+                    break;
+                case 'priority_counter_success':
+                    handlePriorityCounterSuccessEvent(event, data);
+                    break;
+                case 'priority_counter_failure':
+                    handlePriorityCounterFailureEvent(event, data);
+                    break;
                 default:
                     console.warn('Unknown event type:', event.type);
             }
@@ -1526,4 +1568,228 @@ function handleTypeIconError(imgElement, moveType) {
     console.warn('Could not load image for type:', moveType);
     imgElement.onerror = null; // Prevent infinite loop
     imgElement.src = '/static/images/type/normal.png'; // Set to default normal type icon
+}
+
+// Priority system functions
+function displayPriorityValues() {
+    console.log('Displaying priority values for moves...');
+    
+    const moveButtons = document.querySelectorAll('.move-button');
+    console.log(`Found ${moveButtons.length} move buttons`);
+    
+    moveButtons.forEach((button, index) => {
+        const priority = parseInt(button.getAttribute('data-priority') || '0');
+        const isPriorityCounter = button.getAttribute('data-is-priority-counter') === 'True';
+        const moveName = button.querySelector('.move-name')?.textContent || 'Unknown';
+        
+        console.log(`Move ${index + 1}: ${moveName}, Priority: ${priority}, Counter: ${isPriorityCounter}`);
+        
+        // Check if priority indicators exist in the HTML
+        const priorityIndicator = button.querySelector('.priority-indicator');
+        const counterIndicator = button.querySelector('.priority-counter-indicator');
+        
+        console.log(`  - Priority indicator found: ${!!priorityIndicator}`);
+        console.log(`  - Counter indicator found: ${!!counterIndicator}`);
+        
+        // Priority indicators should already be visible from the HTML template
+        // No need to modify them here
+    });
+}
+
+function showTurnOrderPreview(playerMoveName) {
+    console.log(`Showing turn order preview for player move: ${playerMoveName}`);
+    
+    const turnOrderPreview = document.getElementById('turn-order-preview');
+    const turnOrderText = document.getElementById('turn-order-text');
+    
+    if (!turnOrderPreview || !turnOrderText) {
+        console.error('Turn order preview elements not found');
+        return;
+    }
+    
+    // Get player move data
+    const playerMoveButton = Array.from(document.querySelectorAll('.move-button')).find(button => 
+        button.querySelector('.move-name').textContent.toLowerCase() === playerMoveName.toLowerCase()
+    );
+    
+    if (!playerMoveButton) {
+        console.error(`Player move button not found for: ${playerMoveName}`);
+        return;
+    }
+    
+    const playerPriority = parseInt(playerMoveButton.getAttribute('data-priority') || '0');
+    const playerIsPriorityCounter = playerMoveButton.getAttribute('data-is-priority-counter') === 'True';
+    
+    // For now, assume opponent uses a normal priority move (priority 0)
+    // In a real implementation, this would come from the server or AI decision
+    const opponentPriority = 0;
+    const opponentIsPriorityCounter = false;
+    
+    // Get Pokemon names
+    const playerName = document.getElementById('player-pokemon-name').textContent;
+    const opponentName = document.getElementById('opponent-pokemon-name').textContent;
+    
+    // Calculate turn order and explanation
+    let firstPokemon, secondPokemon;
+    let firstMove, secondMove;
+    let explanation = "";
+    
+    // Handle priority counters first
+    if (playerIsPriorityCounter) {
+        firstPokemon = playerName;
+        secondPokemon = opponentName;
+        firstMove = playerMoveName;
+        secondMove = "opponent's move";
+        explanation = " (Priority Counter - may intercept)";
+    } else if (playerPriority > opponentPriority) {
+        firstPokemon = playerName;
+        secondPokemon = opponentName;
+        firstMove = playerMoveName;
+        secondMove = "opponent's move";
+        explanation = ` (Priority +${playerPriority})`;
+    } else if (opponentPriority > playerPriority) {
+        firstPokemon = opponentName;
+        secondPokemon = playerName;
+        firstMove = "opponent's move";
+        secondMove = playerMoveName;
+        if (playerPriority < 0) {
+            explanation = ` (${playerMoveName} has negative priority ${playerPriority})`;
+        } else {
+            explanation = " (Opponent has higher priority)";
+        }
+    } else {
+        // Same priority - would depend on speed
+        firstPokemon = playerName;
+        secondPokemon = opponentName;
+        firstMove = playerMoveName;
+        secondMove = "opponent's move";
+        if (playerPriority === 0) {
+            explanation = " (Speed determines order)";
+        } else {
+            explanation = ` (Both priority ${playerPriority >= 0 ? '+' + playerPriority : playerPriority}, speed determines order)`;
+        }
+    }
+    
+    // Update the preview text with priority explanation
+    turnOrderText.innerHTML = `
+        <div class="turn-order-main">
+            <span class="turn-order-item first">${firstPokemon}: ${firstMove}</span> → 
+            <span class="turn-order-item second">${secondPokemon}: ${secondMove}</span>
+        </div>
+        <div class="turn-order-explanation">${explanation}</div>
+    `;
+    
+    // Show the preview
+    turnOrderPreview.classList.remove('hidden');
+    
+    console.log(`Turn order preview shown: ${firstPokemon} (${firstMove}) → ${secondPokemon} (${secondMove})`);
+}
+
+function hideTurnOrderPreview() {
+    const turnOrderPreview = document.getElementById('turn-order-preview');
+    if (turnOrderPreview) {
+        turnOrderPreview.classList.add('hidden');
+    }
+}
+
+function updateMoveButtonInteractions() {
+    console.log('Setting up move button interactions for priority display...');
+    
+    const moveButtons = document.querySelectorAll('.move-button');
+    moveButtons.forEach(button => {
+        const moveName = button.querySelector('.move-name').textContent;
+        
+        // Add hover effect to show turn order preview (non-intrusive)
+        button.addEventListener('mouseenter', () => {
+            if (!isTurnInProgress && battleStarted) {
+                showTurnOrderPreview(moveName);
+            }
+        });
+        
+        // Hide preview when mouse leaves
+        button.addEventListener('mouseleave', () => {
+            if (!isTurnInProgress) {
+                hideTurnOrderPreview();
+            }
+        });
+        
+        // Don't modify the original onclick functionality
+        // Just add a non-intrusive click listener for preview
+        button.addEventListener('click', () => {
+            if (!isTurnInProgress && battleStarted) {
+                selectedMove = moveName;
+                showTurnOrderPreview(moveName);
+            }
+        });
+    });
+}
+
+// Function to add priority-specific battle messages
+function addPriorityBattleMessage(message, isPriorityRelated = false) {
+    console.log(`Adding priority battle message: ${message}`);
+    
+    // Add to battle log with special styling for priority messages
+    const battleLogText = document.getElementById('battle-log-text');
+    if (battleLogText) {
+        if (isPriorityRelated) {
+            battleLogText.innerHTML = `<span style="color: #f1c40f;">⚡ ${message}</span>`;
+        } else {
+            battleLogText.textContent = message;
+        }
+    }
+    
+    // Also add to the right-side battle log
+    const rightBattleLog = document.getElementById('right-battle-log');
+    if (rightBattleLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        if (isPriorityRelated) {
+            logEntry.classList.add('priority-message');
+            logEntry.innerHTML = `⚡ ${message}`;
+            logEntry.style.color = '#f1c40f';
+            logEntry.style.borderLeftColor = '#f1c40f';
+        } else {
+            logEntry.textContent = message;
+        }
+        
+        rightBattleLog.querySelector('div').appendChild(logEntry);
+        rightBattleLog.scrollTop = rightBattleLog.scrollHeight;
+    }
+}
+
+// Priority-specific event handlers
+
+function handlePriorityExplanationEvent(event, data) {
+    console.log('=== HANDLE PRIORITY EXPLANATION EVENT ===');
+    console.log('Event:', event);
+    
+    // Add priority explanation message with special styling
+    addLogMessage(event.message, false, null, true); // true for isPriorityRelated
+    
+    console.log('Priority explanation message added:', event.message);
+}
+
+function handlePriorityCounterSuccessEvent(event, data) {
+    console.log('=== HANDLE PRIORITY COUNTER SUCCESS EVENT ===');
+    console.log('Event:', event);
+    
+    const isPlayer = event.target === 'player';
+    
+    // Add priority counter success message with special styling
+    addLogMessage(event.message, false, isPlayer, true); // true for isPriorityRelated
+    
+    console.log('Priority counter success message added:', event.message);
+}
+
+function handlePriorityCounterFailureEvent(event, data) {
+    console.log('=== HANDLE PRIORITY COUNTER FAILURE EVENT ===');
+    console.log('Event:', event);
+    
+    const isPlayer = event.target === 'player';
+    
+    // Add priority counter failure message with special styling
+    addLogMessage(event.message, false, isPlayer, true); // true for isPriorityRelated
+    
+    console.log('Priority counter failure message added:', event.message);
 }

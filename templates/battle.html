@@ -125,12 +125,25 @@
             <!-- Battle log header -->
             <h3 id="battle-log-text" class="battle-log-text pixel-font text-sm">Battle started! Choose your move.</h3>
             
+            <!-- Turn Order Preview -->
+            <div id="turn-order-preview" class="turn-order-preview hidden">
+                <span id="turn-order-text">Turn Order: </span>
+            </div>
+            
             <div class="move-grid">
                 {% for move in player_moves %}
                     {% if loop.index <= 4 %}
-                        <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button" data-type="{{ move.type }}" data-pp="{{ move.pp }}" data-max-pp="{{ move.max_pp }}">
+                        <button onclick="makeMove('{{ move.name }}')" class="move-button move-grid-button" data-type="{{ move.type }}" data-pp="{{ move.pp }}" data-max-pp="{{ move.max_pp }}" data-priority="{{ move.priority }}" data-is-priority-counter="{{ move.is_priority_counter }}">
                             <div class="move-header">
                                 <span class="move-name">{{ move.name | capitalize }}</span>
+                                {% if move.priority != 0 %}
+                                    <span class="priority-indicator priority-{{ 'positive' if move.priority > 0 else 'negative' }}" title="Priority: {{ '+' if move.priority > 0 else '' }}{{ move.priority }}">
+                                        {{ '+' if move.priority > 0 else '' }}{{ move.priority }}
+                                    </span>
+                                {% endif %}
+                                {% if move.is_priority_counter %}
+                                    <span class="priority-counter-indicator" title="Priority Counter Move">C</span>
+                                {% endif %}
                                 <img src="{{ url_for('static', filename='images/type/' + move.type|lower + '.png') }}" alt="{{ move.type }}" class="type-icon" onerror="handleTypeIconError(this, '{{ move.type|lower }}')" />
                                 <script>console.log('Attempting to load type image for {{ move.name }}: {{ url_for('static', filename='images/type/' + move.type|lower + '.png') }}');</script>
                                 <script>console.log('Move object for {{ move.name }}:', {{ move | tojson }});</script>
