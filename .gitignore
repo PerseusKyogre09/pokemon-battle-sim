@@ -78,8 +78,8 @@ dmypy.json
 
 # Audio files (keep only specific ones)
 music/
-!music/nidorino.ogg
-!music/battle_music.mp3
+!music/hit-sound.mp3
+!music/pokeball-throw.mp3
 
 # Large dataset files
 *.csv
@@ -91,6 +91,7 @@ music/
 !datasets/learnsets.json
 !datasets/moves.json
 !datasets/typechart.json
+!datasets/moves_desc.json
 
 # Temporary files
 *.tmp

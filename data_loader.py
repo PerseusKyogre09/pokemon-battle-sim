@@ -5,12 +5,14 @@ from typing import Dict, Any, List, Optional
 class DataLoader:
     def __init__(self):
         self.moves_data = {}
+        self.moves_desc_data = {}
         self.learnsets_data = {}
         self.typechart_data = {}
         self._load_all_data()
     
     def _load_all_data(self):
         self._load_moves()
+        self._load_moves_descriptions()
         self._load_learnsets()
         self._load_typechart()
     
@@ -79,6 +81,64 @@ class DataLoader:
         except Exception as e:
             print(f"Error loading moves data: {e}")
             raise
+    
+    def _load_moves_descriptions(self):
+        try:
+            with open('datasets/moves_desc.json', 'r', encoding='utf-8') as f:
+                content = f.read()
+                # The file appears to be in a JavaScript-like format, not pure JSON
+                # We need to parse it differently
+                
+                # Remove the outer braces and split by move entries
+                content = content.strip()
+                if content.startswith('{') and content.endswith('}'):
+                    content = content[1:-1]  # Remove outer braces
+                
+                # Parse each move entry
+                import re
+                
+                # Find all move entries using regex
+                move_pattern = r'(\w+):\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}'
+                matches = re.findall(move_pattern, content, re.DOTALL)
+                
+                for move_key, move_content in matches:
+                    try:
+                        # Parse the move content
+                        move_desc = {}
+                        
+                        # Extract name
+                        name_match = re.search(r'name:\s*"([^"]+)"', move_content)
+                        if name_match:
+                            move_desc['name'] = name_match.group(1)
+                        
+                        # Extract description
+                        desc_match = re.search(r'desc:\s*"([^"]+)"', move_content)
+                        if desc_match:
+                            move_desc['desc'] = desc_match.group(1)
+                        
+                        # Extract short description
+                        short_desc_match = re.search(r'shortDesc:\s*"([^"]+)"', move_content)
+                        if short_desc_match:
+                            move_desc['shortDesc'] = short_desc_match.group(1)
+                        
+                        # Extract boost message (for moves like Belly Drum)
+                        boost_match = re.search(r'boost:\s*"([^"]+)"', move_content)
+                        if boost_match:
+                            move_desc['boost'] = boost_match.group(1)
+                        
+                        # Store the description data
+                        self.moves_desc_data[move_key.lower()] = move_desc
+                        
+                    except Exception as e:
+                        print(f"Warning: Failed to parse move description for {move_key}: {e}")
+                        continue
+                
+                print(f"\n=== LOADED {len(self.moves_desc_data)} MOVE DESCRIPTIONS ===")
+                
+        except FileNotFoundError:
+            print("Warning: moves_desc.json file not found")
+        except Exception as e:
+            print(f"Error loading move descriptions: {e}")
     
     def _load_learnsets(self):
         try:
@@ -286,6 +346,25 @@ class DataLoader:
         # If still not found, try a partial match
         for key, data in self.moves_data.items():
             if move_name.lower() in key.lower() or move_name.lower() in data.get('name', '').lower():
+                return data
+                
+        return None
+    
+    def get_move_description(self, move_name: str) -> Optional[Dict[str, Any]]:
+        """Get move description data including special mechanics descriptions."""
+        if not move_name:
+            return None
+            
+        # Try to find the move by exact key first
+        move_key = move_name.lower().replace(' ', '').replace('-', '')
+        
+        # Check if the move exists in our description data
+        if move_key in self.moves_desc_data:
+            return self.moves_desc_data[move_key]
+            
+        # If not found, try to find by name in the values
+        for key, data in self.moves_desc_data.items():
+            if data.get('name', '').lower() == move_name.lower():
                 return data
                 
         return None

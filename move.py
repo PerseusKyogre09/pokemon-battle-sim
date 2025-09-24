@@ -34,8 +34,11 @@ class Move:
         # Parse multi-hit properties from move data
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
         
-        # Parse priority counter properties from move data
-        self.is_priority_counter, self.priority_counter_conditions = self._parse_priority_counter_data()
+        # Parse stat modifications from move data
+        self.stat_modifications, self.targets_self = self._parse_stat_modifications()
+        
+        # Parse recoil properties from move data
+        self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -131,46 +134,80 @@ class Move:
         
         return False, None
     
-    def _parse_priority_counter_data(self) -> Tuple[bool, Optional[Dict[str, Any]]]:
-        """Parse priority counter data from move dataset during initialization"""
-        # Get the raw move data to access description and other properties
+    def _parse_stat_modifications(self) -> Tuple[Optional[Dict[str, int]], bool]:
+        """Parse stat modifications from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return None, False
+        
+        # Get the raw move data to access boosts property
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return None, False
+        
+        stat_modifications = None
+        targets_self = False
+        
+        # Check for boosts property
+        if 'boosts' in raw_move_data and isinstance(raw_move_data['boosts'], dict):
+            # Map dataset stat abbreviations to Pokemon class stat names
+            stat_name_mapping = {
+                'atk': 'attack',
+                'def': 'defense',
+                'spa': 'special_attack',
+                'spd': 'special_defense',
+                'spe': 'speed',
+                'accuracy': 'accuracy',
+                'evasion': 'evasion'
+            }
+            
+            # Convert abbreviated stat names to full names
+            stat_modifications = {}
+            for stat_abbrev, change in raw_move_data['boosts'].items():
+                if stat_abbrev in stat_name_mapping and isinstance(change, int):
+                    full_stat_name = stat_name_mapping[stat_abbrev]
+                    stat_modifications[full_stat_name] = change
+            
+            # Only keep stat_modifications if we found valid entries
+            if not stat_modifications:
+                stat_modifications = None
+        
+        # Determine target based on move's target property
+        if 'target' in raw_move_data:
+            target = raw_move_data['target']
+            # Self-targeting moves
+            if target in ['self']:
+                targets_self = True
+            # Opponent-targeting moves
+            elif target in ['normal', 'allAdjacentFoes', 'allEnemies', 'adjacentFoe', 'randomNormal']:
+                targets_self = False
+            # For other targets, default to opponent targeting
+            else:
+                targets_self = False
+        
+        return stat_modifications, targets_self
+    
+    def _parse_recoil_data(self) -> Tuple[bool, Optional[List[int]]]:
+        """Parse recoil data from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return False, None
+        
+        # Get the raw move data to access recoil property
         raw_move_data = self._get_raw_move_data()
         if not raw_move_data:
             return False, None
         
-        # Check if this move is a priority counter based on its description
-        desc = raw_move_data.get('desc', '').lower()
-        short_desc = raw_move_data.get('shortDesc', '').lower()
-        
-        # Define priority counter conditions based on known moves
-        priority_counter_conditions = {
-            'sucker punch': {
-                'counters': ['physical', 'special'],  # Move categories that can be countered
-                'fails_against': ['status'],
-                'priority_when_successful': 1,
-                'failure_message': "But it failed!",
-                'success_condition': 'target_uses_attacking_move'
-            }
-        }
-        
-        move_name_lower = self.name.lower()
-        
-        # Check if this is a known priority counter move
-        if move_name_lower in priority_counter_conditions:
-            return True, priority_counter_conditions[move_name_lower]
-        
-        # Check for priority counter patterns in description
-        # Sucker Punch pattern: "Fails if the target did not select a physical attack, special attack"
-        if ('fails if' in desc and 'attack' in desc and 'target' in desc) or \
-           ('fails if target is not attacking' in short_desc):
-            # This appears to be a priority counter move
-            return True, {
-                'counters': ['physical', 'special'],
-                'fails_against': ['status'],
-                'priority_when_successful': self.priority,
-                'failure_message': "But it failed!",
-                'success_condition': 'target_uses_attacking_move'
-            }
+        # Check for recoil property
+        if 'recoil' in raw_move_data and isinstance(raw_move_data['recoil'], list):
+            recoil_data = raw_move_data['recoil']
+            if len(recoil_data) == 2 and all(isinstance(x, (int, float)) for x in recoil_data):
+                return True, recoil_data
+            else:
+                print(f"WARNING: Invalid recoil data format for {self.name}: {recoil_data}")
+                return False, None
         
         return False, None
     
@@ -594,6 +631,191 @@ class Move:
         
         return messages
 
+    def _calculate_recoil_damage(self, user, damage_dealt: int) -> int:
+        """
+        Calculate the amount of recoil damage the user should take.
+        
+        Args:
+            user: The Pokemon using the recoil move
+            damage_dealt: Amount of damage dealt to the target
+            
+        Returns:
+            int: Amount of recoil damage to apply (0 if no recoil should occur)
+        """
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for recoil calculation")
+                return 0
+            
+            if damage_dealt <= 0:
+                # No recoil if no damage was dealt
+                return 0
+            
+            # Check if this is actually a recoil move
+            if not self.is_recoil_move or not self.recoil_ratio:
+                return 0
+            
+            # Validate recoil ratio format
+            if not isinstance(self.recoil_ratio, list) or len(self.recoil_ratio) != 2:
+                print(f"ERROR: Invalid recoil_ratio format for {self.name}: {self.recoil_ratio}")
+                return 0
+            
+            numerator, denominator = self.recoil_ratio
+            if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
+                print(f"ERROR: Non-numeric recoil_ratio values for {self.name}: {self.recoil_ratio}")
+                return 0
+            
+            if denominator == 0:
+                print(f"ERROR: Zero denominator in recoil_ratio for {self.name}")
+                return 0
+            
+            # Calculate recoil as fraction of damage dealt
+            recoil_fraction = numerator / denominator
+            recoil_damage = int(damage_dealt * recoil_fraction)
+            
+            # Ensure recoil damage is at least 1 if fraction is positive and damage was dealt
+            if recoil_fraction > 0 and damage_dealt > 0 and recoil_damage == 0:
+                recoil_damage = 1
+            
+            return max(0, recoil_damage)
+            
+        except Exception as e:
+            print(f"ERROR: Unexpected error in _calculate_recoil_damage for {self.name}: {e}")
+            return 0
+
+    def _apply_recoil_effects(self, user, damage_dealt: int) -> List[str]:
+        """
+        Apply recoil effects and return battle messages.
+        
+        Args:
+            user: The Pokemon using the recoil move
+            damage_dealt: Amount of damage dealt to the target
+            
+        Returns:
+            List[str]: List of battle messages describing recoil effects
+        """
+        messages = []
+        
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for recoil effects")
+                return messages
+            
+            # Check if this is actually a recoil move
+            if not self.is_recoil_move:
+                return messages
+            
+            # Calculate the amount of recoil damage
+            recoil_damage = self._calculate_recoil_damage(user, damage_dealt)
+            
+            if recoil_damage <= 0:
+                return messages
+            
+            # Apply recoil damage using Pokemon's take_damage method
+            user.take_damage(recoil_damage)
+            
+            # Generate recoil message
+            messages.append(f"{user.name} is hurt by recoil!")
+            
+        except Exception as e:
+            print(f"ERROR: Failed to apply recoil effects for {self.name}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return messages
+
+    def _handle_special_moves(self, attacking_pokemon, defending_pokemon):
+        """Handle special moves with unique mechanics like Belly Drum."""
+        move_name_lower = self.name.lower()
+        
+        # Handle Belly Drum
+        if move_name_lower == 'belly drum':
+            return self._handle_belly_drum(attacking_pokemon)
+        
+        # Add other special moves here as needed
+        # elif move_name_lower == 'other_special_move':
+        #     return self._handle_other_special_move(attacking_pokemon, defending_pokemon)
+        
+        return None  # No special handling needed
+    
+    def _handle_belly_drum(self, user):
+        """Handle Belly Drum: Maximize Attack at the cost of 50% max HP."""
+        # Check if Attack is already at maximum (+6)
+        if user.stat_stages.get('attack', 0) >= 6:
+            return 0, f"{user.name} used {self.name}!", f"{user.name}'s Attack won't go any higher!"
+        
+        # Calculate HP cost (50% of max HP, rounded down)
+        hp_cost = user.max_hp // 2
+        
+        # Check if user has enough HP (must have more than 50% to use)
+        if user.current_hp <= hp_cost:
+            return 0, f"{user.name} used {self.name}!", f"But it failed!"
+        
+        # Apply the effects
+        # 1. Reduce HP by 50%
+        user.current_hp -= hp_cost
+        
+        # 2. Set Attack to maximum (+6 stages)
+        old_attack_stage = user.stat_stages.get('attack', 0)
+        user.stat_stages['attack'] = 6
+        user._recalculate_stats()  # Recalculate stats with new stage
+        
+        # Generate the message
+        move_desc = data_loader.get_move_description(self.name)
+        if move_desc and 'boost' in move_desc:
+            # Use the official message from the dataset
+            boost_message = move_desc['boost'].replace('[POKEMON]', user.name)
+        else:
+            # Fallback message
+            boost_message = f"{user.name} cut its own HP and maximized its Attack!"
+        
+        return 0, f"{user.name} used {self.name}!", boost_message
+
+    def _apply_stat_modifications(self, user, target) -> List[str]:
+        """
+        Apply stat modifications to appropriate targets and return battle messages.
+        
+        Args:
+            user: The Pokemon using the move
+            target: The target Pokemon (may be None for self-targeting moves)
+            
+        Returns:
+            List[str]: List of battle messages describing stat modifications
+        """
+        messages = []
+        
+        try:
+            # Check if this move has stat modifications
+            if not self.stat_modifications or not isinstance(self.stat_modifications, dict):
+                return messages
+            
+            # Determine the target Pokemon for stat modifications
+            if self.targets_self:
+                modification_target = user
+            else:
+                modification_target = target
+            
+            # Validate that we have a valid target
+            if not modification_target or not hasattr(modification_target, 'modify_stat_stage'):
+                return messages
+            
+            # Apply each stat modification
+            for stat_name, change in self.stat_modifications.items():
+                if isinstance(change, int) and change != 0:
+                    # Apply the stat stage change and get the result message
+                    message = modification_target.modify_stat_stage(stat_name, change)
+                    if message:  # Only add non-empty messages
+                        messages.append(message)
+            
+        except Exception as e:
+            print(f"ERROR: Failed to apply stat modifications for {self.name}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return messages
+
     def _apply_single_status_effect(self, target, status_effect: Dict[str, Any]) -> str:
         if not status_effect:
             return ""
@@ -658,6 +880,11 @@ class Move:
         
         # Handle status moves and 0-power moves - they deal no damage
         if self.is_status_move or self.power == 0:
+            # Check for special moves first (like Belly Drum)
+            special_move_result = self._handle_special_moves(attacking_pokemon, defending_pokemon)
+            if special_move_result:
+                return special_move_result
+            
             status_messages = []
             if defending_pokemon:
                 status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
@@ -667,8 +894,13 @@ class Move:
             if attacking_pokemon:
                 healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, 0)
             
-            # Combine status and healing messages
-            all_messages = status_messages + healing_messages
+            # Apply stat modifications for status moves
+            stat_modification_messages = []
+            if self.stat_modifications:
+                stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+            
+            # Combine status, healing, and stat modification messages
+            all_messages = status_messages + healing_messages + stat_modification_messages
             combined_message = " ".join(all_messages) if all_messages else None
             return 0, f"{attacking_pokemon.name} used {self.name}!", combined_message
         
@@ -783,8 +1015,18 @@ class Move:
         if attacking_pokemon:
             healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
         
-        # Combine status and healing messages
-        all_messages = status_messages + healing_messages
+        # Apply stat modifications after damage calculation
+        stat_modification_messages = []
+        if self.stat_modifications:
+            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+        
+        # Apply recoil effects after damage calculation
+        recoil_messages = []
+        if attacking_pokemon:
+            recoil_messages = self._apply_recoil_effects(attacking_pokemon, base_damage)
+        
+        # Combine status, healing, stat modification, and recoil messages
+        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
@@ -897,8 +1139,18 @@ class Move:
         if attacking_pokemon:
             healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, total_damage)
         
+        # Apply stat modifications after damage calculation
+        stat_modification_messages = []
+        if self.stat_modifications:
+            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
+        
+        # Apply recoil effects after damage calculation
+        recoil_messages = []
+        if attacking_pokemon:
+            recoil_messages = self._apply_recoil_effects(attacking_pokemon, total_damage)
+        
         # Combine all messages
-        all_messages = status_messages + healing_messages
+        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
         if all_messages:
             combined_message = f"{combined_message} {' '.join(all_messages)}"
         
@@ -1007,8 +1259,8 @@ class Move:
             'drain_ratio': self.drain_ratio,
             'is_multihit_move': self.is_multihit_move,
             'multihit_data': self.multihit_data,
-            'is_priority_counter': self.is_priority_counter,
-            'priority_counter_conditions': self.priority_counter_conditions
+            'stat_modifications': self.stat_modifications,
+            'targets_self': self.targets_self
         }
         
     @classmethod
@@ -1045,10 +1297,10 @@ class Move:
         if 'multihit_data' in data:
             move.multihit_data = data['multihit_data']
         
-        # Restore priority counter data if available
-        if 'is_priority_counter' in data:
-            move.is_priority_counter = data['is_priority_counter']
-        if 'priority_counter_conditions' in data:
-            move.priority_counter_conditions = data['priority_counter_conditions']
+        # Restore stat modification data if available
+        if 'stat_modifications' in data:
+            move.stat_modifications = data['stat_modifications']
+        if 'targets_self' in data:
+            move.targets_self = data['targets_self']
             
         return move
