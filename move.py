@@ -36,6 +36,9 @@ class Move:
         
         # Parse stat modifications from move data
         self.stat_modifications, self.targets_self = self._parse_stat_modifications()
+        
+        # Parse recoil properties from move data
+        self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
         # Get move data from the dataset
@@ -184,6 +187,29 @@ class Move:
                 targets_self = False
         
         return stat_modifications, targets_self
+    
+    def _parse_recoil_data(self) -> Tuple[bool, Optional[List[int]]]:
+        """Parse recoil data from move dataset during initialization"""
+        # Get move data from the dataset
+        move_data = data_loader.get_move(self.name)
+        if not move_data:
+            return False, None
+        
+        # Get the raw move data to access recoil property
+        raw_move_data = self._get_raw_move_data()
+        if not raw_move_data:
+            return False, None
+        
+        # Check for recoil property
+        if 'recoil' in raw_move_data and isinstance(raw_move_data['recoil'], list):
+            recoil_data = raw_move_data['recoil']
+            if len(recoil_data) == 2 and all(isinstance(x, (int, float)) for x in recoil_data):
+                return True, recoil_data
+            else:
+                print(f"WARNING: Invalid recoil data format for {self.name}: {recoil_data}")
+                return False, None
+        
+        return False, None
     
     def _determine_hit_count(self) -> int:
         """Determine how many times a multi-hit move should hit"""
@@ -458,6 +484,101 @@ class Move:
             
         except Exception as e:
             print(f"ERROR: Failed to apply healing effects for {self.name}: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return messages
+
+    def _calculate_recoil_damage(self, user, damage_dealt: int) -> int:
+        """
+        Calculate the amount of recoil damage the user should take.
+        
+        Args:
+            user: The Pokemon using the recoil move
+            damage_dealt: Amount of damage dealt to the target
+            
+        Returns:
+            int: Amount of recoil damage to apply (0 if no recoil should occur)
+        """
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for recoil calculation")
+                return 0
+            
+            if damage_dealt <= 0:
+                # No recoil if no damage was dealt
+                return 0
+            
+            # Check if this is actually a recoil move
+            if not self.is_recoil_move or not self.recoil_ratio:
+                return 0
+            
+            # Validate recoil ratio format
+            if not isinstance(self.recoil_ratio, list) or len(self.recoil_ratio) != 2:
+                print(f"ERROR: Invalid recoil_ratio format for {self.name}: {self.recoil_ratio}")
+                return 0
+            
+            numerator, denominator = self.recoil_ratio
+            if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
+                print(f"ERROR: Non-numeric recoil_ratio values for {self.name}: {self.recoil_ratio}")
+                return 0
+            
+            if denominator == 0:
+                print(f"ERROR: Zero denominator in recoil_ratio for {self.name}")
+                return 0
+            
+            # Calculate recoil as fraction of damage dealt
+            recoil_fraction = numerator / denominator
+            recoil_damage = int(damage_dealt * recoil_fraction)
+            
+            # Ensure recoil damage is at least 1 if fraction is positive and damage was dealt
+            if recoil_fraction > 0 and damage_dealt > 0 and recoil_damage == 0:
+                recoil_damage = 1
+            
+            return max(0, recoil_damage)
+            
+        except Exception as e:
+            print(f"ERROR: Unexpected error in _calculate_recoil_damage for {self.name}: {e}")
+            return 0
+
+    def _apply_recoil_effects(self, user, damage_dealt: int) -> List[str]:
+        """
+        Apply recoil effects and return battle messages.
+        
+        Args:
+            user: The Pokemon using the recoil move
+            damage_dealt: Amount of damage dealt to the target
+            
+        Returns:
+            List[str]: List of battle messages describing recoil effects
+        """
+        messages = []
+        
+        try:
+            # Validate inputs
+            if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp'):
+                print(f"ERROR: Invalid user Pokemon for recoil effects")
+                return messages
+            
+            # Check if this is actually a recoil move
+            if not self.is_recoil_move:
+                return messages
+            
+            # Calculate the amount of recoil damage
+            recoil_damage = self._calculate_recoil_damage(user, damage_dealt)
+            
+            if recoil_damage <= 0:
+                return messages
+            
+            # Apply recoil damage using Pokemon's take_damage method
+            user.take_damage(recoil_damage)
+            
+            # Generate recoil message
+            messages.append(f"{user.name} is hurt by recoil!")
+            
+        except Exception as e:
+            print(f"ERROR: Failed to apply recoil effects for {self.name}: {e}")
             import traceback
             traceback.print_exc()
         
@@ -757,8 +878,13 @@ class Move:
         if self.stat_modifications:
             stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
         
-        # Combine status, healing, and stat modification messages
-        all_messages = status_messages + healing_messages + stat_modification_messages
+        # Apply recoil effects after damage calculation
+        recoil_messages = []
+        if attacking_pokemon:
+            recoil_messages = self._apply_recoil_effects(attacking_pokemon, base_damage)
+        
+        # Combine status, healing, stat modification, and recoil messages
+        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
@@ -876,8 +1002,13 @@ class Move:
         if self.stat_modifications:
             stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
         
+        # Apply recoil effects after damage calculation
+        recoil_messages = []
+        if attacking_pokemon:
+            recoil_messages = self._apply_recoil_effects(attacking_pokemon, total_damage)
+        
         # Combine all messages
-        all_messages = status_messages + healing_messages + stat_modification_messages
+        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
         if all_messages:
             combined_message = f"{combined_message} {' '.join(all_messages)}"
         
