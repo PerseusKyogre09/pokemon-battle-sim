@@ -463,6 +463,53 @@ class Move:
         
         return messages
 
+    def _handle_special_moves(self, attacking_pokemon, defending_pokemon):
+        """Handle special moves with unique mechanics like Belly Drum."""
+        move_name_lower = self.name.lower()
+        
+        # Handle Belly Drum
+        if move_name_lower == 'belly drum':
+            return self._handle_belly_drum(attacking_pokemon)
+        
+        # Add other special moves here as needed
+        # elif move_name_lower == 'other_special_move':
+        #     return self._handle_other_special_move(attacking_pokemon, defending_pokemon)
+        
+        return None  # No special handling needed
+    
+    def _handle_belly_drum(self, user):
+        """Handle Belly Drum: Maximize Attack at the cost of 50% max HP."""
+        # Check if Attack is already at maximum (+6)
+        if user.stat_stages.get('attack', 0) >= 6:
+            return 0, f"{user.name} used {self.name}!", f"{user.name}'s Attack won't go any higher!"
+        
+        # Calculate HP cost (50% of max HP, rounded down)
+        hp_cost = user.max_hp // 2
+        
+        # Check if user has enough HP (must have more than 50% to use)
+        if user.current_hp <= hp_cost:
+            return 0, f"{user.name} used {self.name}!", f"But it failed!"
+        
+        # Apply the effects
+        # 1. Reduce HP by 50%
+        user.current_hp -= hp_cost
+        
+        # 2. Set Attack to maximum (+6 stages)
+        old_attack_stage = user.stat_stages.get('attack', 0)
+        user.stat_stages['attack'] = 6
+        user._recalculate_stats()  # Recalculate stats with new stage
+        
+        # Generate the message
+        move_desc = data_loader.get_move_description(self.name)
+        if move_desc and 'boost' in move_desc:
+            # Use the official message from the dataset
+            boost_message = move_desc['boost'].replace('[POKEMON]', user.name)
+        else:
+            # Fallback message
+            boost_message = f"{user.name} cut its own HP and maximized its Attack!"
+        
+        return 0, f"{user.name} used {self.name}!", boost_message
+
     def _apply_stat_modifications(self, user, target) -> List[str]:
         """
         Apply stat modifications to appropriate targets and return battle messages.
@@ -570,6 +617,11 @@ class Move:
         
         # Handle status moves and 0-power moves - they deal no damage
         if self.is_status_move or self.power == 0:
+            # Check for special moves first (like Belly Drum)
+            special_move_result = self._handle_special_moves(attacking_pokemon, defending_pokemon)
+            if special_move_result:
+                return special_move_result
+            
             status_messages = []
             if defending_pokemon:
                 status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
