@@ -292,7 +292,6 @@ def search_pokemon():
         return jsonify([])
     
     try:
-        # Try exact match first
         response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{query}')
         if response.status_code == 200:
             pokemon = response.json()
@@ -304,7 +303,6 @@ def search_pokemon():
     except:
         pass
     
-    # If no exact match, try search
     try:
         response = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1000')
         if response.status_code == 200:
@@ -389,7 +387,6 @@ def start_game():
         player_sprite = game.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
         opponent_sprite = game.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
         
-        # Additional fallback for player sprite - prioritize Showdown Gen 5 animated back sprites
         if not player_sprite:
             # Fallback to Showdown Gen 5 animated back sprites (highest priority)
             pokemon_name = player_data.get('name', '').lower()

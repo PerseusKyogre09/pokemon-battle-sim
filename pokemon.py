@@ -6,23 +6,22 @@ import random
 class Pokemon:
     def __init__(self, name, type_, sprite_url, stats, moves=None, level=100):
         self.name = self._format_pokemon_name(name) if isinstance(name, str) else name
-        # Handle both single type (string) and multiple types (list)
         if isinstance(type_, list):
             self.types = [t.lower() for t in type_]
-            self.type = self.types[0]  # For backward compatibility
+            self.type = self.types[0]
         else:
             self.types = [type_.lower()]
-            self.type = type_.lower()  # For backward compatibility
+            self.type = type_.lower()
             
         self.sprite_url = sprite_url
-        self.sprite = sprite_url  # Add sprite alias for backward compatibility
+        self.sprite = sprite_url
         self.level = level
         
         # Initialize new status management system
-        self.status_effects = {}  # Dict of status_type -> StatusEffect
-        self.major_status = None  # Reference to current major status
-        self.volatile_statuses = set()  # Set of volatile status types
-        self.status_change_events = []  # Track status change events for this turn
+        self.status_effects = {}
+        self.major_status = None
+        self.volatile_statuses = set()
+        self.status_change_events = []
         
         # Keep old attributes for backward compatibility
         self.status_condition = None

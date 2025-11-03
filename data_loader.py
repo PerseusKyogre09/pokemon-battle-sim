@@ -86,8 +86,6 @@ class DataLoader:
         try:
             with open('datasets/moves_desc.json', 'r', encoding='utf-8') as f:
                 content = f.read()
-                # The file appears to be in a JavaScript-like format, not pure JSON
-                # We need to parse it differently
                 
                 # Remove the outer braces and split by move entries
                 content = content.strip()
