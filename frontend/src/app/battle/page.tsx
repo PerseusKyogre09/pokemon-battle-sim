@@ -339,6 +339,7 @@ export default function BattlePage() {
                       onClick={() => handleMove(move.name)}
                       onMouseEnter={() => setHoveredMove(move)}
                       onMouseLeave={() => setHoveredMove(null)}
+                      onTouchStart={() => setHoveredMove(move)}
                       disabled={isProcessing || move.pp <= 0 || battleStage !== 'active'}
                       className={`text-left text-[9px] md:text-[12px] uppercase group flex items-center gap-1 md:gap-3
                         ${isProcessing || battleStage !== 'active' ? 'opacity-50' : 'hover:text-red-400'}
