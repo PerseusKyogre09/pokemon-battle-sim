@@ -237,23 +237,23 @@ export default function BattlePage() {
       )}
 
       {/* MAIN SHOWDOWN-STYLE LAYOUT */}
-      <main className="flex-1 flex flex-col md:flex-row h-screen overflow-hidden p-2 md:p-4 gap-2 md:gap-4">
+      <main className="flex-1 flex h-screen overflow-hidden p-4 gap-4">
         
         {/* LEFT COLUMN: Visuals & Moves */}
-        <div className="flex-[2] flex flex-col gap-2 md:gap-4 h-full">
+        <div className="flex-[2] flex flex-col gap-4">
           
-          {/* BATTLE ARENA */}
-          <div className="relative h-[300px] md:flex-1 bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-2 md:border-4 border-[#475569] rounded-lg md:rounded-xl overflow-hidden gba-panel-shadow shrink-0">
+          {/* BATTLE ARENA (Smaller defined area) */}
+          <div className="relative flex-1 bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 border-[#475569] rounded-xl overflow-hidden gba-panel-shadow">
             <div className="absolute inset-0 bg-black/40" />
             
             {/* Turn Counter Overlay */}
-            <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-black/60 px-2 md:px-3 py-1 border border-white/10 text-[8px] md:text-[10px] text-yellow-500 z-20">
+            <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 border-2 border-white/10 text-[10px] text-yellow-500 z-20">
               TURN {events.filter(e => e.includes('used')).length + 1}
             </div>
 
-            {/* TOP SECTION: Opponent Status & Sprite */}
-            <div className="absolute top-4 md:top-8 left-0 right-0 h-[40%] px-4 md:px-8">
-              <div className="absolute top-0 left-4 md:left-8 scale-75 md:scale-100 origin-top-left">
+            {/* TOP SECTION: Opponent Status (Left) & Sprite (Right) */}
+            <div className="absolute top-8 left-0 right-0 h-[40%] px-8">
+              <div className="absolute top-0 left-8">
                 <PokemonCard
                   name={battleState.opponent_pokemon.name}
                   sprite={battleState.opponent_pokemon.sprite}
@@ -266,7 +266,7 @@ export default function BattlePage() {
                   layout="status-only"
                 />
               </div>
-              <div className="absolute top-0 right-4 md:right-16 scale-75 md:scale-100 origin-top-right">
+              <div className="absolute top-0 right-16">
                 <PokemonCard
                   name={battleState.opponent_pokemon.name}
                   sprite={battleState.opponent_pokemon.sprite}
@@ -284,9 +284,9 @@ export default function BattlePage() {
               </div>
             </div>
 
-            {/* MIDDLE SECTION: Player Sprite & Status */}
-            <div className="absolute bottom-4 md:bottom-8 left-0 right-0 h-[40%] px-4 md:px-8">
-              <div className="absolute bottom-0 left-4 md:left-16 scale-75 md:scale-100 origin-bottom-left">
+            {/* MIDDLE SECTION: Player Sprite (Left) & Status (Right) */}
+            <div className="absolute bottom-8 left-0 right-0 h-[40%] px-8">
+              <div className="absolute bottom-0 left-16">
                 <PokemonCard
                   name={battleState.player_pokemon.name}
                   sprite={battleState.player_pokemon.sprite}
@@ -302,7 +302,7 @@ export default function BattlePage() {
                   flip={false}
                 />
               </div>
-              <div className="absolute bottom-0 right-4 md:right-8 scale-75 md:scale-100 origin-bottom-right">
+              <div className="absolute bottom-0 right-8">
                 <PokemonCard
                   name={battleState.player_pokemon.name}
                   sprite={battleState.player_pokemon.sprite}
@@ -317,14 +317,14 @@ export default function BattlePage() {
             </div>
           </div>
 
-          {/* MOVE SELECTION AREA */}
-          <div className="h-40 md:h-48 gba-box flex flex-col justify-center relative gba-panel-shadow shrink-0">
+          {/* MOVE SELECTION AREA (Below Arena) */}
+          <div className="h-48 gba-box flex flex-col justify-center relative gba-panel-shadow">
             {gameOver ? (
               <div className="flex flex-col items-center justify-center h-full p-4">
-                <p className="text-sm md:text-xl text-yellow-500 uppercase mb-2 md:mb-4 tracking-widest animate-pulse">{gameOver}</p>
+                <p className="text-xl text-yellow-500 uppercase mb-4 tracking-widest animate-pulse">{gameOver}</p>
                 <button 
                   onClick={() => router.push('/')}
-                  className="px-6 md:px-12 py-2 md:py-3 bg-red-900/40 border-2 md:border-4 border-red-800 text-white text-[10px] md:text-xs uppercase hover:bg-red-800 transition-colors"
+                  className="px-12 py-3 bg-red-900/40 border-4 border-red-800 text-white text-xs uppercase hover:bg-red-800 transition-colors"
                 >
                   RETURN TO HOME
                 </button>
@@ -332,33 +332,32 @@ export default function BattlePage() {
             ) : (
               <div className="flex h-full">
                 {/* Left: Move Grid */}
-                <div className="w-[60%] md:w-[70%] grid grid-cols-2 gap-x-1 md:gap-x-2 gap-y-2 md:gap-y-4 p-3 md:p-6 items-center border-r-2 md:border-r-4 border-[#0f172a]">
+                <div className="w-[70%] grid grid-cols-2 gap-x-2 gap-y-4 p-6 items-center border-r-4 border-[#0f172a]">
                   {battleState.player_moves.map(move => (
                     <button
                       key={move.name}
                       onClick={() => handleMove(move.name)}
                       onMouseEnter={() => setHoveredMove(move)}
                       onMouseLeave={() => setHoveredMove(null)}
-                      onTouchStart={() => setHoveredMove(move)}
                       disabled={isProcessing || move.pp <= 0 || battleStage !== 'active'}
-                      className={`text-left text-[9px] md:text-[12px] uppercase group flex items-center gap-1 md:gap-3
+                      className={`text-left text-[12px] uppercase group flex items-center gap-3
                         ${isProcessing || battleStage !== 'active' ? 'opacity-50' : 'hover:text-red-400'}
                       `}
                     >
-                      <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[4px] md:border-l-[8px] border-l-red-500 border-t-[3px] md:border-t-[6px] border-t-transparent border-b-[3px] md:border-b-[6px] border-b-transparent" />
+                      <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[8px] border-l-red-500 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent" />
                       {move.name.replace('-', ' ')}
                     </button>
                   ))}
                 </div>
 
                 {/* Right: Info & Run */}
-                <div className="w-[40%] md:w-[30%] flex flex-col bg-black/20">
-                  <div className="flex-1 p-2 md:p-4 flex flex-col justify-center gap-2 md:gap-4">
+                <div className="w-[30%] flex flex-col bg-black/20">
+                  <div className="flex-1 p-4 flex flex-col justify-center gap-4">
                     <div className="flex flex-col">
-                      <span className="text-gray-500 text-[6px] md:text-[8px] uppercase mb-0.5 md:mb-1">Move Detail</span>
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-1">
-                        <span className="text-white text-[9px] md:text-[12px]">{hoveredMove ? `${hoveredMove.pp}/${hoveredMove.max_pp} PP` : '--/--'}</span>
-                        <span className={`text-[7px] md:text-[9px] px-1 md:px-2 py-0.5 rounded-sm inline-block text-center ${hoveredMove ? `type-${hoveredMove.type.toLowerCase()}` : 'bg-gray-800 text-gray-600'}`}>
+                      <span className="text-gray-500 text-[8px] uppercase mb-1">Move Detail</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white text-[12px]">{hoveredMove ? `${hoveredMove.pp}/${hoveredMove.max_pp} PP` : '--/--'}</span>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-sm ${hoveredMove ? `type-${hoveredMove.type.toLowerCase()}` : 'bg-gray-800 text-gray-600'}`}>
                           {hoveredMove ? hoveredMove.type : '--'}
                         </span>
                       </div>
@@ -367,10 +366,10 @@ export default function BattlePage() {
                   
                   <button 
                     onClick={() => confirm('Forfeit?') && router.push('/')}
-                    className="h-8 md:h-12 border-t-2 md:border-t-4 border-[#0f172a] text-[8px] md:text-[10px] uppercase text-gray-500 hover:text-white transition-colors flex items-center justify-center gap-1 md:gap-2 group"
+                    className="h-12 border-t-4 border-[#0f172a] text-[10px] uppercase text-gray-500 hover:text-white transition-colors flex items-center justify-center gap-2 group"
                   >
-                    <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[4px] md:border-l-[6px] border-l-white border-t-[3px] md:border-t-[4px] border-t-transparent border-b-[3px] md:border-b-[4px] border-b-transparent" />
-                    RUN
+                    <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[6px] border-l-white border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent" />
+                    RUN BATTLE
                   </button>
                 </div>
               </div>
@@ -378,9 +377,9 @@ export default function BattlePage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Battle Log */}
-        <div className="flex-1 h-[200px] md:h-full min-w-full md:min-w-[320px] flex flex-col gap-1 md:gap-2">
-          <div className="px-2 text-gray-500 text-[8px] md:text-[10px] uppercase tracking-widest flex justify-between">
+        {/* RIGHT COLUMN: Battle Log (Full height like Showdown) */}
+        <div className="flex-1 h-full min-w-[320px] flex flex-col gap-2">
+          <div className="px-2 text-gray-500 text-[10px] uppercase tracking-widest flex justify-between">
             <span>Battle Log</span>
             <span className="animate-pulse text-green-500">LIVE</span>
           </div>

@@ -93,44 +93,53 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans selection:bg-yellow-500/30">
-      <header className="bg-gray-900/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/5">
+    <div className="min-h-screen bg-[#020617] text-white font-retro overflow-x-hidden relative">
+      {/* Dynamic Background Background */}
+      <div className="absolute inset-0 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center opacity-20 blur-sm pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/50 via-transparent to-[#020617] pointer-events-none" />
+
+      <header className="relative z-50 border-b border-white/5 backdrop-blur-md bg-[#020617]/40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.4)]">
-              <span className="text-gray-900 text-2xl font-black">P</span>
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-              PokéSim <span className="text-yellow-500">Battle</span>
+          <div className="flex items-center space-x-4">
+            <img src="/images/pokeball.png" alt="Logo" className="w-10 h-10 animate-spin-slow" />
+            <h1 className="text-lg md:text-2xl font-bold tracking-[0.15em] bg-gradient-to-r from-white via-yellow-400 to-white bg-clip-text text-transparent">
+              POKÉSIM <span className="text-yellow-500">BATTLE</span>
             </h1>
           </div>
-          <a href="https://github.com/PerseusKyogre09" target="_blank" className="text-gray-400 hover:text-white transition-colors">
-            GitHub
-          </a>
+          <div className="flex items-center space-x-6">
+            <a href="https://github.com/PerseusKyogre09" target="_blank" className="text-gray-500 hover:text-white transition-all text-[10px] uppercase tracking-widest hidden sm:block">
+              [ GITHUB ]
+            </a>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-12 flex flex-col items-center">
-        <div className="max-w-2xl w-full text-center mb-12">
-          <h2 className="text-4xl font-retro mb-6 tracking-tight leading-tight">Choose Your <span className="text-yellow-500">Champion</span></h2>
-          <p className="text-gray-400 font-retro text-xs leading-relaxed uppercase opacity-70">Experience authentic Pokémon battles with strategic movesets and modern aesthetics.</p>
+        <div className="max-w-4xl w-full text-center mb-16 relative">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-yellow-500/10 blur-[100px] rounded-full pointer-events-none" />
+          <h2 className="text-3xl md:text-6xl mb-8 leading-tight tracking-tighter" style={{ textShadow: '8px 8px 0 rgba(0,0,0,0.5)' }}>
+            CHOOSE YOUR <br/>
+            <span className="text-yellow-500">CHAMPION</span>
+          </h2>
+          <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed uppercase tracking-[0.3em] opacity-80 max-w-xl mx-auto">
+            Experience authentic high-stakes battles with precision movesets and modern GBA aesthetics.
+          </p>
         </div>
 
-        <div className="w-full max-w-md relative mb-12" ref={searchRef}>
-          <div className="relative group">
+        <div className="w-full max-w-lg relative mb-20" ref={searchRef}>
+          <div className="relative group gba-panel-shadow">
             <input
               type="text"
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search Pokémon..."
-              className="w-full px-6 py-4 bg-gray-900/50 border-4 border-gray-800 font-retro text-xs focus:outline-none focus:border-yellow-500 transition-all placeholder:text-gray-600 group-hover:border-gray-700"
-              style={{ clipPath: 'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)' }}
+              placeholder="ENTER POKÉMON NAME..."
+              className="w-full px-8 py-6 bg-gray-900/80 border-4 border-[#475569] text-xs md:text-sm focus:outline-none focus:border-yellow-500 transition-all placeholder:text-gray-700 font-retro tracking-widest text-white"
             />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center space-x-4">
               {loading ? (
-                <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
               ) : (
-                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <img src="/images/pokeball.gif" alt="" className="w-8 h-8 opacity-40 group-hover:opacity-100 transition-opacity" />
               )}
             </div>
           </div>
