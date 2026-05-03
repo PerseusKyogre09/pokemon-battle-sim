@@ -16,8 +16,8 @@ const BattleLog: React.FC<BattleLogProps> = ({ events }) => {
   }, [events]);
 
   return (
-    <div className="flex flex-col h-32">
-      <div className="bg-[#0f172a] border-[6px] border-[#475569] rounded-xl p-4 h-full relative shadow-[inset_0_4px_0_#1e293b,inset_0_-4px_0_#020617] flex items-center">
+    <div className="flex flex-col h-full">
+      <div className="bg-[#0f172a] border-[6px] border-[#475569] rounded-xl p-4 h-full relative shadow-[inset_0_4px_0_#1e293b,inset_0_-4px_0_#020617] flex items-start">
         {/* Inner subtle border effect */}
         <div className="absolute inset-1 border-2 border-[#1e293b] rounded-lg pointer-events-none" />
         
