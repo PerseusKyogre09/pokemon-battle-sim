@@ -857,7 +857,7 @@ class Move:
             # Combine status, healing, and stat modification messages
             all_messages = status_messages + healing_messages + stat_modification_messages
             combined_message = " ".join(all_messages) if all_messages else None
-            return 0, f"{attacking_pokemon.name} used {self.name}!", combined_message
+            return 0, "", combined_message
         
         # Handle multi-hit moves
         if self.is_multihit_move:

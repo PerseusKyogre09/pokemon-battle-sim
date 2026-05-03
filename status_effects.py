@@ -106,10 +106,6 @@ class StatusEffect:
                 # Regular damage (burn, poison)
                 damage = int(pokemon.max_hp * turn_damage)
             
-            # Apply damage (but don't let poison kill the Pokemon)
-            if self.status_type == StatusType.POISON.value and pokemon.current_hp <= damage:
-                damage = max(0, pokemon.current_hp - 1)
-            
             if damage > 0:
                 pokemon.current_hp = max(0, pokemon.current_hp - damage)
                 damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by {status}!")
@@ -570,12 +566,8 @@ class PoisonStatusEffect(StatusEffect):
         # Calculate poison damage (1/8 of max HP)
         damage = int(pokemon.max_hp * (1/8))
         
-        # Prevent poison from reducing HP below 1
-        if pokemon.current_hp <= damage:
-            damage = max(0, pokemon.current_hp - 1)
-        
         if damage > 0:
-            pokemon.current_hp = max(1, pokemon.current_hp - damage)
+            pokemon.current_hp = max(0, pokemon.current_hp - damage)
             damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
             messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
@@ -649,12 +641,8 @@ class ToxicStatusEffect(StatusEffect):
         # Calculate toxic damage (counter/16 of max HP)
         damage = int(pokemon.max_hp * (self.counter / 16))
         
-        # Prevent toxic from reducing HP below 1
-        if pokemon.current_hp <= damage:
-            damage = max(0, pokemon.current_hp - 1)
-        
         if damage > 0:
-            pokemon.current_hp = max(1, pokemon.current_hp - damage)
+            pokemon.current_hp = max(0, pokemon.current_hp - damage)
             damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
             messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         

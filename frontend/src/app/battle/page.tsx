@@ -198,6 +198,10 @@ export default function BattlePage() {
               setTimeout(() => setPlayerAnim(prev => ({ ...prev, shaking: false })), 400);
             }
           }
+
+          if (eventObj.status_message) {
+            setEvents(prev => [...prev, eventObj.status_message]);
+          }
         } else if (eventObj.type === 'effectiveness') {
           setEvents(prev => [...prev, eventObj.message]);
         } else if (eventObj.type === 'status') {
@@ -219,11 +223,28 @@ export default function BattlePage() {
             player_pokemon: {
               ...prev.player_pokemon,
               current_hp: isPlayer ? eventObj.attacker_hp : eventObj.defender_hp,
+              status_effects: isPlayer ? eventObj.attacker_status : eventObj.defender_status
             },
             opponent_pokemon: {
               ...prev.opponent_pokemon,
               current_hp: isPlayer ? eventObj.defender_hp : eventObj.attacker_hp,
+              status_effects: isPlayer ? eventObj.defender_status : eventObj.attacker_status
             }
+          } : null);
+        } else if (eventObj.type === 'status') {
+          const isTargetPlayer = eventObj.target === 'player';
+          setBattleState(prev => prev ? {
+            ...prev,
+            player_pokemon: isTargetPlayer ? {
+              ...prev.player_pokemon,
+              current_hp: eventObj.pokemon_hp,
+              status_effects: eventObj.status_effects
+            } : prev.player_pokemon,
+            opponent_pokemon: !isTargetPlayer ? {
+              ...prev.opponent_pokemon,
+              current_hp: eventObj.pokemon_hp,
+              status_effects: eventObj.status_effects
+            } : prev.opponent_pokemon
           } : null);
         }
         
@@ -293,6 +314,7 @@ export default function BattlePage() {
                 maxHp={battleState.opponent_pokemon.max_hp}
                 level={100}
                 types={battleState.opponent_pokemon.types}
+                status_effects={battleState.opponent_pokemon.status_effects}
                 isOpponent
                 showStatus={opponentAnim.status}
                 layout="status-only"
@@ -340,6 +362,7 @@ export default function BattlePage() {
                 maxHp={battleState.player_pokemon.max_hp}
                 level={100}
                 types={battleState.player_pokemon.types}
+                status_effects={battleState.player_pokemon.status_effects}
                 showStatus={playerAnim.status}
                 layout="status-only"
               />

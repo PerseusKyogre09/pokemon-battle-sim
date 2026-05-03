@@ -2,6 +2,7 @@
 
 import React from 'react';
 import HealthBar from './HealthBar';
+import { StatusEffect } from '@/lib/api';
 
 interface PokemonCardProps {
   name: string;
@@ -10,6 +11,7 @@ interface PokemonCardProps {
   maxHp: number;
   level: number;
   types: string[];
+  status_effects?: StatusEffect[];
   isOpponent?: boolean;
   isVisible?: boolean;
   isAttacking?: boolean;
@@ -20,8 +22,26 @@ interface PokemonCardProps {
   flip?: boolean;
 }
 
+const statusLabels: Record<string, string> = {
+  burn: 'BRN',
+  paralysis: 'PAR',
+  poison: 'PSN',
+  toxic: 'PSN',
+  sleep: 'SLP',
+  freeze: 'FRZ',
+};
+
+const statusColors: Record<string, string> = {
+  burn: 'bg-red-500 text-white',
+  paralysis: 'bg-yellow-400 text-black',
+  poison: 'bg-purple-500 text-white',
+  toxic: 'bg-purple-600 text-white',
+  sleep: 'bg-gray-400 text-black',
+  freeze: 'bg-blue-300 text-black',
+};
+
 const PokemonCard: React.FC<PokemonCardProps> = ({ 
-  name, sprite, currentHp, maxHp, level, types = [], 
+  name, sprite, currentHp, maxHp, level, types = [], status_effects = [],
   isOpponent, isVisible = true, isAttacking, isShaking, isFainted, showStatus = true,
   layout = 'full', flip = false
 }) => {
@@ -55,10 +75,21 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       borderWidth: isOpponent ? '2px 0 4px 4px' : '4px 4px 2px 0'
     }}>
       <div className="flex justify-between items-center mb-1 border-b-2 border-white/10 pb-1">
-        <h3 className="text-[10px] font-retro uppercase text-white flex items-center gap-1">
-          {name}
-          <span className="text-[8px] text-blue-400">♂</span>
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[10px] font-retro uppercase text-white flex items-center gap-1">
+            {name}
+            <span className="text-[8px] text-blue-400">♂</span>
+          </h3>
+          {status_effects.filter(s => s.is_major).map(status => (
+            <span 
+              key={status.type} 
+              className={`px-1.5 py-0.5 rounded-[2px] text-[7px] font-bold uppercase tracking-tighter shadow-sm border border-white/20 ${statusColors[status.type] || 'bg-gray-500'}`}
+              style={{ textShadow: '1px 1px 0 rgba(0,0,0,0.2)' }}
+            >
+              {statusLabels[status.type] || status.type.slice(0, 3).toUpperCase()}
+            </span>
+          ))}
+        </div>
         <div className="flex items-center gap-1">
           <span className="text-[8px] font-retro text-gray-400">Lv</span>
           <span className="text-[10px] font-retro text-white">{level}</span>

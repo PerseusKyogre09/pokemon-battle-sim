@@ -60,6 +60,8 @@ class Game:
                     'type': 'status',
                     'message': msg,
                     'target': 'player',
+                    'pokemon_hp': self.player_pokemon.current_hp,
+                    'status_effects': self.player_pokemon.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
         
@@ -70,6 +72,8 @@ class Game:
                     'type': 'status',
                     'message': msg,
                     'target': 'opponent',
+                    'pokemon_hp': self.opponent_pokemon.current_hp,
+                    'status_effects': self.opponent_pokemon.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
         
@@ -227,6 +231,8 @@ class Game:
                 'defender_hp': defender.current_hp,
                 'attacker_max_hp': attacker.max_hp,
                 'defender_max_hp': defender.max_hp,
+                'attacker_status': attacker.get_status_display(),
+                'defender_status': defender.get_status_display(),
                 'timestamp': len(turn_info['battle_events']),
                 'status_message': status_message  # Include status message in move event
             }
@@ -306,6 +312,8 @@ class Game:
                         'type': 'status',
                         'message': msg,
                         'target': 'player',
+                        'pokemon_hp': self.player_pokemon.current_hp,
+                        'status_effects': self.player_pokemon.get_status_display(),
                         'timestamp': len(turn_info['battle_events'])
                     })
             
@@ -316,6 +324,8 @@ class Game:
                         'type': 'status',
                         'message': msg,
                         'target': 'opponent',
+                        'pokemon_hp': self.opponent_pokemon.current_hp,
+                        'status_effects': self.opponent_pokemon.get_status_display(),
                         'timestamp': len(turn_info['battle_events'])
                     })
             

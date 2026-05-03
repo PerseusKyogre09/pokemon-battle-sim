@@ -91,7 +91,7 @@ export default function Home() {
 
       const entry = speciesRes.flavor_text_entries.find((e: any) => e.language.name === 'en');
       setPokedexEntry(entry ? entry.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ') : '');
-      
+
       if (setsRes.success && setsRes.sets.length > 0) {
         setAvailableSets(setsRes.sets);
       } else {
@@ -140,7 +140,7 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex items-center space-x-6">
-            <a href="https://github.com/PerseusKyogre09" target="_blank" className="text-gray-500 hover:text-white transition-all text-[10px] uppercase tracking-widest hidden sm:block">
+            <a href="https://github.com/PerseusKyogre09/pokemon-battle-sim" target="_blank" className="text-gray-500 hover:text-white transition-all text-[10px] uppercase tracking-widest hidden sm:block">
               [ GITHUB ]
             </a>
           </div>
@@ -151,7 +151,7 @@ export default function Home() {
         <div className="max-w-4xl w-full text-center mb-16 relative">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-yellow-500/10 blur-[100px] rounded-full pointer-events-none" />
           <h2 className="text-3xl md:text-6xl mb-8 leading-tight tracking-tighter" style={{ textShadow: '8px 8px 0 rgba(0,0,0,0.5)' }}>
-            CHOOSE YOUR <br/>
+            CHOOSE YOUR <br />
             <span className="text-yellow-500">CHAMPION</span>
           </h2>
           <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed uppercase tracking-[0.3em] opacity-80 max-w-xl mx-auto">
@@ -207,7 +207,7 @@ export default function Home() {
                     types={selectedPokemon.types.map((t: any) => t.type.name)}
                   />
                 </div>
-                
+
                 <div className="flex-1 space-y-4 md:space-y-6 w-full">
                   <div className="bg-gray-900/50 backdrop-blur-md p-4 md:p-6 border-4 border-gray-800 shadow-xl relative">
                     <div className="absolute top-0 left-0 w-3 h-3 bg-yellow-500/20" />
@@ -243,7 +243,7 @@ export default function Home() {
                     <p className="text-gray-500 text-[8px] uppercase tracking-wide">Choose competitive build</p>
                   </div>
                   <div className="flex items-center space-x-2 bg-black/20 p-1 rounded-lg">
-                    <button 
+                    <button
                       onClick={() => setCurrentSetIndex(Math.max(0, currentSetIndex - 1))}
                       disabled={currentSetIndex === 0}
                       className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full disabled:opacity-30 text-[10px]"
@@ -251,7 +251,7 @@ export default function Home() {
                       ←
                     </button>
                     <span className="text-[9px] md:text-xs font-mono flex items-center px-1 md:px-2">{currentSetIndex + 1}/{availableSets.length}</span>
-                    <button 
+                    <button
                       onClick={() => setCurrentSetIndex(Math.min(availableSets.length - 1, currentSetIndex + 1))}
                       disabled={currentSetIndex === availableSets.length - 1}
                       className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full disabled:opacity-30 text-[10px]"
@@ -262,8 +262,8 @@ export default function Home() {
                 </div>
 
                 <div className="mb-4 md:mb-6 border-l-2 border-yellow-500/30 pl-4">
-                   <p className="text-white font-bold text-sm md:text-lg mb-1">{availableSets[currentSetIndex]?.set_name}</p>
-                   <p className="text-gray-500 text-[8px] md:text-sm uppercase tracking-widest">{availableSets[currentSetIndex]?.format || 'Standard'}</p>
+                  <p className="text-white font-bold text-sm md:text-lg mb-1">{availableSets[currentSetIndex]?.set_name}</p>
+                  <p className="text-gray-500 text-[8px] md:text-sm uppercase tracking-widest">{availableSets[currentSetIndex]?.format || 'Standard'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 md:gap-3">
@@ -297,13 +297,13 @@ export default function Home() {
                     <p className="text-gray-500 text-[8px] md:text-[10px] uppercase tracking-widest">Select your adversary</p>
                   </div>
                   <div className="flex bg-black/40 rounded-full p-1 border border-white/10 shadow-inner">
-                    <button 
+                    <button
                       onClick={() => setIsRandomOpponent(true)}
                       className={`px-3 py-1.5 md:px-6 md:py-2 text-[8px] md:text-[10px] uppercase tracking-widest rounded-full transition-all duration-300 ${isRandomOpponent ? 'bg-yellow-500 text-gray-900 shadow-lg font-bold' : 'text-gray-500 hover:text-white'}`}
                     >
                       Random
                     </button>
-                    <button 
+                    <button
                       onClick={() => setIsRandomOpponent(false)}
                       className={`px-3 py-1.5 md:px-6 md:py-2 text-[8px] md:text-[10px] uppercase tracking-widest rounded-full transition-all duration-300 ${!isRandomOpponent ? 'bg-yellow-500 text-gray-900 shadow-lg font-bold' : 'text-gray-500 hover:text-white'}`}
                     >
@@ -327,7 +327,7 @@ export default function Home() {
                   ) : (
                     <div className="space-y-4 md:space-y-6 h-full flex flex-col">
                       <div className="relative">
-                        <input 
+                        <input
                           type="text"
                           value={opponentSearch}
                           onChange={(e) => setOpponentSearch(e.target.value)}
@@ -358,11 +358,11 @@ export default function Home() {
                 </div>
 
                 <div className="mt-6 md:mt-10 pt-6 md:pt-10 border-t border-white/5 flex items-center justify-between opacity-40">
-                   <div className="flex items-center space-x-2 md:space-x-3">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-[6px] md:text-[8px] uppercase tracking-widest text-gray-400">Competitive Sets Loaded</span>
-                   </div>
-                   <span className="text-[6px] md:text-[8px] uppercase tracking-widest text-gray-400">V.1.0 Arena</span>
+                  <div className="flex items-center space-x-2 md:space-x-3">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-[6px] md:text-[8px] uppercase tracking-widest text-gray-400">Competitive Sets Loaded</span>
+                  </div>
+                  <span className="text-[6px] md:text-[8px] uppercase tracking-widest text-gray-400">V.1.0 Arena</span>
                 </div>
               </div>
             </div>
