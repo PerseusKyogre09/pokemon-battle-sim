@@ -46,23 +46,26 @@ if os.path.exists(music_path):
     app.mount("/api/music/local", StaticFiles(directory=music_path), name="music")
 
 @app.get("/api/audio/signed-url/{filename}")
-async def get_signed_url(filename: str):
+async def get_signed_url(filename: str, request: Request):
     if not supabase:
         print(f"[AUDIO] ⚠️ Supabase not configured. Falling back to local: {filename}")
-        return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
+        base_url = str(request.base_url).rstrip('/')
+        return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
     
     try:
         # Generate a signed URL valid for 1 hour (3600 seconds)
         response = supabase.storage.from_(bucket_name).create_signed_url(filename, 3600)
         if "error" in response:
             print(f"[AUDIO] ❌ Supabase error: {response['error']}")
-            return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
+            base_url = str(request.base_url).rstrip('/')
+            return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
         
         print(f"[AUDIO] ✅ Serving {filename} from Supabase")
         return {"url": response["signedURL"], "source": "supabase"}
     except Exception as e:
         print(f"[AUDIO] ❌ Exception: {e}")
-        return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
+        base_url = str(request.base_url).rstrip('/')
+        return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
 
 @app.get("/api/pokemon/cry/{pokemon_name}")
 async def pokemon_cry(pokemon_name: str):
@@ -244,12 +247,12 @@ async def start_game(request: Request):
             'player_pokemon': {
                 **game_instance.player_pokemon.to_dict(),
                 'sprite': player_sprite,
-                'cry_url': f"http://localhost:5000/api/pokemon/cry/{player_pokemon}"
+                'cry_url': f"/api/pokemon/cry/{player_pokemon}"
             },
             'opponent_pokemon': {
                 **game_instance.opponent_pokemon.to_dict(),
                 'sprite': opponent_sprite,
-                'cry_url': "http://localhost:5000/api/pokemon/cry/charizard"
+                'cry_url': "/api/pokemon/cry/charizard"
             },
             'player_moves': [{
                 'name': move.name,
@@ -296,4 +299,5 @@ async def move(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    port = int(os.getenv("PORT", 7860))
+    uvicorn.run(app, host="0.0.0.0", port=port)
