@@ -1,3 +1,47 @@
+// Audio is started muted so browsers allow it, then unmuted once playback begins.
+let audioReady = false;
+let failedAudioElements = [];
+
+async function playAudioSafely(audioElement, options = {}) {
+    const { restart = false, volume = 0.7, logLabel = 'audio' } = options;
+    if (!audioElement) return false;
+
+    audioElement.volume = volume;
+    audioElement.muted = true;
+    if (restart) {
+        audioElement.currentTime = 0;
+    }
+
+    try {
+        const playPromise = audioElement.play();
+        if (playPromise !== undefined) {
+            await playPromise;
+        }
+        audioElement.muted = false;
+        audioReady = true;
+        return true;
+    } catch (error) {
+        console.log(`Unable to play ${logLabel}:`, error.message);
+        if (!failedAudioElements.includes(audioElement)) {
+            failedAudioElements.push(audioElement);
+        }
+        return false;
+    }
+}
+
+function retryFailedAudio() {
+    if (!failedAudioElements.length) return;
+
+    const pending = [...failedAudioElements];
+    failedAudioElements = [];
+    pending.forEach(audioElement => {
+        if (audioElement && audioElement.src) {
+            playAudioSafely(audioElement, { restart: false, volume: audioElement.volume || 0.7, logLabel: audioElement.id || 'audio' })
+                .catch(error => console.log('Retry failed:', error));
+        }
+    });
+}
+
 // Function to update PP display for a move
 function updateMovePP(moveName, newPP) {
     console.log(`Updating PP for ${moveName} to ${newPP}`);
@@ -46,6 +90,15 @@ let selectedMove = null; // Track currently selected move for turn order preview
 // Initialize the battle when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing battle...');
+    
+    const retryAudioOnInteraction = () => {
+        console.log('User interacted with page, retrying failed audio...');
+        retryFailedAudio();
+        document.removeEventListener('click', retryAudioOnInteraction);
+        document.removeEventListener('keydown', retryAudioOnInteraction);
+    };
+    document.addEventListener('click', retryAudioOnInteraction);
+    document.addEventListener('keydown', retryAudioOnInteraction);
     
     battleLogEl = document.getElementById("battle-log");
     if (!battleLogEl) {
@@ -226,10 +279,7 @@ function loadPokemonCry(audioElement, pokemonName, distorted = false) {
         audioElement.preservesPitch = true;
     }
     
-    // Play the cry
-    audioElement.play().catch(error => {
-        console.error('Error playing Pokémon cry:', error);
-    });
+    playAudioSafely(audioElement, { restart: true, volume: 0.7, logLabel: 'pokemon cry' });
 }
 
 // Start the battle sequence with animations
@@ -241,13 +291,16 @@ async function startBattleSequence() {
         const battleMusic = document.getElementById('battle-music');
         if (battleMusic) {
             console.log('   - Battle music element found, setting volume...');
-            battleMusic.volume = 0.7;
             console.log('   - Attempting to play music...');
             try {
-                await battleMusic.play();
+                const started = await playAudioSafely(battleMusic, { restart: true, volume: 0.7, logLabel: 'battle music' });
+                if (started) {
                 console.log('   - Music started successfully');
+                } else {
+                    console.log('   - Music play failed');
+                }
             } catch (error) {
-                console.log('   - Music play failed:', error);
+                console.log('   - Music play failed:', error.message);
             }
         } else {
             console.log('   - Battle music element not found');
@@ -290,10 +343,10 @@ async function startBattleSequence() {
             const pokeballSound = document.getElementById('pokeball-sound');
             if (pokeballSound) {
                 try {
-                    await pokeballSound.play();
+                    await playAudioSafely(pokeballSound, { restart: true, volume: 0.7, logLabel: 'pokeball sound' });
                     console.log('   - Pokéball sound played successfully');
                 } catch (error) {
-                    console.log('   - Pokeball sound failed:', error);
+                    console.log('   - Pokéball sound failed:', error.message);
                 }
             } else {
                 console.log('   - Pokéball sound element not found');
@@ -368,18 +421,8 @@ async function startBattleSequence() {
                             console.log('   - Loading cry from:', cryPath);
                             
                             try {
-                                // Create a new audio element to avoid issues with loading
                                 const audio = new Audio(cryPath);
-                                audio.volume = 0.5;
-                                
-                                // Play the cry
-                                const playPromise = audio.play();
-                                if (playPromise !== undefined) {
-                                    await playPromise.catch(e => {
-                                        console.log('   - Error playing cry (will continue):', e.message);
-                                        return Promise.resolve();
-                                    });
-                                }
+                                await playAudioSafely(audio, { restart: true, volume: 0.5, logLabel: 'opponent cry' });
                                 
                                 console.log('   - Opponent cry playback started');
                                 
@@ -427,11 +470,10 @@ async function startBattleSequence() {
             const pokeballSound = document.getElementById('pokeball-sound');
             if (pokeballSound) {
                 try {
-                    pokeballSound.currentTime = 0;
-                    await pokeballSound.play();
+                    await playAudioSafely(pokeballSound, { restart: true, volume: 0.7, logLabel: 'pokeball sound' });
                     console.log('    - Pokéball sound played successfully');
                 } catch (error) {
-                    console.log('    - Pokeball sound failed:', error);
+                    console.log('    - Pokéball sound failed:', error.message);
                 }
             } else {
                 console.log('    - Pokéball sound element not found');
@@ -501,18 +543,8 @@ async function startBattleSequence() {
                         const cryPath = `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`;
                         console.log('    - Loading player cry from:', cryPath);
                         
-                        // Create a new audio element to avoid issues with loading
                         const audio = new Audio(cryPath);
-                        audio.volume = 0.5;
-                        
-                        // Play the cry
-                        const playPromise = audio.play();
-                        if (playPromise !== undefined) {
-                            await playPromise.catch(e => {
-                                console.log('    - Error playing player cry (will continue):', e.message);
-                                return Promise.resolve();
-                            });
-                        }
+                        await playAudioSafely(audio, { restart: true, volume: 0.5, logLabel: 'player cry' });
                         
                         console.log('    - Player cry playback started');
                         
@@ -1068,7 +1100,10 @@ function animateAttack(isPlayer) {
     // After a brief delay, "shake" the defender and play hit sound
     setTimeout(() => {
         defenderElement.classList.add('animate-shake');
-        document.getElementById('hit-sound').play();
+        const hitSound = document.getElementById('hit-sound');
+        if (hitSound) {
+            playAudioSafely(hitSound, { restart: true, volume: 0.7, logLabel: 'hit sound' });
+        }
         
         setTimeout(() => {
             defenderElement.classList.remove('animate-shake');
@@ -1697,7 +1732,13 @@ function updateMoveButtonInteractions() {
     
     const moveButtons = document.querySelectorAll('.move-button');
     moveButtons.forEach(button => {
-        const moveName = button.querySelector('.move-name').textContent;
+        const moveNameEl = button.querySelector('.move-name');
+        if (!moveNameEl) {
+            console.warn('Move button missing .move-name element:', button);
+            return; // Skip this button
+        }
+        
+        const moveName = moveNameEl.textContent;
         
         // Add hover effect to show turn order preview (non-intrusive)
         button.addEventListener('mouseenter', () => {

@@ -9,7 +9,6 @@ class Game:
         self.battle_over = False
         self.priority_resolver = PriorityResolver()
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
-        # Get player's back sprite (prefer Gen 5 animated, fallback to default)
         player_sprite = (
             player_data['sprites'].get('versions', {})
             .get('generation-v', {})
@@ -19,7 +18,6 @@ class Game:
             player_data['sprites'].get('back_default')
         )
         
-        # Get opponent's front sprite (prefer Gen 5 animated, fallback to default)
         opponent_sprite = (
             opponent_data['sprites'].get('versions', {})
             .get('generation-v', {})
@@ -29,41 +27,32 @@ class Game:
             opponent_data['sprites'].get('front_default')
         )
         
-        # Extract types for both Pokémon
         player_types = [t['type']['name'] for t in player_data['types']]
         opponent_types = [t['type']['name'] for t in opponent_data['types']]
         
-        print(f"DEBUG: Player {player_data['name']} types: {player_types}")
-        print(f"DEBUG: Opponent {opponent_data['name']} types: {opponent_types}")
-        
-        # Create Pokémon instances with the selected sprites and types
         self.player_pokemon = Pokemon(
             player_data['name'], 
-            player_types,  # Pass all types as a list
+            player_types,
             player_sprite, 
             player_data['stats'], 
             player_moves
         )
         self.opponent_pokemon = Pokemon(
             opponent_data['name'], 
-            opponent_types,  # Pass all types as a list
+            opponent_types,
             opponent_sprite, 
             opponent_data['stats'], 
             opponent_moves
         )
-        
-        print(f"DEBUG: Player Pokémon created with types: {self.player_pokemon.types}")
-        print(f"DEBUG: Opponent Pokémon created with types: {self.opponent_pokemon.types}")
 
     def process_turn(self, move_name):
         turn_info = {
             'player_move': move_name,
             'player_damage': 0,
             'opponent_damage': 0,
-            'battle_events': []  # Will store all battle events in order
+            'battle_events': []
         }
         
-        # Process turn-start effects for both Pokemon
         player_start_messages = self.player_pokemon.process_turn_start_effects()
         for msg in player_start_messages:
             if msg:
@@ -84,7 +73,6 @@ class Game:
                     'timestamp': len(turn_info['battle_events'])
                 })
         
-        # Check if either Pokemon fainted from turn-start effects
         if self.player_pokemon.current_hp <= 0:
             self.battle_over = True
             turn_info['battle_events'].append({

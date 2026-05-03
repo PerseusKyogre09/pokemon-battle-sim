@@ -9,34 +9,17 @@ sets_data = None
 
 def get_strategic_moveset(pokemon_name: str, format_name: str = None, debug: bool = True) -> Optional[List[str]]:
     try:
-        if debug:
-            print(f"\nGetting strategic moveset for: {pokemon_name}")
-            if format_name:
-                print(f"Format: {format_name}")
-                
-        # Use the new fetch_sets which handles format selection
         moves = fetch_sets(pokemon_name, format_name, debug)
         
-        # Try with gen8ou if no moves found
         if moves is None and format_name is None:
-            if debug:
-                print("No moveset found in any format, trying gen8ou explicitly...")
             moves = fetch_sets(pokemon_name, "gen8ou", debug)
         
-        # If still no moves, try random moveset
         if moves is None:
-            if debug:
-                print("No set found in any format, trying fallback...")
             moves = get_fallback_moveset(pokemon_name, debug)
         
         return moves
             
     except Exception as e:
-        if debug:
-            import traceback
-            print(f"Error in get_strategic_moveset for {pokemon_name}: {e}")
-            traceback.print_exc()
-        # If there's an error, try fallback
         return get_fallback_moveset(pokemon_name, debug)
 
 def get_all_pokemon_sets(pokemon_name: str, debug: bool = True) -> Optional[dict]:
@@ -45,27 +28,18 @@ def get_all_pokemon_sets(pokemon_name: str, debug: bool = True) -> Optional[dict
     Returns a dictionary with format names as keys and sets as values
     """
     try:
-        if debug:
-            print(f"\nGetting all sets for: {pokemon_name}")
-            
-        # Normalize the Pokémon name
         normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())
         
-        # Get the directory of the current script
         script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
         
         if not os.path.exists(file_path):
-            if debug:
-                print("Error: gen8_stats_sets.json not found!")
             return None
             
         with open(file_path, 'r', encoding='utf-8') as f:
             sets_data = json.load(f)
         
         if not isinstance(sets_data, dict):
-            if debug:
-                print("Error: Invalid data format in JSON file")
             return None
         
         all_sets = {}
@@ -107,19 +81,10 @@ def get_all_pokemon_sets(pokemon_name: str, debug: bool = True) -> Optional[dict
                 pokemon_sets = stats_data[pokemon_key]
                 if pokemon_sets:
                     all_sets[format_name] = pokemon_sets
-                    if debug:
-                        print(f"Found {len(pokemon_sets)} sets in {format_name}")
         
-        if debug:
-            print(f"Total formats with sets: {len(all_sets)}")
-            
         return all_sets if all_sets else None
             
     except Exception as e:
-        if debug:
-            import traceback
-            print(f"Error in get_all_pokemon_sets for {pokemon_name}: {e}")
-            traceback.print_exc()
         return None
 
 def fetch_sets(pokemon_name: str, format_name: str = None, debug: bool = True) -> Optional[List[str]]:

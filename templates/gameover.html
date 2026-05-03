@@ -34,7 +34,7 @@
     </div>
 
     <!-- Victory jingle audio -->
-    <audio id="victory-jingle" src="{{ url_for('music', filename='victory-jingle.mp3') }}" autoplay loop></audio>
+    <audio id="victory-jingle" src="{{ url_for('music', filename='victory-jingle.mp3') }}" muted loop></audio>
     
     <!-- Footer -->
     <footer class="w-full py-4 text-center text-gray-500 text-sm mt-8">
@@ -57,5 +57,42 @@
         </div>
     </footer>
     </div>
+
+    <script>
+        // Try to play victory jingle automatically, or wait for user interaction
+        function attemptPlayJingle() {
+            const jingle = document.getElementById('victory-jingle');
+            if (!jingle) return;
+            
+            jingle.muted = false;
+            jingle.volume = 0.7;
+            jingle.currentTime = 0;
+            
+            const playPromise = jingle.play();
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log('Victory jingle playing automatically');
+                    })
+                    .catch(error => {
+                        console.log('Autoplay blocked, waiting for interaction:', error);
+                        // Wait for user interaction
+                        document.addEventListener('click', () => {
+                            jingle.play().catch(e => console.log('Play failed:', e));
+                        }, { once: true });
+                        document.addEventListener('keydown', () => {
+                            jingle.play().catch(e => console.log('Play failed:', e));
+                        }, { once: true });
+                    });
+            }
+        }
+        
+        // Try to play jingle when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attemptPlayJingle);
+        } else {
+            attemptPlayJingle();
+        }
+    </script>
 </body>
 </html>

@@ -18,22 +18,17 @@ def sounds(filename):
 @app.route('/pokemon/cry/<pokemon_name>')
 def pokemon_cry(pokemon_name):
     try:
-        # Fetch pokemon data from the pokeapi
         response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}')
         if response.status_code == 200:
             pokemon_data = response.json()
             
-            # Get the cry of the pokemon
             if 'cries' in pokemon_data and 'latest' in pokemon_data['cries']:
                 cry_url = pokemon_data['cries']['latest']
                 
-                # Fetch the cry audio file
                 cry_response = requests.get(cry_url)
                 if cry_response.status_code == 200:
-                    # Return the audio file with the correct content type
                     return Response(cry_response.content, mimetype='audio/ogg')
             
-            # Fallback to a default cry if the specific one isn't available
             return send_from_directory('music', 'nidorino.ogg')
         else:
             return send_from_directory('music', 'nidorino.ogg')
@@ -42,7 +37,7 @@ def pokemon_cry(pokemon_name):
         return send_from_directory('music', 'nidorino.ogg')
 
 def get_pokemon_data(pokemon_name):
-    url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}' #pokeapi for pokemon data
+    url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}'
     response = requests.get(url)
     if response.status_code == 200:
         return response.json()

@@ -232,10 +232,10 @@
     </footer>
     
     <!-- Audio elements -->
-    <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto"></audio>
-    <audio id="faint-sound" src="{{ url_for('music', filename='cry/nidorino.ogg') }}" preload="auto"></audio>
-    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop></audio>
-    <audio id="pokeball-sound" src="{{ url_for('music', filename='pokeball-throw.mp3') }}" preload="auto"></audio>
+    <audio id="hit-sound" src="{{ url_for('music', filename='hit-sound.mp3') }}" preload="auto" muted></audio>
+    <audio id="faint-sound" src="{{ url_for('music', filename='cry/nidorino.ogg') }}" preload="auto" muted></audio>
+    <audio id="battle-music" src="{{ url_for('music', filename='battle-music.mp3') }}" preload="auto" loop muted></audio>
+    <audio id="pokeball-sound" src="{{ url_for('music', filename='pokeball-throw.mp3') }}" preload="auto" muted></audio>
     
     <!-- Pokémon cry audio elements -->
     <audio id="player-cry" 

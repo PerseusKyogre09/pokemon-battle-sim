@@ -17,21 +17,18 @@ class DataLoader:
         self._load_typechart()
     
     def _extract_status_effect(self, move_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        # Check for direct status effect
         if 'status' in move_data and move_data['status']:
             return {
                 'type': move_data['status'],
-                'chance': 100  # If status is directly in move_data, it's 100% chance
+                'chance': 100
             }
             
-        # Check for secondary effect
         if 'secondary' in move_data and move_data['secondary'] and 'status' in move_data['secondary']:
             return {
                 'type': move_data['secondary']['status'],
                 'chance': move_data['secondary'].get('chance', 100)
             }
             
-        # Check for secondary effects in secondary array (some moves have multiple effects)
         if 'secondaries' in move_data and move_data['secondaries']:
             for effect in move_data['secondaries']:
                 if 'status' in effect:
@@ -47,31 +44,26 @@ class DataLoader:
             with open('datasets/moves.json', 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
             
-            print(f"\n=== LOADED {len(moves_data)} MOVES FROM moves.json ===")
-            
             for move_key, move_data in moves_data.items():
                 move_name = move_data.get('name', '').lower()
                 if not move_name:
                     continue
                 
-                # Extract status effect information
                 status_effect = self._extract_status_effect(move_data)
                 
-                # Create a move entry with all necessary data
                 move_entry = {
                     'name': move_name,
                     'type': move_data.get('type', 'normal').lower(),
                     'basePower': int(move_data.get('basePower', 0)),
                     'pp': int(move_data.get('pp', 10)),
-                    'accuracy': move_data.get('accuracy', 100),  # Can be True for certain moves
+                    'accuracy': move_data.get('accuracy', 100),
                     'category': move_data.get('category', 'status' if move_data.get('basePower', 0) == 0 else 'physical').lower(),
                     'num': int(move_data.get('num', 0)),
                     'status_effect': status_effect,
                     'is_status_move': move_data.get('category', '').lower() == 'status' or move_data.get('basePower', 0) == 0,
-                    'priority': int(move_data.get('priority', 0))  # Add priority field, default to 0 if not specified
+                    'priority': int(move_data.get('priority', 0))
                 }
                 
-                # Store by both the move key and the move name for easier lookup
                 self.moves_data[move_key.lower()] = move_entry
                 if move_key.lower() != move_name.lower():
                     self.moves_data[move_name.lower()] = move_entry
@@ -101,30 +93,24 @@ class DataLoader:
                 
                 for move_key, move_content in matches:
                     try:
-                        # Parse the move content
                         move_desc = {}
                         
-                        # Extract name
                         name_match = re.search(r'name:\s*"([^"]+)"', move_content)
                         if name_match:
                             move_desc['name'] = name_match.group(1)
                         
-                        # Extract description
                         desc_match = re.search(r'desc:\s*"([^"]+)"', move_content)
                         if desc_match:
                             move_desc['desc'] = desc_match.group(1)
                         
-                        # Extract short description
                         short_desc_match = re.search(r'shortDesc:\s*"([^"]+)"', move_content)
                         if short_desc_match:
                             move_desc['shortDesc'] = short_desc_match.group(1)
                         
-                        # Extract boost message (for moves like Belly Drum)
                         boost_match = re.search(r'boost:\s*"([^"]+)"', move_content)
                         if boost_match:
                             move_desc['boost'] = boost_match.group(1)
                         
-                        # Store the description data
                         self.moves_desc_data[move_key.lower()] = move_desc
                         
                     except Exception as e:
@@ -143,11 +129,8 @@ class DataLoader:
             with open('datasets/learnsets.json', 'r', encoding='utf-8') as f:
                 learnsets_data = json.load(f)
             
-            print(f"\n=== LOADED LEARNSETS FOR {len(learnsets_data)} POKÉMON ===")
-            
             for pokemon_name, data in learnsets_data.items():
                 if 'learnset' in data:
-                    # Convert move names to lowercase for case-insensitive lookup
                     moves = [move.lower() for move in data['learnset'].keys()]
                     self.learnsets_data[pokemon_name.lower()] = moves
             
@@ -162,8 +145,6 @@ class DataLoader:
             with open('datasets/typechart.json', 'r', encoding='utf-8') as f:
                 self.typechart_data = json.load(f)
             
-            print(f"\n=== LOADED TYPE CHART WITH {len(self.typechart_data)} TYPES ===")
-            
         except FileNotFoundError:
             print("Warning: typechart.json file not found")
         except json.JSONDecodeError as e:
@@ -174,41 +155,11 @@ class DataLoader:
     
     def get_move(self, move_name):
         if not move_name:
-            print("\n=== MOVE LOOKUP FAILED ===")
-            print("No move name provided")
             return None
             
         move_key = move_name.lower().replace(' ', '').replace('-', '')
         move_data = self.moves_data.get(move_key)
         
-        # Log move lookup
-        if move_data:
-            print(f"\n=== MOVE LOOKUP ===")
-            print(f"Requested move: {move_name}")
-            print(f"Lookup key: {move_key}")
-            print(f"Found move: {move_data.get('name', 'Unknown')}")
-            print(f"Move type: {move_data.get('type', 'Unknown')}")
-            print(f"Category: {move_data.get('category', 'physical').capitalize()}")
-            print(f"Accuracy: {move_data.get('accuracy', 100)}")
-            if move_data.get('status_effect'):
-                print(f"Status Effect: {move_data['status_effect']['type']} ({move_data['status_effect']['chance']}% chance)")
-            print(f"Full move data: {move_data}")
-            
-            # Log all available keys that contain the move name for debugging
-            matching_keys = [k for k in self.moves_data.keys() if move_key in k]
-            if len(matching_keys) > 1:
-                print(f"Found {len(matching_keys)} matching keys: {matching_keys[:10]}{'...' if len(matching_keys) > 10 else ''}")
-        else:
-            print(f"\n=== MOVE NOT FOUND ===")
-            print(f"Requested move: {move_name}")
-            print(f"Lookup key: {move_key}")
-            print(f"Available move keys (first 10): {list(self.moves_data.keys())[:10]}")
-            
-            # Try to find similar move names
-            similar_moves = [k for k in self.moves_data.keys() if move_key in k or move_key[:4] in k][:5]
-            if similar_moves:
-                print(f"Similar moves found: {similar_moves}")
-            
         return move_data
     
     def get_pokemon_moves(self, pokemon_name: str, limit: int = 4) -> List[str]:
@@ -232,56 +183,31 @@ class DataLoader:
     
     def get_type_effectiveness(self, attacking_type: str, defending_type: str) -> float:
         if not attacking_type or not defending_type:
-            print(f"\n=== TYPE EFFECTIVENESS DEBUG ===")
-            print(f"Missing type data - attacking: {attacking_type}, defending: {defending_type}")
             return 1.0
             
-        # Store original types for logging
-        original_attacking = attacking_type
-        original_defending = defending_type
-        
-        # Convert to title case to match the type chart keys
         attacking_type = attacking_type.title()
         defending_type = defending_type.title()
         
-        print(f"\n=== TYPE EFFECTIVENESS DEBUG ===")
-        print(f"Original types - attacking: {original_attacking}, defending: {original_defending}")
-        print(f"Formatted types - attacking: {attacking_type}, defending: {defending_type}")
-        
-        # Get the defending type's damage taken data (FIXED: use title case)
         defending_data = self.typechart_data.get(defending_type, {})
         damage_taken = defending_data.get('damageTaken', {})
         
-        print(f"Defending type data found: {defending_type in self.typechart_data}")
-        print(f"Available types in typechart: {list(self.typechart_data.keys())[:10]}...")
-        
-        # Get the effectiveness code
         effectiveness_code = damage_taken.get(attacking_type, 0)
         
-        print(f"Effectiveness code for {attacking_type} vs {defending_type}: {effectiveness_code}")
-        
-        # Convert to multiplier
         multiplier = 1.0
-        if effectiveness_code == 0:  # Normal effectiveness (1x)
+        if effectiveness_code == 0:
             multiplier = 1.0
-        elif effectiveness_code == 1:  # 2x effective
+        elif effectiveness_code == 1:
             multiplier = 2.0
-        elif effectiveness_code == 2:  # 0.5x effective
+        elif effectiveness_code == 2:
             multiplier = 0.5
-        elif effectiveness_code == 3:  # No effect (0x)
+        elif effectiveness_code == 3:
             multiplier = 0.0
-        
-        print(f"Final effectiveness multiplier: {multiplier}")
-        print("=== END TYPE EFFECTIVENESS DEBUG ===\n")
             
         return multiplier
     
     def get_move_power(self, move_name: str) -> int:
-        print(f"\n=== GET MOVE POWER ===")
-        print(f"Getting power for move: {move_name}")
         move_data = self.get_move_data(move_name)
         power = move_data.get('basePower', 50) if move_data else 50
-        print(f"Power for {move_name}: {power}")
         return power
         
     def get_effectiveness_message(self, effectiveness: float) -> str:

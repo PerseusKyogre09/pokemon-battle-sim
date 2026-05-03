@@ -14,39 +14,30 @@ class Move:
         self.accuracy = accuracy
         self.category = category.lower()
         self.is_status_move = category.lower() == 'status' or power == 0
-        self.priority = priority  # Higher priority moves go first
+        self.priority = priority
         
-        # Parse status effects from move data if not provided
         if status_effect is None:
             self.primary_status, self.secondary_status, self.status_chance = self._parse_move_data()
         else:
-            # Use provided status effect (for backward compatibility)
             self.primary_status = status_effect if self.is_status_move else None
             self.secondary_status = status_effect if not self.is_status_move else None
             self.status_chance = status_effect.get('chance', 100) if status_effect else 0
         
-        # Keep old status_effect for backward compatibility
         self.status_effect = status_effect
         
-        # Parse healing properties from move data
         self.is_healing_move, self.heal_amount, self.drain_ratio = self._parse_healing_data()
         
-        # Parse multi-hit properties from move data
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
         
-        # Parse stat modifications from move data
         self.stat_modifications, self.targets_self = self._parse_stat_modifications()
         
-        # Parse recoil properties from move data
         self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
 
     def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
-        # Get move data from the dataset
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return None, None, 0
             
-        # Set priority from move data if available
         if 'priority' in move_data:
             self.priority = move_data['priority']
         
@@ -54,12 +45,10 @@ class Move:
         secondary_status = None
         status_chance = 0
         
-        # Check if data_loader already parsed status_effect
         if 'status_effect' in move_data and move_data['status_effect']:
             status_info = move_data['status_effect']
             status_type = self._normalize_status_type(status_info.get('type', ''))
             if status_type:
-                # Determine if this is primary (status move) or secondary (damaging move)
                 if self.is_status_move:
                     primary_status = {
                         'type': status_type,
@@ -76,12 +65,10 @@ class Move:
     
     def _parse_healing_data(self) -> Tuple[bool, Optional[List[int]], Optional[List[int]]]:
         """Parse healing and drain data from move dataset during initialization"""
-        # Get move data from the dataset
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return False, None, None
         
-        # Get the raw move data to access heal and drain properties
         raw_move_data = self._get_raw_move_data()
         if not raw_move_data:
             return False, None, None
@@ -90,17 +77,14 @@ class Move:
         heal_amount = None
         drain_ratio = None
         
-        # Check for direct healing moves (heal property)
         if 'heal' in raw_move_data and isinstance(raw_move_data['heal'], list):
             is_healing = True
             heal_amount = raw_move_data['heal']
         
-        # Check for HP-draining moves (drain property)
         if 'drain' in raw_move_data and isinstance(raw_move_data['drain'], list):
             is_healing = True
             drain_ratio = raw_move_data['drain']
         
-        # Also check flags for heal flag
         if 'flags' in raw_move_data and isinstance(raw_move_data['flags'], dict):
             if raw_move_data['flags'].get('heal') == 1:
                 is_healing = True
@@ -109,24 +93,19 @@ class Move:
     
     def _parse_multihit_data(self) -> Tuple[bool, Optional[Union[int, List[int]]]]:
         """Parse multi-hit data from move dataset during initialization"""
-        # Get move data from the dataset
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return False, None
         
-        # Get the raw move data to access multihit property
         raw_move_data = self._get_raw_move_data()
         if not raw_move_data:
             return False, None
         
-        # Check for multihit property
         if 'multihit' in raw_move_data:
             multihit_data = raw_move_data['multihit']
             if isinstance(multihit_data, int):
-                # Fixed number of hits (e.g., Triple Kick = 3)
                 return True, multihit_data
             elif isinstance(multihit_data, list) and len(multihit_data) == 2:
-                # Range of hits (e.g., Spike Cannon = [2,5])
                 return True, multihit_data
             else:
                 print(f"WARNING: Invalid multihit data format for {self.name}: {multihit_data}")
@@ -136,12 +115,10 @@ class Move:
     
     def _parse_stat_modifications(self) -> Tuple[Optional[Dict[str, int]], bool]:
         """Parse stat modifications from move dataset during initialization"""
-        # Get move data from the dataset
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return None, False
         
-        # Get the raw move data to access boosts property
         raw_move_data = self._get_raw_move_data()
         if not raw_move_data:
             return None, False
@@ -149,9 +126,7 @@ class Move:
         stat_modifications = None
         targets_self = False
         
-        # Check for boosts property
         if 'boosts' in raw_move_data and isinstance(raw_move_data['boosts'], dict):
-            # Map dataset stat abbreviations to Pokemon class stat names
             stat_name_mapping = {
                 'atk': 'attack',
                 'def': 'defense',
@@ -162,27 +137,21 @@ class Move:
                 'evasion': 'evasion'
             }
             
-            # Convert abbreviated stat names to full names
             stat_modifications = {}
             for stat_abbrev, change in raw_move_data['boosts'].items():
                 if stat_abbrev in stat_name_mapping and isinstance(change, int):
                     full_stat_name = stat_name_mapping[stat_abbrev]
                     stat_modifications[full_stat_name] = change
             
-            # Only keep stat_modifications if we found valid entries
             if not stat_modifications:
                 stat_modifications = None
         
-        # Determine target based on move's target property
         if 'target' in raw_move_data:
             target = raw_move_data['target']
-            # Self-targeting moves
             if target in ['self']:
                 targets_self = True
-            # Opponent-targeting moves
             elif target in ['normal', 'allAdjacentFoes', 'allEnemies', 'adjacentFoe', 'randomNormal']:
                 targets_self = False
-            # For other targets, default to opponent targeting
             else:
                 targets_self = False
         
@@ -190,17 +159,14 @@ class Move:
     
     def _parse_recoil_data(self) -> Tuple[bool, Optional[List[int]]]:
         """Parse recoil data from move dataset during initialization"""
-        # Get move data from the dataset
         move_data = data_loader.get_move(self.name)
         if not move_data:
             return False, None
         
-        # Get the raw move data to access recoil property
         raw_move_data = self._get_raw_move_data()
         if not raw_move_data:
             return False, None
         
-        # Check for recoil property
         if 'recoil' in raw_move_data and isinstance(raw_move_data['recoil'], list):
             recoil_data = raw_move_data['recoil']
             if len(recoil_data) == 2 and all(isinstance(x, (int, float)) for x in recoil_data):
@@ -217,17 +183,10 @@ class Move:
             return 1
         
         if isinstance(self.multihit_data, int):
-            # Fixed number of hits
             return self.multihit_data
         elif isinstance(self.multihit_data, list) and len(self.multihit_data) == 2:
-            # Range of hits - use Pokemon's standard probability distribution
             min_hits, max_hits = self.multihit_data
             
-            # Standard multi-hit move probability distribution:
-            # 2 hits: 35% chance
-            # 3 hits: 35% chance  
-            # 4 hits: 15% chance
-            # 5 hits: 15% chance
             if max_hits == 5:
                 rand = random.randint(1, 100)
                 if rand <= 35:
@@ -239,7 +198,6 @@ class Move:
                 else:
                     return 5
             else:
-                # For other ranges, use uniform distribution
                 return random.randint(min_hits, max_hits)
         
         return 1
@@ -251,14 +209,11 @@ class Move:
             with open('datasets/moves.json', 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
             
-            # Try different variations of the move name
             move_key = self.name.lower().replace(' ', '').replace('-', '')
             
-            # Direct lookup
             if move_key in moves_data:
                 return moves_data[move_key]
             
-            # Search by name field
             for key, data in moves_data.items():
                 if data.get('name', '').lower() == self.name.lower():
                     return data

@@ -17,18 +17,15 @@ class Pokemon:
         self.sprite = sprite_url
         self.level = level
         
-        # Initialize new status management system
         self.status_effects = {}
         self.major_status = None
         self.volatile_statuses = set()
         self.status_change_events = []
         
-        # Keep old attributes for backward compatibility
         self.status_condition = None
         self.status_counter = 0
         self.volatile_status = set()
         
-        # Store base stats for status effect calculations
         if isinstance(stats, list):
             self.base_stats = {
                 'hp': stats[0]['base_stat'] if isinstance(stats[0], dict) else stats[0],
@@ -39,14 +36,11 @@ class Pokemon:
                 'speed': stats[5]['base_stat'] if isinstance(stats[5], dict) else stats[5]
             }
         else:
-            # Handle case where stats is already a dict
             self.base_stats = stats
         
-        # Calculate and store actual stats
         self.max_hp = int(((self.base_stats['hp'] * 2) * self.level / 100) + self.level + 10)
         self.current_hp = self.max_hp
         
-        # Store actual stats with stat stages (default to 0 = no change)
         self.stat_stages = {
             'attack': 0,
             'defense': 0,
@@ -57,17 +51,12 @@ class Pokemon:
             'evasion': 0
         }
         
-        # Calculate base stats
         self.attack = self._calculate_stat('attack')
         self.defense = self._calculate_stat('defense')
         self.special_attack = self._calculate_stat('special_attack')
         self.special_defense = self._calculate_stat('special_defense')
         self.speed = self._calculate_stat('speed')
         
-        # Maintain backward compatibility with old status system
-        # These will be updated by the new status management methods
-        
-        # Use dataset moves if no moves provided
         if moves is None:
             available_moves = data_loader.get_pokemon_moves(self.name.lower(), 4)
             self.moves = {}
@@ -90,7 +79,6 @@ class Pokemon:
                         status_effect=status_effect
                     )
         else:
-            # Use provided moves but enhance with dataset data
             self.moves = {}
             for move in moves:
                 move_name = move['name']
@@ -109,9 +97,7 @@ class Pokemon:
                         category=category,
                         status_effect=status_effect
                     )
-                    # Also store max_pp for reference
                     self.moves[move_name].max_pp = move.get('max_pp', move_pp)
-        #scaled to level 100 (since pokeapi wasnt setting pokemons to level 100 automatically for some reason)
 
     def _format_pokemon_name(self, name):
         """Format Pokemon name with proper capitalization for display.
@@ -162,7 +148,6 @@ class Pokemon:
         old_hp = self.current_hp
         self.current_hp = max(0, self.current_hp - damage)
         
-        # If Pokemon just fainted (HP went from >0 to 0), reset stat stages
         if old_hp > 0 and self.current_hp <= 0:
             self.reset_stats()
         
@@ -188,7 +173,6 @@ class Pokemon:
         Stage +5: 7/2 = 3.5 (350%)
         Stage +6: 8/2 = 4.0 (400%)
         """
-        # Clamp stage to valid range
         stage = max(-6, min(6, stage))
         
         if stage >= 0:
@@ -204,27 +188,23 @@ class Pokemon:
         base = self.base_stats[stat_name]
         level = self.level
         
-        # Calculate base stat
         if stat_name in ['attack', 'defense', 'special_attack', 'special_defense', 'speed']:
             stat = int(((base * 2) * level / 100) + 5)
         else:
             stat = base
             
-        # Apply stat stage multiplier
         stage = self.stat_stages.get(stat_name, 0)
         multiplier = self.get_stat_stage_multiplier(stage)
         stat = int(stat * multiplier)
             
-        # Apply status effect modifiers using new system
         stat = self.get_modified_stat_value(stat_name, stat)
             
-        return max(1, stat)  # Stats can't go below 1
+        return max(1, stat)
     
     def get_modified_stat_value(self, stat_name: str, base_value: int) -> int:
         """Get stat value with status effect modifications applied."""
         modified_value = base_value
         
-        # Apply modifications from all active status effects
         for status_effect in self.status_effects.values():
             modified_value = status_effect.modify_stat(self, stat_name, modified_value)
         
@@ -232,13 +212,11 @@ class Pokemon:
         
     def apply_status_effect(self, status_type: str, **kwargs) -> str:
         """Apply a status effect using the new status system with proper validation."""
-        # Validate input
         if not status_type or not isinstance(status_type, str):
             return ""
         
         status_type = status_type.lower().strip()
         
-        # Create the appropriate status effect object
         status_effect = None
         
         try:
@@ -253,14 +231,12 @@ class Pokemon:
             elif status_type == StatusType.POISON.value:
                 status_effect = PoisonStatusEffect(**kwargs)
             elif status_type == StatusType.TOXIC.value:
-                # Import ToxicStatusEffect when it's implemented
                 try:
                     from status_effects import ToxicStatusEffect
                     status_effect = ToxicStatusEffect(**kwargs)
                 except ImportError:
                     status_effect = StatusEffect(status_type, **kwargs)
             else:
-                # Generic status effect for unknown types
                 status_effect = StatusEffect(status_type, **kwargs)
         except Exception as e:
             print(f"ERROR: Failed to create status effect {status_type}: {e}")
@@ -270,16 +246,11 @@ class Pokemon:
         
         if status_effect:
             try:
-                # Check if status can be applied before calling apply
                 can_apply_before = status_effect.can_apply(self)
                 message = status_effect.apply(self)
                 
-                # Only update stats and legacy status if the application was successful
-                # (status was actually applied, not just a failure message returned)
                 if can_apply_before and message:
-                    # Update backward compatibility attributes
                     self._update_legacy_status()
-                    # Recalculate stats to apply status effect modifications
                     self._recalculate_stats()
                 
                 return message
@@ -299,16 +270,12 @@ class Pokemon:
             status_effect = self.status_effects[status_type]
             del self.status_effects[status_type]
             
-            # Clear major status if this was the major status
             if self.major_status == status_type:
                 self.major_status = None
             
-            # Generate status change event
             self._add_status_change_event('status_removed', status_type, status_effect.name)
             
-            # Update backward compatibility attributes
             self._update_legacy_status()
-            # Recalculate stats to remove status effect modifications
             self._recalculate_stats()
             
             return f"{self.name} recovered from {status_effect.name}!"
@@ -339,12 +306,10 @@ class Pokemon:
         """Process all status effects at turn start."""
         messages = []
         
-        # Process each status effect's turn start effects
         for status_effect in list(self.status_effects.values()):
             effect_messages = status_effect.process_turn_start(self)
             messages.extend(effect_messages)
         
-        # Update backward compatibility attributes
         self._update_legacy_status()
         
         return messages
@@ -353,19 +318,16 @@ class Pokemon:
         """Process all status effects at turn end."""
         messages = []
         
-        # Process each status effect's turn end effects
         for status_effect in list(self.status_effects.values()):
             effect_messages = status_effect.process_turn_end(self)
             messages.extend(effect_messages)
         
-        # Update backward compatibility attributes
         self._update_legacy_status()
         
         return messages
     
     def can_use_move(self) -> tuple:
         """Check if pokemon can use a move this turn."""
-        # Check all status effects for move prevention
         for status_effect in self.status_effects.values():
             prevents_move, message = status_effect.affects_move_usage(self)
             if prevents_move:
@@ -393,7 +355,6 @@ class Pokemon:
         """Update legacy status attributes for backward compatibility."""
         if self.major_status:
             self.status_condition = self.major_status
-            # Set counter based on status effect if available
             if self.major_status in self.status_effects:
                 status_effect = self.status_effects[self.major_status]
                 if hasattr(status_effect, 'duration') and status_effect.duration > 0:
@@ -406,35 +367,31 @@ class Pokemon:
         
     def end_turn_status_effects(self):
         """Handle end-of-turn status effects like poison, burn, etc."""
-        # Use new status system if available
         if hasattr(self, 'status_effects') and self.status_effects:
             messages = self.process_turn_end_effects()
             return " ".join(messages) if messages else ""
         
-        # Fallback to old system for backward compatibility
         if not self.status_condition or self.current_hp <= 0:
             return ""
             
         messages = []
         
-        # Handle damage from status conditions
         if self.status_condition == 'poison':
-            damage = max(1, self.max_hp // 8)  # 1/8 max HP
+            damage = max(1, self.max_hp // 8)
             self.current_hp = max(1, self.current_hp - damage)
             messages.append(f"{self.name} is hurt by poison!")
             
         elif self.status_condition == 'toxic':
-            damage = max(1, (self.max_hp // 16) * self.status_counter)  # 1/16, 2/16, 3/16, etc.
+            damage = max(1, (self.max_hp // 16) * self.status_counter)
             self.current_hp = max(1, self.current_hp - damage)
             messages.append(f"{self.name} is hurt by poison!")
-            self.status_counter += 1  # Increase toxic counter
+            self.status_counter += 1
             
         elif self.status_condition == 'burn':
-            damage = max(1, self.max_hp // 16)  # 1/16 max HP
+            damage = max(1, self.max_hp // 16)
             self.current_hp = max(1, self.current_hp - damage)
             messages.append(f"{self.name} is hurt by its burn!")
             
-        # Handle status condition recovery
         if self.status_condition == 'sleep':
             self.status_counter -= 1
             if self.status_counter <= 0:
@@ -444,7 +401,6 @@ class Pokemon:
                 messages.append(f"{self.name} is fast asleep.")
                 
         elif self.status_condition == 'freeze':
-            # 20% chance to thaw out each turn
             if random.random() < 0.2:
                 self.status_condition = None
                 messages.append(f"{self.name} thawed out!")
@@ -465,11 +421,9 @@ class Pokemon:
         
     def can_attack(self):
         """Check if the Pokémon can attack this turn."""
-        # Use new status system if available, fall back to old system
         if hasattr(self, 'status_effects') and self.status_effects:
             return self.can_use_move()
         
-        # Fallback to old system for backward compatibility
         if not hasattr(self, 'status_condition'):
             self.status_condition = None
             
@@ -527,22 +481,17 @@ class Pokemon:
         Returns:
             str: Message describing the result of the stat modification
         """
-        # Validate stat name
         if stat_name not in self.stat_stages:
-            return ""  # Silently ignore invalid stats
+            return ""
             
-        # Get current stage and calculate new stage
         current_stage = self.stat_stages[stat_name]
         new_stage = current_stage + change
         
-        # Clamp to valid range (-6 to +6)
         clamped_stage = max(-6, min(6, new_stage))
         actual_change = clamped_stage - current_stage
         
-        # Generate message using the dedicated message generation system
         message = self.generate_stat_modification_message(stat_name, change, actual_change)
         
-        # Apply the change if there was an actual change
         if actual_change != 0:
             self.stat_stages[stat_name] = clamped_stage
             self._recalculate_stats()
