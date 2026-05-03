@@ -525,6 +525,7 @@ class Pokemon:
         return {
             'name': self.name,
             'type': self.type,
+            'types': self.types,
             'sprite_url': self.sprite_url,
             'sprite': self.sprite_url,  # Keep both for backward compatibility
             'level': self.level,

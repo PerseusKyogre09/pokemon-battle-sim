@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --background: #020617;
+  --foreground: #f8fafc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Type Colors */
+.type-fire { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.type-water { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.type-grass { background: linear-gradient(135deg, #10b981, #047857); }
+.type-electric { background: linear-gradient(135deg, #f59e0b, #b45309); }
+.type-psychic { background: linear-gradient(135deg, #ec4899, #be185d); }
+.type-ice { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+.type-dragon { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.type-dark { background: linear-gradient(135deg, #374151, #111827); }
+.type-fairy { background: linear-gradient(135deg, #f472b6, #db2777); }
+.type-normal { background: linear-gradient(135deg, #9ca3af, #4b5563); }
+.type-fighting { background: linear-gradient(135deg, #b91c1c, #7f1d1d); }
+.type-flying { background: linear-gradient(135deg, #818cf8, #4f46e5); }
+.type-poison { background: linear-gradient(135deg, #8b5cf6, #5b21b6); }
+.type-ground { background: linear-gradient(135deg, #d97706, #92400e); }
+.type-rock { background: linear-gradient(135deg, #b45309, #78350f); }
+.type-bug { background: linear-gradient(135deg, #84cc16, #4d7c0f); }
+.type-ghost { background: linear-gradient(135deg, #6366f1, #4338ca); }
+.type-steel { background: linear-gradient(135deg, #64748b, #334155); }
+
+/* Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+@keyframes pulse-yellow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+  50% { box-shadow: 0 0 20px 10px rgba(234, 179, 8, 0); }
+}
+
+.pulse-yellow {
+  animation: pulse-yellow 2s infinite;
+}
