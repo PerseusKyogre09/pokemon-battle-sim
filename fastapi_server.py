@@ -24,6 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+bucket_name = os.getenv("SUPABASE_BUCKET_NAME", "pokemon-music")
+
+supabase: Client = None
 if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
     try:
         supabase = create_client(supabase_url, supabase_key)
