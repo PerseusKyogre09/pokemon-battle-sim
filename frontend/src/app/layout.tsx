@@ -33,7 +33,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <footer className="fixed bottom-0 left-0 right-0 py-1.5 px-4 bg-black/40 backdrop-blur-sm text-[8px] md:text-[10px] text-gray-500/80 text-center z-[100] pointer-events-none select-none tracking-wider">
+          Pokémon and all related names are trademarks of Nintendo, Game Freak, and Creatures. This is a non-commercial fan-made project.
+        </footer>
+      </body>
     </html>
   );
 }
