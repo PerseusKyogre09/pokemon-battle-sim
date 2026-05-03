@@ -46,6 +46,12 @@ class Game:
         )
 
     def process_turn(self, move_name):
+        # Reset turn-based volatile statuses
+        if self.player_pokemon:
+            self.player_pokemon.is_flinched = False
+        if self.opponent_pokemon:
+            self.opponent_pokemon.is_flinched = False
+            
         turn_info = {
             'player_move': move_name,
             'player_damage': 0,

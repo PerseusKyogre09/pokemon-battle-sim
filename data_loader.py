@@ -16,30 +16,8 @@ class DataLoader:
         self._load_learnsets()
         self._load_typechart()
     
-    def _extract_status_effect(self, move_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if 'status' in move_data and move_data['status']:
-            return {
-                'type': move_data['status'],
-                'chance': 100
-            }
-            
-        if 'secondary' in move_data and move_data['secondary'] and 'status' in move_data['secondary']:
-            return {
-                'type': move_data['secondary']['status'],
-                'chance': move_data['secondary'].get('chance', 100)
-            }
-            
-        if 'secondaries' in move_data and move_data['secondaries']:
-            for effect in move_data['secondaries']:
-                if 'status' in effect:
-                    return {
-                        'type': effect['status'],
-                        'chance': effect.get('chance', 100)
-                    }
-        
-        return None
-
     def _load_moves(self):
+        """Load moves data from datasets/moves.json."""
         try:
             with open('datasets/moves.json', 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
@@ -49,25 +27,13 @@ class DataLoader:
                 if not move_name:
                     continue
                 
-                status_effect = self._extract_status_effect(move_data)
+                self.moves_data[move_key.lower()] = move_data
+                clean_name = move_name.lower().replace(' ', '').replace('-', '')
+                if move_key.lower() != clean_name:
+                     self.moves_data[clean_name] = move_data
                 
-                move_entry = {
-                    'name': move_name,
-                    'type': move_data.get('type', 'normal').lower(),
-                    'basePower': int(move_data.get('basePower', 0)),
-                    'pp': int(move_data.get('pp', 10)),
-                    'accuracy': move_data.get('accuracy', 100),
-                    'category': move_data.get('category', 'status' if move_data.get('basePower', 0) == 0 else 'physical').lower(),
-                    'num': int(move_data.get('num', 0)),
-                    'status_effect': status_effect,
-                    'is_status_move': move_data.get('category', '').lower() == 'status' or move_data.get('basePower', 0) == 0,
-                    'priority': int(move_data.get('priority', 0))
-                }
-                
-                self.moves_data[move_key.lower()] = move_entry
-                if move_key.lower() != move_name.lower():
-                    self.moves_data[move_name.lower()] = move_entry
-                    
+            print(f"=== LOADED {len(self.moves_data)} MOVES FROM moves.json ===")
+            
         except FileNotFoundError:
             print("Warning: moves.json file not found")
         except Exception as e:
@@ -82,12 +48,8 @@ class DataLoader:
                 # Remove the outer braces and split by move entries
                 content = content.strip()
                 if content.startswith('{') and content.endswith('}'):
-                    content = content[1:-1]  # Remove outer braces
+                    content = content[1:-1]
                 
-                # Parse each move entry
-                import re
-                
-                # Find all move entries using regex
                 move_pattern = r'(\w+):\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}'
                 matches = re.findall(move_pattern, content, re.DOTALL)
                 
@@ -165,12 +127,9 @@ class DataLoader:
     def get_pokemon_moves(self, pokemon_name: str, limit: int = 4) -> List[str]:
         pokemon_data = self.learnsets_data.get(pokemon_name.lower(), {})
         
-        # Handle case where pokemon_data might be a list instead of dict
         if isinstance(pokemon_data, list):
-            # If it's a list, assume it's the moves list directly
             available_moves = pokemon_data
         elif isinstance(pokemon_data, dict):
-            # If it's a dict, get the learnset
             learnset = pokemon_data.get('learnset', {})
             available_moves = list(learnset.keys()) if isinstance(learnset, dict) else []
         else:

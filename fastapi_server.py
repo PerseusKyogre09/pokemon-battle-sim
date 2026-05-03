@@ -16,7 +16,6 @@ load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for Next.js development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,12 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-bucket_name = os.getenv("SUPABASE_BUCKET_NAME", "pokemon-music")
-
-supabase: Client = None
 if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
     try:
         supabase = create_client(supabase_url, supabase_key)
@@ -40,7 +33,6 @@ if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
 
 game_instance = None
 
-# Serve static files (fallback for local dev)
 music_path = os.path.join(os.path.dirname(__file__), 'music')
 if os.path.exists(music_path):
     app.mount("/api/music/local", StaticFiles(directory=music_path), name="music")
@@ -53,7 +45,6 @@ async def get_signed_url(filename: str, request: Request):
         return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
     
     try:
-        # Generate a signed URL valid for 1 hour (3600 seconds)
         response = supabase.storage.from_(bucket_name).create_signed_url(filename, 3600)
         if "error" in response:
             print(f"[AUDIO] ❌ Supabase error: {response['error']}")
@@ -76,11 +67,9 @@ async def pokemon_cry(pokemon_name: str):
             pokemon_data = response.json()
             cry_url = None
             
-            # Try new 'cries' field first
             if 'cries' in pokemon_data and 'latest' in pokemon_data['cries']:
                 cry_url = pokemon_data['cries']['latest']
             
-            # Fallback to the ID-based repository if cries field is missing
             if not cry_url:
                 pokemon_id = pokemon_data.get('id')
                 if pokemon_id:
@@ -115,40 +104,8 @@ def get_pokemon_moves(pokemon_data):
     strategic_moves = get_strategic_moveset(pokemon_name, debug=False)
     
     if strategic_moves:
-        selected_moves = []
-        for move_name in strategic_moves:
-            clean_move_name = move_name.lower().replace(' ', '-')
-            move_data = data_loader.get_move(clean_move_name)
-            
-            move_pp = 15
-            move_power = 75
-            move_type = 'normal'
-            
-            if move_data:
-                move_power = move_data.get('basePower', 75)
-                move_type = move_data.get('type', 'normal')
-                move_pp = data_loader.get_move_pp(clean_move_name) or 15
-            else:
-                try:
-                    move_url = f'https://pokeapi.co/api/v2/move/{clean_move_name}'
-                    move_response = requests.get(move_url)
-                    if move_response.status_code == 200:
-                        move_data = move_response.json()
-                        move_power = move_data.get('power', 75)
-                        move_type = move_data.get('type', {}).get('name', 'normal')
-                        move_pp = move_data.get('pp', 15)
-                except:
-                    pass
-            
-            selected_moves.append({
-                'name': move_name,
-                'power': move_power or 75,
-                'type': move_type or 'normal',
-                'pp': move_pp,
-                'max_pp': move_pp
-            })
-        return selected_moves
-    return []
+        return [{'name': move_name} for move_name in strategic_moves[:4]]
+    return [{'name': 'tackle'}, {'name': 'growl'}]
 
 @app.get("/api/search-pokemon")
 async def search_pokemon(q: str = ""):
@@ -215,7 +172,6 @@ async def get_all_sets(pokemon_name: str):
 
 @app.get("/api/battle-ready-pokemon")
 async def get_battle_ready_list():
-    """Returns a list of fully evolved, battle-ready Pokémon names."""
     try:
         return {"success": True, "pokemon": get_battle_ready_pokemon_list()}
     except Exception as e:
@@ -230,7 +186,6 @@ async def start_game(request: Request):
         selected_set = data.get('selected_set')
         opponent_choice = data.get('opponent', 'charizard').lower()
         
-        # Handle Random Opponent
         if opponent_choice == 'random':
             opponent_pokemon_name = get_random_battle_ready_pokemon().lower()
         else:
@@ -242,22 +197,7 @@ async def start_game(request: Request):
         player_moves = []
         if selected_set and 'moves' in selected_set:
             for move_name in selected_set['moves']:
-                clean_move_name = move_name.lower().replace(' ', '-')
-                move_data = data_loader.get_move(clean_move_name)
-                if move_data:
-                    move_power = move_data.get('basePower', 75)
-                    move_type = move_data.get('type', 'normal')
-                    move_pp = data_loader.get_move_pp(clean_move_name) or 15
-                else:
-                    move_power, move_type, move_pp = 75, 'normal', 15
-                
-                player_moves.append({
-                    'name': move_name,
-                    'power': move_power,
-                    'type': move_type,
-                    'pp': move_pp,
-                    'max_pp': move_pp
-                })
+                player_moves.append({'name': move_name})
         else:
             player_moves = get_pokemon_moves(player_data)
             
@@ -269,7 +209,6 @@ async def start_game(request: Request):
         player_sprite = game_instance.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
         opponent_sprite = game_instance.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
         
-        # Get base URL for absolute cry links
         base_url = str(request.base_url).rstrip('/')
         
         battle_data = {

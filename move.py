@@ -3,182 +3,124 @@ from typing import Optional, Tuple, Dict, Any, Union, List
 import random
 
 class Move:
-    def __init__(self, name: str, power: int, pp: int, move_type: str = 'normal', 
-                 accuracy: Union[int, bool] = 100, category: str = 'physical',
-                 status_effect: Optional[Dict[str, Any]] = None, priority: int = 0):
+    def __init__(self, name: str, move_data: Optional[Dict[str, Any]] = None):
         self.name = name
-        self.power = power
-        self.pp = pp
-        self.max_pp = pp
-        self.type = move_type.lower()
-        self.accuracy = accuracy
-        self.category = category.lower()
-        self.is_status_move = category.lower() == 'status' or power == 0
-        self.priority = priority
+        self.data = move_data if move_data else data_loader.get_move(name)
         
-        if status_effect is None:
-            self.primary_status, self.secondary_status, self.status_chance = self._parse_move_data()
+        if not self.data:
+            self.power = 0
+            self.pp = 10
+            self.max_pp = 10
+            self.type = 'normal'
+            self.accuracy = 100
+            self.category = 'physical'
+            self.priority = 0
+            self.is_status_move = True
         else:
-            self.primary_status = status_effect if self.is_status_move else None
-            self.secondary_status = status_effect if not self.is_status_move else None
-            self.status_chance = status_effect.get('chance', 100) if status_effect else 0
-        
-        self.status_effect = status_effect
+            self.power = self.data.get('basePower', 0)
+            self.pp = self.data.get('pp', 10)
+            self.max_pp = self.pp
+            self.type = self.data.get('type', 'normal').lower()
+            self.accuracy = self.data.get('accuracy', 100)
+            self.category = self.data.get('category', 'physical').lower()
+            self.priority = self.data.get('priority', 0)
+            self.is_status_move = self.category == 'status' or self.power == 0
         
         self.is_healing_move, self.heal_amount, self.drain_ratio = self._parse_healing_data()
-        
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
-        
         self.stat_modifications, self.targets_self = self._parse_stat_modifications()
-        
         self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
 
-    def _parse_move_data(self) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], int]:
-        move_data = data_loader.get_move(self.name)
-        if not move_data:
-            return None, None, 0
-            
-        if 'priority' in move_data:
-            self.priority = move_data['priority']
-        
-        primary_status = None
-        secondary_status = None
-        status_chance = 0
-        
-        if 'status_effect' in move_data and move_data['status_effect']:
-            status_info = move_data['status_effect']
-            status_type = self._normalize_status_type(status_info.get('type', ''))
-            if status_type:
-                if self.is_status_move:
-                    primary_status = {
-                        'type': status_type,
-                        'chance': status_info.get('chance', 100)
-                    }
-                else:
-                    secondary_status = {
-                        'type': status_type,
-                        'chance': status_info.get('chance', 100)
-                    }
-                status_chance = status_info.get('chance', 100)
-        
-        return primary_status, secondary_status, status_chance
     
     def _parse_healing_data(self) -> Tuple[bool, Optional[List[int]], Optional[List[int]]]:
-        """Parse healing and drain data from move dataset during initialization"""
-        move_data = data_loader.get_move(self.name)
-        if not move_data:
-            return False, None, None
-        
-        raw_move_data = self._get_raw_move_data()
-        if not raw_move_data:
+        if not self.data:
             return False, None, None
         
         is_healing = False
         heal_amount = None
         drain_ratio = None
         
-        if 'heal' in raw_move_data and isinstance(raw_move_data['heal'], list):
+        if 'heal' in self.data and isinstance(self.data['heal'], list):
             is_healing = True
-            heal_amount = raw_move_data['heal']
+            heal_amount = self.data['heal']
         
-        if 'drain' in raw_move_data and isinstance(raw_move_data['drain'], list):
+        if 'drain' in self.data and isinstance(self.data['drain'], list):
             is_healing = True
-            drain_ratio = raw_move_data['drain']
+            drain_ratio = self.data['drain']
         
-        if 'flags' in raw_move_data and isinstance(raw_move_data['flags'], dict):
-            if raw_move_data['flags'].get('heal') == 1:
+        if 'flags' in self.data and isinstance(self.data['flags'], dict):
+            if self.data['flags'].get('heal') == 1:
                 is_healing = True
         
         return is_healing, heal_amount, drain_ratio
     
     def _parse_multihit_data(self) -> Tuple[bool, Optional[Union[int, List[int]]]]:
-        """Parse multi-hit data from move dataset during initialization"""
-        move_data = data_loader.get_move(self.name)
-        if not move_data:
+        if not self.data:
             return False, None
         
-        raw_move_data = self._get_raw_move_data()
-        if not raw_move_data:
-            return False, None
-        
-        if 'multihit' in raw_move_data:
-            multihit_data = raw_move_data['multihit']
+        if 'multihit' in self.data:
+            multihit_data = self.data['multihit']
             if isinstance(multihit_data, int):
                 return True, multihit_data
             elif isinstance(multihit_data, list) and len(multihit_data) == 2:
                 return True, multihit_data
-            else:
-                print(f"WARNING: Invalid multihit data format for {self.name}: {multihit_data}")
+            elif multihit_data is not None:
                 return False, None
         
         return False, None
     
+    def _apply_boosts(self, pokemon, boosts: Dict[str, int]) -> List[str]:
+        if not boosts or not pokemon:
+            return []
+            
+        stat_name_mapping = {
+            'atk': 'attack',
+            'def': 'defense',
+            'spa': 'special_attack',
+            'spd': 'special_defense',
+            'spe': 'speed',
+            'accuracy': 'accuracy',
+            'evasion': 'evasion'
+        }
+        
+        messages = []
+        for stat_abbrev, stages in boosts.items():
+            full_stat_name = stat_name_mapping.get(stat_abbrev)
+            if full_stat_name and hasattr(pokemon, 'change_stat_stage'):
+                msg = pokemon.change_stat_stage(full_stat_name, stages)
+                if msg:
+                    messages.append(msg)
+                    
+        return messages
+
     def _parse_stat_modifications(self) -> Tuple[Optional[Dict[str, int]], bool]:
-        """Parse stat modifications from move dataset during initialization"""
-        move_data = data_loader.get_move(self.name)
-        if not move_data:
+        if not self.data:
             return None, False
         
-        raw_move_data = self._get_raw_move_data()
-        if not raw_move_data:
-            return None, False
-        
-        stat_modifications = None
+        stat_modifications = self.data.get('boosts')
         targets_self = False
         
-        if 'boosts' in raw_move_data and isinstance(raw_move_data['boosts'], dict):
-            stat_name_mapping = {
-                'atk': 'attack',
-                'def': 'defense',
-                'spa': 'special_attack',
-                'spd': 'special_defense',
-                'spe': 'speed',
-                'accuracy': 'accuracy',
-                'evasion': 'evasion'
-            }
-            
-            stat_modifications = {}
-            for stat_abbrev, change in raw_move_data['boosts'].items():
-                if stat_abbrev in stat_name_mapping and isinstance(change, int):
-                    full_stat_name = stat_name_mapping[stat_abbrev]
-                    stat_modifications[full_stat_name] = change
-            
-            if not stat_modifications:
-                stat_modifications = None
-        
-        if 'target' in raw_move_data:
-            target = raw_move_data['target']
+        if 'target' in self.data:
+            target = self.data['target']
             if target in ['self']:
                 targets_self = True
-            elif target in ['normal', 'allAdjacentFoes', 'allEnemies', 'adjacentFoe', 'randomNormal']:
-                targets_self = False
-            else:
-                targets_self = False
         
         return stat_modifications, targets_self
     
     def _parse_recoil_data(self) -> Tuple[bool, Optional[List[int]]]:
-        """Parse recoil data from move dataset during initialization"""
-        move_data = data_loader.get_move(self.name)
-        if not move_data:
+        if not self.data:
             return False, None
         
-        raw_move_data = self._get_raw_move_data()
-        if not raw_move_data:
-            return False, None
-        
-        if 'recoil' in raw_move_data and isinstance(raw_move_data['recoil'], list):
-            recoil_data = raw_move_data['recoil']
+        if 'recoil' in self.data and isinstance(self.data['recoil'], list):
+            recoil_data = self.data['recoil']
             if len(recoil_data) == 2 and all(isinstance(x, (int, float)) for x in recoil_data):
                 return True, recoil_data
             else:
-                print(f"WARNING: Invalid recoil data format for {self.name}: {recoil_data}")
                 return False, None
         
         return False, None
     
     def _determine_hit_count(self) -> int:
-        """Determine how many times a multi-hit move should hit"""
         if not self.is_multihit_move or not self.multihit_data:
             return 1
         
@@ -201,27 +143,6 @@ class Move:
                 return random.randint(min_hits, max_hits)
         
         return 1
-    
-    def _get_raw_move_data(self) -> Optional[Dict[str, Any]]:
-        """Get raw move data directly from the JSON dataset"""
-        try:
-            import json
-            with open('datasets/moves.json', 'r', encoding='utf-8') as f:
-                moves_data = json.load(f)
-            
-            move_key = self.name.lower().replace(' ', '').replace('-', '')
-            
-            if move_key in moves_data:
-                return moves_data[move_key]
-            
-            for key, data in moves_data.items():
-                if data.get('name', '').lower() == self.name.lower():
-                    return data
-            
-            return None
-        except Exception as e:
-            print(f"ERROR: Failed to get raw move data for {self.name}: {e}")
-            return None
     
     def is_priority_counter_move(self) -> bool:
         """
@@ -365,30 +286,6 @@ class Move:
         # If it can't counter, it might fail entirely (handled elsewhere)
         return self.priority
 
-    def _normalize_status_type(self, status_code: str) -> Optional[str]:
-        if not status_code:
-            return None
-            
-        # Map dataset status codes to standard status names
-        status_mapping = {
-            'par': 'paralysis',
-            'paralyze': 'paralysis',
-            'paralyzed': 'paralysis',
-            'brn': 'burn',
-            'burn': 'burn',
-            'frz': 'freeze',
-            'freeze': 'freeze',
-            'frozen': 'freeze',
-            'psn': 'poison',
-            'poison': 'poison',
-            'tox': 'toxic',
-            'toxic': 'toxic',
-            'slp': 'sleep',
-            'sleep': 'sleep',
-            'asleep': 'sleep'
-        }
-        
-        return status_mapping.get(status_code.lower())
 
     def _check_accuracy(self) -> bool:
         if self.accuracy is True:  # Moves that never miss (e.g., Aerial Ace)
@@ -399,21 +296,89 @@ class Move:
             
         return True  # Default to True if accuracy is somehow invalid
 
-    def _apply_status_effects(self, user, target) -> List[str]:
+    def _apply_effect_block(self, target, effect_block: Dict[str, Any], chance_override: Optional[int] = None) -> List[str]:
+        """Apply an effect block (secondary or self) to a target Pokemon."""
+        if not effect_block or not target:
+            return []
+            
+        chance = chance_override if chance_override is not None else effect_block.get('chance', 100)
+        if random.randint(1, 100) > chance:
+            return []
+            
         messages = []
         
-        # Apply primary status effect (for status moves)
-        if self.primary_status:
-            message = self._apply_single_status_effect(target, self.primary_status)
-            if message:
-                messages.append(message)
+        # 1. Apply Status
+        if 'status' in effect_block:
+            status_type = effect_block['status']
+            msg = target.apply_status_effect(status_type)
+            if msg:
+                messages.append(msg)
+                
+        # 2. Apply Volatile Status
+        if 'volatileStatus' in effect_block:
+            v_status = effect_block['volatileStatus']
+            if hasattr(target, 'apply_volatile_status'):
+                msg = target.apply_volatile_status(v_status)
+                if msg:
+                    messages.append(msg)
+                
+        # 3. Apply Boosts
+        if 'boosts' in effect_block:
+            boost_msgs = self._apply_boosts(target, effect_block['boosts'])
+            messages.extend(boost_msgs)
+            
+        return messages
+
+    def _apply_secondary_effects(self, user, target) -> List[str]:
+        """Apply secondary effects of the move (chance-based on target)."""
+        messages = []
         
-        # Apply secondary status effect (for damaging moves with status chance)
-        if self.secondary_status:
-            message = self._apply_single_status_effect(target, self.secondary_status)
-            if message:
-                messages.append(message)
+        # Handle 'secondary' field (standard)
+        if 'secondary' in self.data and self.data['secondary']:
+            msgs = self._apply_effect_block(target, self.data['secondary'])
+            messages.extend(msgs)
+            
+        # Handle 'secondaries' field (multiple possible effects)
+        if 'secondaries' in self.data and self.data['secondaries']:
+            for effect in self.data['secondaries']:
+                msgs = self._apply_effect_block(target, effect)
+                messages.extend(msgs)
+                
+        return messages
+
+    def _apply_self_effects(self, user, target) -> List[str]:
+        """Apply effects on the user (like stat drops after Overheat)."""
+        messages = []
         
+        # Handle 'self' field
+        if 'self' in self.data and self.data['self']:
+            msgs = self._apply_effect_block(user, self.data['self'])
+            messages.extend(msgs)
+            
+        # Also handle standard 'boosts' if they target self (parsed in __init__)
+        if self.stat_modifications and self.targets_self:
+            boost_msgs = self._apply_boosts(user, self.stat_modifications)
+            messages.extend(boost_msgs)
+            
+        return messages
+
+    def _apply_status_effects(self, user, target) -> List[str]:
+        """Apply primary status effects for status moves."""
+        if not self.is_status_move or not self.data or not target:
+            return []
+            
+        messages = []
+        
+        # Status moves usually have 'status' directly in move_data
+        if 'status' in self.data:
+            msg = target.apply_status_effect(self.data['status'])
+            if msg:
+                messages.append(msg)
+                    
+        # Also apply any secondary effects that status moves might have
+        secondary_msgs = self._apply_secondary_effects(user, target)
+        messages.extend(secondary_msgs)
+            
         return messages
     
     def _calculate_heal_amount(self, user, damage_dealt: int = 0) -> int:
@@ -771,49 +736,6 @@ class Move:
         
         return messages
 
-    def _apply_single_status_effect(self, target, status_effect: Dict[str, Any]) -> str:
-        if not status_effect:
-            return ""
-        
-        # Validate status effect data
-        if not isinstance(status_effect, dict):
-            return ""
-        
-        # Check if target has apply_status_effect method
-        if not hasattr(target, 'apply_status_effect') or not callable(getattr(target, 'apply_status_effect', None)):
-            return ""
-        
-        # Check if the status effect applies based on chance
-        chance = status_effect.get('chance', 100)
-        if not isinstance(chance, (int, float)) or chance < 0 or chance > 100:
-            chance = 100
-        
-        if random.randint(1, 100) > chance:
-            return ""
-        
-        status_type = status_effect.get('type', '')
-        if not status_type or not isinstance(status_type, str):
-            return ""
-        
-        # Map abbreviated status types to full names
-        status_type_mapping = {
-            'par': 'paralysis',
-            'brn': 'burn',
-            'frz': 'freeze',
-            'slp': 'sleep',
-            'psn': 'poison',
-            'tox': 'toxic'
-        }
-        
-        # Convert abbreviated status type to full name if needed
-        status_type = status_type_mapping.get(status_type.lower(), status_type.lower())
-        
-        # Apply the status effect using the new status system
-        try:
-            return target.apply_status_effect(status_type)
-        except Exception as e:
-            print(f"ERROR: Failed to apply status effect {status_type} to {getattr(target, 'name', 'unknown')}: {e}")
-            return ""
 
     def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, str, Optional[str]]:
         # Debug log for move usage
@@ -885,20 +807,13 @@ class Move:
                 
             # Calculate effectiveness against each of the target's types
             effectiveness = 1.0
-            effectiveness_breakdown = {}
+            # Calculate effectiveness against each of the target's types
+            effectiveness = 1.0
             
             for target_type in defending_types:
-                type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
-                effectiveness_breakdown[target_type] = type_effectiveness
-                effectiveness *= type_effectiveness
+                effectiveness *= data_loader.get_type_effectiveness(move_type, target_type)
                 
             effectiveness = round(effectiveness, 2)
-            
-            # Debug logging
-            print(f"DEBUG: {attacking_pokemon.name}'s {self.name} ({move_type}) vs {defending_pokemon.name} ({', '.join(defending_types)}):")
-            for t, eff in effectiveness_breakdown.items():
-                print(f"  - Against {t}: {eff}x")
-            print(f"  Total effectiveness: {effectiveness}x")
             
             # Determine attack and defense stats based on move category
             if self.category == 'physical':
@@ -938,50 +853,55 @@ class Move:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
                     damage = int(damage * 1.5)
-                    print(f"DEBUG: STAB applied for {attacking_pokemon.name}'s {self.name}")
             
-            # Check for critical hit (6.25% chance by default)
-            crit_chance = 1/16  # Default crit chance
-            is_critical = random.random() < crit_chance
+            # Check for critical hit
+            crit_ratio = self.data.get('critRatio', 1)
+            will_crit = self.data.get('willCrit', False)
+            
+            crit_chances = {1: 1/16, 2: 1/8, 3: 1/2, 4: 1.0}
+            crit_chance = crit_chances.get(crit_ratio, 1.0) if crit_ratio in crit_chances else (1.0 if crit_ratio > 4 else 1/16)
+            
+            is_critical = will_crit or random.random() < crit_chance
             
             if is_critical:
                 damage = int(damage * 1.5)
-                print(f"DEBUG: Critical hit! {attacking_pokemon.name}'s {self.name} did 1.5x damage!")
                 if effectiveness_message:
                     effectiveness_message = "A critical hit! " + effectiveness_message
                 else:
                     effectiveness_message = "A critical hit!"
             
-            # Apply random damage variation (85% to 100% of calculated damage)
             damage_multiplier = random.uniform(0.85, 1.0)
             damage = max(1, int(damage * damage_multiplier))
-            print(f"DEBUG: Damage roll: {damage_multiplier*100:.1f}% of max damage")
-            print(f"DEBUG: {attack_name}: {attack_stat}, {defense_name}: {defense_stat}, Base Power: {base_damage}, Final Damage: {damage}")
             
-            base_damage = damage  # Update base_damage with the calculated damage
+            base_damage = damage
         
         # Apply status effects after damage calculation
-        status_messages = []
-        if defending_pokemon:
-            status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
-        
-        # Apply healing effects after damage calculation
+        # Apply secondary effects, self effects, healing, and recoil
+        secondary_messages = []
+        self_messages = []
         healing_messages = []
-        if attacking_pokemon:
-            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
-        
-        # Apply stat modifications after damage calculation
-        stat_modification_messages = []
-        if self.stat_modifications:
-            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
-        
-        # Apply recoil effects after damage calculation
         recoil_messages = []
+        
+        if defending_pokemon and not self.is_status_move:
+            secondary_messages = self._apply_secondary_effects(attacking_pokemon, defending_pokemon)
+            
         if attacking_pokemon:
+            # Self-effects (stat drops/boosts on user)
+            self_messages = self._apply_self_effects(attacking_pokemon, defending_pokemon)
+            
+            # Healing/Drain effects
+            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
+            
+            # Recoil effects
             recoil_messages = self._apply_recoil_effects(attacking_pokemon, base_damage)
         
-        # Combine status, healing, stat modification, and recoil messages
-        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
+        # Apply legacy status effects for status moves
+        status_messages = []
+        if self.is_status_move and defending_pokemon:
+            status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
+        
+        # Combine all messages
+        all_messages = status_messages + secondary_messages + self_messages + healing_messages + recoil_messages
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
@@ -1056,9 +976,14 @@ class Move:
                 if move_type in attacker_types:
                     damage = int(damage * 1.5)
             
-            # Check for critical hit (6.25% chance by default)
-            crit_chance = 1/16
-            is_critical = random.random() < crit_chance
+            # Check for critical hit
+            crit_ratio = self.data.get('critRatio', 1)
+            will_crit = self.data.get('willCrit', False)
+            
+            crit_chances = {1: 1/16, 2: 1/8, 3: 1/2, 4: 1.0}
+            crit_chance = crit_chances.get(crit_ratio, 1.0) if crit_ratio in crit_chances else (1.0 if crit_ratio > 4 else 1/16)
+            
+            is_critical = will_crit or random.random() < crit_chance
             
             if is_critical:
                 damage = int(damage * 1.5)
@@ -1084,30 +1009,24 @@ class Move:
         # Combine messages
         combined_message = f"{hit_message} {effectiveness_message}".strip()
         
-        # Apply status effects after damage calculation
-        status_messages = []
-        if defending_pokemon:
-            status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
-        
-        # Apply healing effects after damage calculation
+        # Apply secondary effects, self effects, healing, and recoil
+        secondary_messages = []
+        self_messages = []
         healing_messages = []
-        if attacking_pokemon:
-            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, total_damage)
-        
-        # Apply stat modifications after damage calculation
-        stat_modification_messages = []
-        if self.stat_modifications:
-            stat_modification_messages = self._apply_stat_modifications(attacking_pokemon, defending_pokemon)
-        
-        # Apply recoil effects after damage calculation
         recoil_messages = []
+        
+        if defending_pokemon:
+            secondary_messages = self._apply_secondary_effects(attacking_pokemon, defending_pokemon)
+            
         if attacking_pokemon:
+            self_messages = self._apply_self_effects(attacking_pokemon, defending_pokemon)
+            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, total_damage)
             recoil_messages = self._apply_recoil_effects(attacking_pokemon, total_damage)
         
         # Combine all messages
-        all_messages = status_messages + healing_messages + stat_modification_messages + recoil_messages
+        all_messages = secondary_messages + self_messages + healing_messages + recoil_messages
         if all_messages:
-            combined_message = f"{combined_message} {' '.join(all_messages)}"
+            combined_message = f"{combined_message} {' '.join(all_messages)}".strip()
         
         return total_damage, combined_message, None
     
@@ -1204,10 +1123,6 @@ class Move:
             'accuracy': self.accuracy,
             'category': self.category,
             'priority': self.priority,
-            'status_effect': self.status_effect,  # Keep for backward compatibility
-            'primary_status': self.primary_status,
-            'secondary_status': self.secondary_status,
-            'status_chance': self.status_chance,
             'is_status_move': self.is_status_move,
             'is_healing_move': self.is_healing_move,
             'heal_amount': self.heal_amount,
@@ -1220,23 +1135,12 @@ class Move:
         
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Move':
-        move = cls(
-            name=data['name'],
-            power=data['power'],
-            pp=data['pp'],
-            move_type=data['type'],
-            accuracy=data.get('accuracy', 100),
-            category=data.get('category', 'physical'),
-            status_effect=data.get('status_effect')
-        )
+        # Create move using the new data-driven constructor
+        move = cls(name=data['name'])
         
-        # Restore parsed status data if available
-        if 'primary_status' in data:
-            move.primary_status = data['primary_status']
-        if 'secondary_status' in data:
-            move.secondary_status = data['secondary_status']
-        if 'status_chance' in data:
-            move.status_chance = data['status_chance']
+        # Override fields that might have been changed/saved
+        move.pp = data.get('pp', move.pp)
+        move.max_pp = data.get('max_pp', move.max_pp)
         
         # Restore healing data if available
         if 'is_healing_move' in data:

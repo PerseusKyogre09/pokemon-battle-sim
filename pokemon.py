@@ -24,7 +24,7 @@ class Pokemon:
         
         self.status_condition = None
         self.status_counter = 0
-        self.volatile_status = set()
+        self.is_flinched = False
         
         if isinstance(stats, list):
             self.base_stats = {
@@ -57,57 +57,33 @@ class Pokemon:
         self.special_defense = self._calculate_stat('special_defense')
         self.speed = self._calculate_stat('speed')
         
-        if moves is None:
-            available_moves = data_loader.get_pokemon_moves(self.name.lower(), 4)
+        if moves:
             self.moves = {}
-            for move_name in available_moves:
-                move_data = data_loader.get_move_data(move_name)
-                if move_data:
-                    move_power = move_data.get('basePower', 0)
-                    move_type = move_data.get('type', 'normal')
-                    move_pp = move_data.get('pp', 10)
-                    move_accuracy = move_data.get('accuracy', 100)
-                    category = move_data.get('category', 'physical')
-                    status_effect = move_data.get('status_effect')
-                    self.moves[move_name] = Move(
-                        name=move_name,
-                        power=move_power,
-                        pp=move_pp,
-                        move_type=move_type,
-                        accuracy=move_accuracy,
-                        category=category,
-                        status_effect=status_effect
-                    )
+            for move_data in moves:
+                move_name = move_data if isinstance(move_data, str) else move_data.get('name')
+                if move_name:
+                    self.moves[move_name] = Move(move_name)
+                    if isinstance(move_data, dict):
+                        if 'pp' in move_data:
+                            self.moves[move_name].pp = move_data['pp']
+                        if 'max_pp' in move_data:
+                            self.moves[move_name].max_pp = move_data['max_pp']
         else:
-            self.moves = {}
-            for move in moves:
-                move_name = move['name']
-                move_data = data_loader.get_move_data(move_name)
-                if move_data:
-                    move_power = move_data.get('basePower', 0)
-                    move_type = move_data.get('type', 'normal')
-                    move_pp = move.get('pp', 10)
-                    category = move_data.get('category', 'physical')
-                    status_effect = move_data.get('status_effect')
-                    self.moves[move_name] = Move(
-                        name=move_name,
-                        power=move_power,
-                        pp=move_pp,
-                        move_type=move_type,
-                        category=category,
-                        status_effect=status_effect
-                    )
-                    self.moves[move_name].max_pp = move.get('max_pp', move_pp)
+            available_moves = data_loader.get_pokemon_moves(self.name.lower(), 4)
+            self.moves = {name: Move(name) for name in available_moves}
+
+    def apply_volatile_status(self, status: str) -> str:
+        status = status.lower()
+        if status == 'flinch':
+            self.is_flinched = True
+            return f"{self.name} flinched!"
+        
+        if status not in self.volatile_statuses:
+            self.volatile_statuses.add(status)
+            return f"{self.name} became {status}!"
+        return ""
 
     def _format_pokemon_name(self, name):
-        """Format Pokemon name with proper capitalization for display.
-        
-        Handles special cases like:
-        - ho-oh -> Ho-Oh
-        - mr-mime -> Mr. Mime  
-        - nidoran-m -> Nidoran♂
-        - nidoran-f -> Nidoran♀
-        """
         if not name:
             return name
             
@@ -144,7 +120,6 @@ class Pokemon:
             return name
 
     def take_damage(self, damage):
-        """Apply damage to the Pokémon, ensuring HP doesn't go below 0."""
         old_hp = self.current_hp
         self.current_hp = max(0, self.current_hp - damage)
         
@@ -152,11 +127,9 @@ class Pokemon:
             self.reset_stats()
         
     def heal(self, amount):
-        """Heal the Pokémon by the specified amount, ensuring HP doesn't exceed max HP."""
         self.current_hp = min(self.max_hp, self.current_hp + amount)
 
     def get_stat_stage_multiplier(self, stage):
-        """Get the multiplier for a given stat stage (-6 to +6).
         
         Returns the standard Pokemon stat stage multiplier:
         Stage -6: 2/8 = 0.25 (25%)
@@ -328,6 +301,9 @@ class Pokemon:
     
     def can_use_move(self) -> tuple:
         """Check if pokemon can use a move this turn."""
+        if getattr(self, 'is_flinched', False):
+            return False, f"{self.name} flinched and couldn't move!"
+            
         for status_effect in self.status_effects.values():
             prevents_move, message = status_effect.affects_move_usage(self)
             if prevents_move:
