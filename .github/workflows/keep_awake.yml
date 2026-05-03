@@ -14,4 +14,5 @@ jobs:
         run: |
           URL="https://PerseusKyogre-Pokemon-Battle-Sim.hf.space/api/health"
           echo "Pinging $URL..."
-          curl -s -I "$URL" | head -n 1
+          # Use GET request to match the FastAPI endpoint
+          curl -s -X GET "$URL" -o /dev/null -w "Status: %{http_code}\n"
