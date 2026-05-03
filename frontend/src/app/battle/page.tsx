@@ -9,6 +9,19 @@ import Pokeball from '@/components/Pokeball';
 
 type BattleStage = 'intro-opponent' | 'intro-player' | 'active' | 'gameover';
 
+// Utility to get signed URL for audio
+const getAudioUrl = async (filename: string) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/audio/signed-url/${filename}`);
+    const data = await response.json();
+    console.log(`🎵 Audio [${data.source}]: ${filename} -> ${data.url}`);
+    return data.url;
+  } catch (error) {
+    console.error(`Error fetching signed URL for ${filename}:`, error);
+    return `/music/${filename}`; // Fallback to local public folder
+  }
+};
+
 export default function BattlePage() {
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [events, setEvents] = useState<string[]>([]);
@@ -21,6 +34,7 @@ export default function BattlePage() {
   const [opponentAnim, setOpponentAnim] = useState({ visible: false, status: false, attacking: false, shaking: false, fainted: false });
   const [pokeballState, setPokeballState] = useState({ player: false, opponent: false });
   const [showFlash, setShowFlash] = useState(false);
+  const [showStartOverlay, setShowStartOverlay] = useState(true);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -32,15 +46,7 @@ export default function BattlePage() {
     if (savedState) {
       const state = JSON.parse(savedState);
       setBattleState(state);
-      
-      audioRef.current = new Audio('/music/battle_music.mp3');
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.3;
-      
-      hitSoundRef.current = new Audio('/music/hit-sound.mp3');
-      pokeballSoundRef.current = new Audio('/music/pokeball-throw.mp3');
-
-      startIntroSequence(state);
+      setupAudio();
     } else {
       router.push('/');
     }
@@ -50,7 +56,29 @@ export default function BattlePage() {
     };
   }, [router]);
 
+  const setupAudio = async () => {
+    const battleMusicUrl = await getAudioUrl('battle-music.mp3');
+    const hitSoundUrl = await getAudioUrl('hit-sound.mp3');
+    const pokeballSoundUrl = await getAudioUrl('pokeball-throw.mp3');
+
+    audioRef.current = new Audio(battleMusicUrl);
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+    
+    hitSoundRef.current = new Audio(hitSoundUrl);
+    pokeballSoundRef.current = new Audio(pokeballSoundUrl);
+  };
+
+  const handleStartBattle = () => {
+    if (!battleState) return;
+    setShowStartOverlay(false);
+    startIntroSequence(battleState);
+  };
+
   const startIntroSequence = async (state: BattleState) => {
+    // Wait for audio to be ready
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // 1. Music starts
     audioRef.current?.play().catch(() => console.log('Autoplay blocked'));
     
@@ -179,13 +207,40 @@ export default function BattlePage() {
     }
   };
 
-  if (!battleState) return <div className="min-h-screen bg-black flex items-center justify-center text-white font-retro text-xs animate-pulse">Loading Battle...</div>;
+  if (!battleState || !battleState.player_pokemon || !battleState.opponent_pokemon) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-white font-retro text-xs animate-pulse">Initializing Battle Data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center text-white overflow-hidden relative">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       
       {showFlash && <div className="absolute inset-0 z-[100] animate-flash" />}
+
+      {showStartOverlay && (
+        <div className="absolute inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center p-4">
+          <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="space-y-4">
+              <div className="w-20 h-20 bg-yellow-500 mx-auto rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] mb-8">
+                <span className="text-gray-900 text-4xl font-black">!</span>
+              </div>
+              <h2 className="text-2xl font-retro text-yellow-500 uppercase tracking-[0.3em] mb-4">Battle Ready?</h2>
+              <p className="text-gray-400 font-retro text-[10px] uppercase leading-relaxed opacity-70">
+                Prepare for battle against {battleState?.opponent_pokemon.name}
+              </p>
+            </div>
+            
+            <button 
+              onClick={handleStartBattle}
+              className="group relative w-full py-8 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-retro text-xs border-4 border-yellow-600 transition-all shadow-[0_0_50px_rgba(234,179,8,0.2)] hover:shadow-[0_0_70px_rgba(234,179,8,0.4)] active:scale-95 overflow-hidden"
+              style={{ clipPath: 'polygon(25px 0, 100% 0, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)' }}
+            >
+              <span className="relative z-10">COMMENCE BATTLE</span>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto h-screen flex flex-col justify-between relative z-10 py-12 px-4 md:px-20">
         

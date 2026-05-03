@@ -8,6 +8,11 @@ from game import Game
 from data_loader import data_loader
 from moveset import get_strategic_moveset, get_all_pokemon_sets
 import json
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI()
 
@@ -20,16 +25,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Supabase client
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+bucket_name = os.getenv("SUPABASE_BUCKET_NAME", "pokemon-music")
+
+supabase: Client = None
+if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+        print("✓ Supabase client initialized")
+    except Exception as e:
+        print(f"Error initializing Supabase client: {e}")
+
 game_instance = None
 
-# Serve static files
+# Serve static files (fallback for local dev)
 music_path = os.path.join(os.path.dirname(__file__), 'music')
 if os.path.exists(music_path):
-    app.mount("/api/music", StaticFiles(directory=music_path), name="music")
+    app.mount("/api/music/local", StaticFiles(directory=music_path), name="music")
 
-static_sounds_path = os.path.join(os.path.dirname(__file__), 'static/sounds')
-if os.path.exists(static_sounds_path):
-    app.mount("/api/sounds", StaticFiles(directory=static_sounds_path), name="sounds")
+@app.get("/api/audio/signed-url/{filename}")
+async def get_signed_url(filename: str):
+    if not supabase:
+        print(f"[AUDIO] ⚠️ Supabase not configured. Falling back to local: {filename}")
+        return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
+    
+    try:
+        # Generate a signed URL valid for 1 hour (3600 seconds)
+        response = supabase.storage.from_(bucket_name).create_signed_url(filename, 3600)
+        if "error" in response:
+            print(f"[AUDIO] ❌ Supabase error: {response['error']}")
+            return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
+        
+        print(f"[AUDIO] ✅ Serving {filename} from Supabase")
+        return {"url": response["signedURL"], "source": "supabase"}
+    except Exception as e:
+        print(f"[AUDIO] ❌ Exception: {e}")
+        return {"url": f"http://localhost:5000/api/music/local/{filename}", "source": "local"}
 
 @app.get("/api/pokemon/cry/{pokemon_name}")
 async def pokemon_cry(pokemon_name: str):
