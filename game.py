@@ -196,6 +196,8 @@ class Game:
                     'type': 'status',
                     'message': prevention_message,
                     'target': 'player' if is_player_attacking else 'opponent',
+                    'pokemon_hp': attacker.current_hp,
+                    'status_effects': attacker.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
                 print(f"DEBUG: {attacker.name} is prevented from using {move_name}: {prevention_message}")

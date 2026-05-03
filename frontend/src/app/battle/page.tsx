@@ -237,13 +237,13 @@ export default function BattlePage() {
             ...prev,
             player_pokemon: isTargetPlayer ? {
               ...prev.player_pokemon,
-              current_hp: eventObj.pokemon_hp,
-              status_effects: eventObj.status_effects
+              current_hp: eventObj.pokemon_hp ?? prev.player_pokemon.current_hp,
+              status_effects: eventObj.status_effects ?? prev.player_pokemon.status_effects
             } : prev.player_pokemon,
             opponent_pokemon: !isTargetPlayer ? {
               ...prev.opponent_pokemon,
-              current_hp: eventObj.pokemon_hp,
-              status_effects: eventObj.status_effects
+              current_hp: eventObj.pokemon_hp ?? prev.opponent_pokemon.current_hp,
+              status_effects: eventObj.status_effects ?? prev.opponent_pokemon.status_effects
             } : prev.opponent_pokemon
           } : null);
         }
@@ -327,7 +327,7 @@ export default function BattlePage() {
                 currentHp={battleState.opponent_pokemon.current_hp}
                 maxHp={battleState.opponent_pokemon.max_hp}
                 level={100}
-                types={battleState.opponent_pokemon.types}
+                status_effects={battleState.opponent_pokemon.status_effects}
                 isOpponent
                 isVisible={opponentAnim.visible}
                 isShaking={opponentAnim.shaking}
@@ -346,6 +346,7 @@ export default function BattlePage() {
                 maxHp={battleState.player_pokemon.max_hp}
                 level={100}
                 types={battleState.player_pokemon.types}
+                status_effects={battleState.player_pokemon.status_effects}
                 isVisible={playerAnim.visible}
                 isShaking={playerAnim.shaking}
                 isAttacking={playerAnim.attacking}

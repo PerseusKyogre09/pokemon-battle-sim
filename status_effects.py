@@ -69,8 +69,8 @@ class StatusEffect:
             pokemon._add_status_change_event('status_applied', self.status_type, self.name)
             
         # Return application message
-        message_template = self.config.get('messages', {}).get('apply', "{pokemon} was affected by {status}!")
-        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name)
+        message_template = self.config.get('messages', {}).get('apply', "{pokemon} became {status}!")
+        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name.lower())
     
     def process_turn_start(self, pokemon) -> List[str]:
         messages = []

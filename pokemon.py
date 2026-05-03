@@ -174,6 +174,17 @@ class Pokemon:
         
         status_type = status_type.lower().strip()
         
+        # Normalize common abbreviations from dataset
+        normalization_map = {
+            'par': 'paralysis',
+            'psn': 'poison',
+            'brn': 'burn',
+            'slp': 'sleep',
+            'frz': 'freeze',
+            'tox': 'toxic'
+        }
+        status_type = normalization_map.get(status_type, status_type)
+        
         status_effect = None
         
         try:

@@ -32,12 +32,21 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  burn: 'bg-red-500 text-white',
-  paralysis: 'bg-yellow-400 text-black',
-  poison: 'bg-purple-500 text-white',
-  toxic: 'bg-purple-600 text-white',
-  sleep: 'bg-gray-400 text-black',
-  freeze: 'bg-blue-300 text-black',
+  burn: 'bg-[#ff4422] text-white',
+  paralysis: 'bg-[#ffcc00] text-black',
+  poison: 'bg-[#aa5599] text-white',
+  toxic: 'bg-[#aa5599] text-white',
+  sleep: 'bg-[#888888] text-white',
+  freeze: 'bg-[#66ccff] text-black',
+};
+
+const statusFilters: Record<string, string> = {
+  paralysis: 'drop-shadow(0 0 12px rgba(255, 230, 0, 0.9)) brightness(1.1) saturate(1.2)',
+  burn: 'drop-shadow(0 0 12px rgba(255, 68, 34, 0.9)) brightness(1.1) saturate(1.2)',
+  poison: 'drop-shadow(0 0 12px rgba(170, 85, 153, 0.9)) brightness(1.1) saturate(1.2)',
+  toxic: 'drop-shadow(0 0 12px rgba(170, 85, 153, 0.9)) brightness(1.1) saturate(1.2)',
+  sleep: 'grayscale(0.3) opacity(0.8)',
+  freeze: 'drop-shadow(0 0 12px rgba(102, 204, 255, 0.9)) brightness(1.2)',
 };
 
 const PokemonCard: React.FC<PokemonCardProps> = ({ 
@@ -45,26 +54,59 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   isOpponent, isVisible = true, isAttacking, isShaking, isFainted, showStatus = true,
   layout = 'full', flip = false
 }) => {
-  const renderSprite = () => (
-    <div className={`relative group transition-all duration-500 flex flex-col items-center
-      ${isVisible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}
-      ${isAttacking ? (isOpponent ? '-translate-x-12 translate-y-12' : 'translate-x-12 -translate-y-12') : ''}
-      ${isShaking ? 'animate-shake' : ''}
-      ${isFainted ? 'animate-faint translate-y-40 opacity-0' : ''}
-    `}>
-      {/* GBA Battle Pod (Dark) */}
-      <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
-      
-      <img 
-        src={sprite} 
-        alt={name} 
-        className={`w-36 h-36 md:w-56 md:h-56 object-contain relative z-10 
-          ${flip ? 'scale-x-[-1]' : ''}
-          drop-shadow-lg
-        `}
-      />
-    </div>
-  );
+  const renderSprite = () => {
+    const majorStatus = status_effects.find(s => s.is_major);
+    const filter = majorStatus ? statusFilters[majorStatus.type] : '';
+    
+    return (
+      <div className={`relative group transition-all duration-500 flex flex-col items-center
+        ${isVisible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}
+        ${isAttacking ? (isOpponent ? '-translate-x-12 translate-y-12' : 'translate-x-12 -translate-y-12') : ''}
+        ${isShaking ? 'animate-shake' : ''}
+        ${isFainted ? 'animate-faint translate-y-40 opacity-0' : ''}
+      `}>
+        {/* GBA Battle Pod (Dark) */}
+        <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
+        
+        <img 
+          src={sprite} 
+          alt={name} 
+          className={`w-36 h-36 md:w-56 md:h-56 object-contain relative z-10 
+            ${flip ? 'scale-x-[-1]' : ''}
+            drop-shadow-lg
+          `}
+          style={{ filter: filter || undefined }}
+        />
+        
+        {/* Status Sparkles/Effects Overlay */}
+        {majorStatus?.type === 'paralysis' && (
+          <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-40">
+             <div className="w-full h-full bg-yellow-400/30 rounded-full blur-xl" />
+          </div>
+        )}
+        {(majorStatus?.type === 'poison' || majorStatus?.type === 'toxic') && (
+          <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-40">
+             <div className="w-full h-full bg-purple-500/30 rounded-full blur-xl" />
+          </div>
+        )}
+        {majorStatus?.type === 'burn' && (
+          <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-40">
+             <div className="w-full h-full bg-red-500/30 rounded-full blur-xl" />
+          </div>
+        )}
+        {majorStatus?.type === 'freeze' && (
+          <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-40">
+             <div className="w-full h-full bg-blue-300/30 rounded-full blur-xl" />
+          </div>
+        )}
+        {majorStatus?.type === 'sleep' && (
+          <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-20">
+             <div className="w-full h-full bg-gray-400/30 rounded-full blur-xl" />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderStatus = () => (
     <div className={`w-64 gba-box gba-panel-shadow relative transition-all duration-500 overflow-hidden
@@ -83,8 +125,11 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           {status_effects.filter(s => s.is_major).map(status => (
             <span 
               key={status.type} 
-              className={`px-1.5 py-0.5 rounded-[2px] text-[7px] font-bold uppercase tracking-tighter shadow-sm border border-white/20 ${statusColors[status.type] || 'bg-gray-500'}`}
-              style={{ textShadow: '1px 1px 0 rgba(0,0,0,0.2)' }}
+              className={`px-2 py-0.5 rounded-[3px] text-[8px] font-bold uppercase tracking-widest shadow-[1px_1px_0_rgba(0,0,0,0.5)] border border-white/30 ${statusColors[status.type] || 'bg-gray-500'}`}
+              style={{ 
+                textShadow: '1px 1px 0 rgba(0,0,0,0.3)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)'
+              }}
             >
               {statusLabels[status.type] || status.type.slice(0, 3).toUpperCase()}
             </span>
