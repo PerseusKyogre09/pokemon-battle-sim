@@ -7,6 +7,51 @@ from typing import List, Optional
 moveset_cache = {}
 sets_data = None
 
+# Formats that typically only contain fully evolved/battle-ready Pokémon
+BATTLE_READY_FORMATS = [
+    'gen8ou',
+    'gen8ubers',
+    'gen8uu',
+    'gen8ru',
+    'gen8nu',
+    'gen8pu',
+    'gen8monotype'
+]
+
+def get_battle_ready_pokemon_list() -> List[str]:
+    """
+    Returns a list of unique Pokémon names that have competitive sets
+    in the battle-ready formats (excluding Little Cup).
+    """
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
+        
+        if not os.path.exists(file_path):
+            return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos"]
+            
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        battle_ready_names = set()
+        for fmt in BATTLE_READY_FORMATS:
+            if fmt in data and 'stats' in data[fmt]:
+                for name in data[fmt]['stats'].keys():
+                    # Basic filtering to avoid obviously non-fully evolved forms if needed
+                    # though Smogon tiers already do most of this work.
+                    battle_ready_names.add(name)
+        
+        return sorted(list(battle_ready_names))
+    except Exception as e:
+        print(f"Error building battle-ready list: {e}")
+        return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos"]
+
+def get_random_battle_ready_pokemon() -> str:
+    """Returns a random fully evolved, battle-ready Pokémon name."""
+    import random
+    pokemon_list = get_battle_ready_pokemon_list()
+    return random.choice(pokemon_list)
+
 def get_strategic_moveset(pokemon_name: str, format_name: str = None, debug: bool = True) -> Optional[List[str]]:
     try:
         moves = fetch_sets(pokemon_name, format_name, debug)

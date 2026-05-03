@@ -57,21 +57,38 @@ export default function BattlePage() {
     }
 
     return () => {
-      if (audioRef.current) audioRef.current.pause();
+      // Robust cleanup to stop all audio on leave
+      [audioRef, hitSoundRef, pokeballSoundRef].forEach(ref => {
+        if (ref.current) {
+          ref.current.pause();
+          ref.current.currentTime = 0;
+          ref.current = null;
+        }
+      });
     };
   }, [router]);
 
   const setupAudio = async () => {
-    const battleMusicUrl = await getAudioUrl('battle-music.mp3');
-    const hitSoundUrl = await getAudioUrl('hit-sound.mp3');
-    const pokeballSoundUrl = await getAudioUrl('pokeball-throw.mp3');
+    try {
+      const [battleMusicUrl, hitSoundUrl, pokeballSoundUrl] = await Promise.all([
+        getAudioUrl('battle-music.mp3'),
+        getAudioUrl('hit-sound.mp3'),
+        getAudioUrl('pokeball-throw.mp3')
+      ]);
 
-    audioRef.current = new Audio(battleMusicUrl);
-    audioRef.current.loop = true;
-    audioRef.current.volume = 0.3;
-    
-    hitSoundRef.current = new Audio(hitSoundUrl);
-    pokeballSoundRef.current = new Audio(pokeballSoundUrl);
+      audioRef.current = new Audio(battleMusicUrl);
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.3;
+      audioRef.current.preload = 'auto';
+      
+      hitSoundRef.current = new Audio(hitSoundUrl);
+      hitSoundRef.current.preload = 'auto';
+      
+      pokeballSoundRef.current = new Audio(pokeballSoundUrl);
+      pokeballSoundRef.current.preload = 'auto';
+    } catch (err) {
+      console.error('Audio setup failed:', err);
+    }
   };
 
   const handleStartBattle = () => {
@@ -134,6 +151,18 @@ export default function BattlePage() {
     
     await new Promise(resolve => setTimeout(resolve, 500));
     setBattleStage('active');
+  };
+
+  const handleQuit = () => {
+    // Explicitly stop all audio before navigating
+    [audioRef, hitSoundRef, pokeballSoundRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.pause();
+        ref.current.currentTime = 0;
+        ref.current = null;
+      }
+    });
+    router.push('/');
   };
 
   const handleMove = async (moveName: string) => {
@@ -246,6 +275,10 @@ export default function BattlePage() {
           <div className="relative h-[300px] md:flex-[4] md:min-h-[450px] 2xl:min-h-[650px] bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 2xl:border-8 border-[#475569] rounded-xl 2xl:rounded-3xl overflow-hidden gba-panel-shadow shrink-0 transition-all duration-700">
             <div className="absolute inset-0 bg-black/10" />
             
+            {/* Pokeball Animations */}
+            <Pokeball type="player" visible={pokeballState.player} />
+            <Pokeball type="opponent" visible={pokeballState.opponent} />
+            
             {/* Turn Counter Overlay */}
             <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 border-2 border-white/10 text-[10px] 2xl:text-[14px] text-yellow-500 z-20 rounded-md">
               TURN {events.filter(e => e.includes('used')).length + 1}
@@ -321,7 +354,7 @@ export default function BattlePage() {
                   {gameOver}
                 </p>
                 <button 
-                  onClick={() => router.push('/')}
+                  onClick={handleQuit}
                   className="px-8 md:px-20 py-2 md:py-5 bg-red-900/40 border-2 md:border-4 border-red-800 text-white text-[8px] md:text-sm uppercase hover:bg-red-800 transition-all tracking-[0.2em] md:tracking-[0.3em] font-bold"
                 >
                   RETURN HOME
@@ -364,7 +397,7 @@ export default function BattlePage() {
                   </div>
                   
                   <button 
-                    onClick={() => confirm('Forfeit?') && router.push('/')}
+                    onClick={() => confirm('Forfeit?') && handleQuit()}
                     className="h-12 md:h-20 border-t-4 border-[#0f172a] text-[10px] md:text-[14px] 2xl:text-[18px] uppercase text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-white/5 tracking-[0.2em]"
                   >
                     <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[10px] border-l-white border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent" />

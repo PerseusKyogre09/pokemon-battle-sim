@@ -6,7 +6,7 @@ import requests
 import os
 from game import Game
 from data_loader import data_loader
-from moveset import get_strategic_moveset, get_all_pokemon_sets
+from moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
 import json
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -213,16 +213,31 @@ async def get_all_sets(pokemon_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/battle-ready-pokemon")
+async def get_battle_ready_list():
+    """Returns a list of fully evolved, battle-ready Pokémon names."""
+    try:
+        return {"success": True, "pokemon": get_battle_ready_pokemon_list()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.post("/api/start")
 async def start_game(request: Request):
     global game_instance
     try:
         data = await request.json()
-        player_pokemon = data.get('pokemon', 'pikachu').lower()
+        player_pokemon_name = data.get('pokemon', 'pikachu').lower()
         selected_set = data.get('selected_set')
+        opponent_choice = data.get('opponent', 'charizard').lower()
         
-        player_data = get_pokemon_data(player_pokemon)
-        opponent_data = get_pokemon_data('charizard')
+        # Handle Random Opponent
+        if opponent_choice == 'random':
+            opponent_pokemon_name = get_random_battle_ready_pokemon().lower()
+        else:
+            opponent_pokemon_name = opponent_choice
+            
+        player_data = get_pokemon_data(player_pokemon_name)
+        opponent_data = get_pokemon_data(opponent_pokemon_name)
         
         player_moves = []
         if selected_set and 'moves' in selected_set:
@@ -261,12 +276,12 @@ async def start_game(request: Request):
             'player_pokemon': {
                 **game_instance.player_pokemon.to_dict(),
                 'sprite': player_sprite,
-                'cry_url': f"{base_url}/api/pokemon/cry/{player_pokemon}"
+                'cry_url': f"{base_url}/api/pokemon/cry/{player_pokemon_name}"
             },
             'opponent_pokemon': {
                 **game_instance.opponent_pokemon.to_dict(),
                 'sprite': opponent_sprite,
-                'cry_url': f"{base_url}/api/pokemon/cry/charizard"
+                'cry_url': f"{base_url}/api/pokemon/cry/{opponent_pokemon_name}"
             },
             'player_moves': [{
                 'name': move.name,
