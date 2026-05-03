@@ -327,6 +327,7 @@ export default function BattlePage() {
                 currentHp={battleState.opponent_pokemon.current_hp}
                 maxHp={battleState.opponent_pokemon.max_hp}
                 level={100}
+                types={battleState.opponent_pokemon.types}
                 status_effects={battleState.opponent_pokemon.status_effects}
                 isOpponent
                 isVisible={opponentAnim.visible}
