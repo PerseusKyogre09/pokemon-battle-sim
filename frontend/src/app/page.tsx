@@ -112,8 +112,8 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-12 flex flex-col items-center">
         <div className="max-w-2xl w-full text-center mb-12">
-          <h2 className="text-5xl font-black mb-4 tracking-tight">Choose Your <span className="text-yellow-500">Champion</span></h2>
-          <p className="text-gray-400 text-lg">Experience authentic Pokémon battles with strategic movesets and modern aesthetics.</p>
+          <h2 className="text-4xl font-retro mb-6 tracking-tight leading-tight">Choose Your <span className="text-yellow-500">Champion</span></h2>
+          <p className="text-gray-400 font-retro text-xs leading-relaxed uppercase opacity-70">Experience authentic Pokémon battles with strategic movesets and modern aesthetics.</p>
         </div>
 
         <div className="w-full max-w-md relative mb-12" ref={searchRef}>
@@ -123,7 +123,8 @@ export default function Home() {
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search Pokémon..."
-              className="w-full px-6 py-4 bg-gray-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all text-lg placeholder:text-gray-600 group-hover:border-white/20"
+              className="w-full px-6 py-4 bg-gray-900/50 border-4 border-gray-800 font-retro text-xs focus:outline-none focus:border-yellow-500 transition-all placeholder:text-gray-600 group-hover:border-gray-700"
+              style={{ clipPath: 'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)' }}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2">
               {loading ? (
@@ -135,12 +136,12 @@ export default function Home() {
           </div>
 
           {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-40 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border-4 border-gray-800 overflow-hidden shadow-2xl z-40 animate-in fade-in slide-in-from-top-2">
               {suggestions.map((p) => (
                 <button
                   key={p.name}
                   onClick={() => selectPokemon(p.name)}
-                  className="w-full text-left px-6 py-3 hover:bg-white/5 transition-colors capitalize font-medium border-b border-white/5 last:border-0"
+                  className="w-full text-left px-6 py-3 hover:bg-yellow-500 hover:text-gray-900 transition-colors capitalize font-retro text-[10px] border-b-2 border-gray-800 last:border-0"
                 >
                   {p.name}
                 </button>
@@ -165,7 +166,8 @@ export default function Home() {
                 <button
                   onClick={handleStartBattle}
                   disabled={loading}
-                  className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 text-gray-900 font-bold rounded-2xl transition-all shadow-[0_0_30px_rgba(234,179,8,0.2)] hover:shadow-[0_0_40px_rgba(234,179,8,0.4)] active:scale-95 flex items-center justify-center space-x-2"
+                  className="w-full py-5 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 text-gray-900 font-retro text-xs border-4 border-yellow-600 transition-all shadow-[0_0_30px_rgba(234,179,8,0.2)] hover:shadow-[0_0_40px_rgba(234,179,8,0.4)] active:scale-95 flex items-center justify-center space-x-2"
+                  style={{ clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)' }}
                 >
                   <span>{loading ? 'PREPARING...' : 'START BATTLE'}</span>
                   {!loading && <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>}
@@ -174,9 +176,13 @@ export default function Home() {
             </div>
 
             <div className="space-y-8">
-              <div className="bg-gray-900/50 backdrop-blur-md p-8 rounded-3xl border border-white/5 shadow-xl">
-                <h3 className="text-yellow-500 font-bold uppercase tracking-widest text-sm mb-4">Pokedex Entry</h3>
-                <p className="text-lg text-gray-300 leading-relaxed italic">
+              <div className="bg-gray-900/50 backdrop-blur-md p-8 border-4 border-gray-800 shadow-xl relative">
+                <div className="absolute top-0 left-0 w-4 h-4 bg-yellow-500/20" />
+                <h3 className="text-yellow-500 font-retro uppercase tracking-widest text-[10px] mb-6 flex items-center">
+                  <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse" />
+                  Pokedex Entry
+                </h3>
+                <p className="text-xs font-retro leading-loose text-gray-300 italic opacity-90">
                   "{pokedexEntry || 'A mysterious Pokémon discovered in the wild...'}"
                 </p>
               </div>
