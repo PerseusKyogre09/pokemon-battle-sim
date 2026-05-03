@@ -1,0 +1,17 @@
+name: Keep Hugging Face Space Awake
+
+on:
+  schedule:
+    # Runs every 6 hours to prevent the Space from sleeping (48h inactivity limit)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows you to manually trigger it from the GitHub Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Space
+        run: |
+          URL="https://PerseusKyogre-Pokemon-Battle-Sim.hf.space/api/health"
+          echo "Pinging $URL..."
+          curl -s -I "$URL" | head -n 1
