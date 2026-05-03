@@ -26,47 +26,56 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   layout = 'full', flip = false
 }) => {
   const renderSprite = () => (
-    <div className={`relative group transition-all duration-500
+    <div className={`relative group transition-all duration-500 flex flex-col items-center
       ${isVisible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}
       ${isAttacking ? (isOpponent ? '-translate-x-12 translate-y-12' : 'translate-x-12 -translate-y-12') : ''}
       ${isShaking ? 'animate-shake' : ''}
       ${isFainted ? 'animate-faint translate-y-40 opacity-0' : ''}
     `}>
-      <div className={`absolute inset-0 bg-white/5 rounded-full blur-3xl transition-all duration-500 group-hover:bg-white/10`} />
+      {/* GBA Battle Pod (Dark) */}
+      <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
+      
       <img 
         src={sprite} 
         alt={name} 
-        className={`w-36 h-36 md:w-48 md:h-48 object-contain relative z-10 transition-transform duration-300 hover:scale-105 drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]
+        className={`w-36 h-36 md:w-56 md:h-56 object-contain relative z-10 
           ${flip ? 'scale-x-[-1]' : ''}
+          drop-shadow-lg
         `}
       />
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-28 h-5 bg-black/40 rounded-full blur-md -z-0" />
     </div>
   );
 
   const renderStatus = () => (
-    <div className={`w-72 bg-gray-900/90 backdrop-blur-md border-4 border-gray-800 p-4 shadow-2xl relative transition-all duration-500
+    <div className={`w-64 gba-box gba-panel-shadow relative transition-all duration-500 overflow-hidden
       ${showStatus ? 'translate-x-0 opacity-100' : (isOpponent ? '-translate-x-20' : 'translate-x-20') + ' opacity-0'}
-      ${isOpponent ? 'rounded-r-2xl' : 'rounded-l-2xl'}
     `}
-    style={{ clipPath: isOpponent ? 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%)' : 'polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px)' }}>
-      <div className="flex justify-between items-end mb-2">
-        <h3 className="text-xs font-retro uppercase tracking-tighter text-white truncate max-w-[140px]">{name}</h3>
-        <span className="text-[10px] font-retro text-gray-400">Lv{level}</span>
+    style={{ 
+      borderRadius: isOpponent ? '0 0 0 16px' : '16px 0 0 0',
+      borderWidth: isOpponent ? '2px 0 4px 4px' : '4px 4px 2px 0'
+    }}>
+      <div className="flex justify-between items-center mb-1 border-b-2 border-white/10 pb-1">
+        <h3 className="text-[10px] font-retro uppercase text-white flex items-center gap-1">
+          {name}
+          <span className="text-[8px] text-blue-400">♂</span>
+        </h3>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px] font-retro text-gray-400">Lv</span>
+          <span className="text-[10px] font-retro text-white">{level}</span>
+        </div>
       </div>
       
-      <div className="flex gap-1 mb-4">
-        {types.map(type => (
-          <span 
-            key={type} 
-            className={`text-[8px] font-retro px-1.5 py-0.5 rounded-sm uppercase text-white shadow-sm type-${type.toLowerCase()}`}
-          >
-            {type}
-          </span>
-        ))}
+      <div className="mt-2 px-1">
+        <HealthBar currentHp={currentHp} maxHp={maxHp} />
       </div>
 
-      <HealthBar currentHp={currentHp} maxHp={maxHp} />
+      {!isOpponent && (
+        <div className="flex justify-end items-center gap-2 mt-1">
+          <div className="text-[8px] font-retro text-gray-300 whitespace-nowrap">
+            {Math.max(0, Math.ceil(currentHp))}/{maxHp}
+          </div>
+        </div>
+      )}
     </div>
   );
 

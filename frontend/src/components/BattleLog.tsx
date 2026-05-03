@@ -16,46 +16,38 @@ const BattleLog: React.FC<BattleLogProps> = ({ events }) => {
   }, [events]);
 
   return (
-    <div className="flex flex-col h-40 md:h-48">
-      <div className="bg-gray-900/90 backdrop-blur-md border-4 border-gray-800 rounded-2xl p-4 h-full relative shadow-inner">
-        {/* Retro scanline effect overlay */}
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%] z-20" />
+    <div className="flex flex-col h-32">
+      <div className="bg-[#0f172a] border-[6px] border-[#475569] rounded-xl p-4 h-full relative shadow-[inset_0_4px_0_#1e293b,inset_0_-4px_0_#020617] flex items-center">
+        {/* Inner subtle border effect */}
+        <div className="absolute inset-1 border-2 border-[#1e293b] rounded-lg pointer-events-none" />
         
         <div 
           ref={scrollRef}
-          className="h-full overflow-y-auto space-y-2 scroll-smooth pr-2 custom-scrollbar relative z-10"
+          className="h-full w-full overflow-y-auto space-y-3 scroll-smooth pr-2 custom-scrollbar relative z-10 py-2"
         >
           {events.length === 0 ? (
-            <p className="text-gray-500 font-retro text-xs animate-pulse">Waiting for battle actions...</p>
+            <p className="text-gray-500 font-retro text-[10px] uppercase">Waiting for battle actions...</p>
           ) : (
             events.map((event, i) => (
               <div 
                 key={i} 
-                className={`font-retro text-[10px] leading-relaxed animate-in fade-in slide-in-from-left-2 duration-300
-                  ${event.includes('Critical') ? 'text-red-400 font-bold' : 
-                    event.includes('effective') ? 'text-yellow-400' : 
-                    event.includes('fainted') ? 'text-gray-400 italic' : 'text-gray-100'}
-                `}
+                className={`font-retro text-[12px] leading-relaxed animate-in fade-in slide-in-from-left-2 duration-300 uppercase text-gray-200`}
               >
-                <span className="text-white/30 mr-2">{'>'}</span>
                 {event}
               </div>
             ))
           )}
         </div>
+        
+        {/* Blinking triangle cursor when events exist */}
+        {events.length > 0 && (
+          <div className="absolute bottom-4 right-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-red-500 animate-bounce" />
+        )}
       </div>
 
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0,0,0,0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #4b5563;
-          border-radius: 10px;
+          width: 0px;
         }
       `}</style>
     </div>

@@ -74,8 +74,19 @@ async def pokemon_cry(pokemon_name: str):
         response = requests.get(url)
         if response.status_code == 200:
             pokemon_data = response.json()
+            cry_url = None
+            
+            # Try new 'cries' field first
             if 'cries' in pokemon_data and 'latest' in pokemon_data['cries']:
                 cry_url = pokemon_data['cries']['latest']
+            
+            # Fallback to the ID-based repository if cries field is missing
+            if not cry_url:
+                pokemon_id = pokemon_data.get('id')
+                if pokemon_id:
+                    cry_url = f"https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/{pokemon_id}.ogg"
+            
+            if cry_url:
                 cry_response = requests.get(cry_url)
                 if cry_response.status_code == 200:
                     return Response(content=cry_response.content, media_type='audio/ogg')
@@ -83,7 +94,7 @@ async def pokemon_cry(pokemon_name: str):
         fallback_path = os.path.join(music_path, 'nidorino.ogg')
         if os.path.exists(fallback_path):
             return FileResponse(fallback_path)
-        raise HTTPException(status_code=404, detail="Cry not found")
+        return Response(status_code=404, content="Cry not found")
     except Exception as e:
         print(f"Error fetching Pokémon cry: {e}")
         fallback_path = os.path.join(music_path, 'nidorino.ogg')
@@ -243,16 +254,19 @@ async def start_game(request: Request):
         player_sprite = game_instance.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
         opponent_sprite = game_instance.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
         
+        # Get base URL for absolute cry links
+        base_url = str(request.base_url).rstrip('/')
+        
         battle_data = {
             'player_pokemon': {
                 **game_instance.player_pokemon.to_dict(),
                 'sprite': player_sprite,
-                'cry_url': f"/api/pokemon/cry/{player_pokemon}"
+                'cry_url': f"{base_url}/api/pokemon/cry/{player_pokemon}"
             },
             'opponent_pokemon': {
                 **game_instance.opponent_pokemon.to_dict(),
                 'sprite': opponent_sprite,
-                'cry_url': "/api/pokemon/cry/charizard"
+                'cry_url': f"{base_url}/api/pokemon/cry/charizard"
             },
             'player_moves': [{
                 'name': move.name,
