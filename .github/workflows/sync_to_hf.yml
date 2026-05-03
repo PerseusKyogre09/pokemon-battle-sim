@@ -1,0 +1,22 @@
+name: Sync to Hugging Face Hub
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: false # Set to true if you ever use large files
+
+      - name: Push to Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Push the master branch to HF's main branch
+          git push --force "https://PerseusKyogre:$HF_TOKEN@huggingface.co/spaces/PerseusKyogre/Pokemon-Battle-Sim" master:main
