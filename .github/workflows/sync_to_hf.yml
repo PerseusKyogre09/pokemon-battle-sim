@@ -18,5 +18,21 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Push the master branch to HF's main branch
-          git push --force "https://PerseusKyogre:$HF_TOKEN@huggingface.co/spaces/PerseusKyogre/Pokemon-Battle-Sim" master:main
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          
+          # Create a clean orphan branch to avoid history issues
+          git checkout --orphan hf-deploy
+          
+          # Remove everything we don't want in the backend space
+          git rm -rf --cached . 
+          
+          # Add only the necessary backend files
+          git add fastapi_server.py game.py data_loader.py moveset.py pokemon.py \
+                  pokemon_utils.py priority_system.py status_effects.py move.py \
+                  fetcher.py requirements.txt Dockerfile README.md datasets/ moves/ gen8_stats_sets.json
+          
+          git commit -m "Automated clean sync from GitHub"
+          
+          # Force push to HF main
+          git push --force "https://PerseusKyogre:$HF_TOKEN@huggingface.co/spaces/PerseusKyogre/Pokemon-Battle-Sim" hf-deploy:main
