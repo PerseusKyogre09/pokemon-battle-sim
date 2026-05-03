@@ -217,20 +217,18 @@ export default function BattlePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center text-white overflow-hidden relative font-retro">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      
+    <div className="min-h-screen bg-[#020617] text-white overflow-hidden relative font-retro flex flex-col">
       {showFlash && <div className="absolute inset-0 z-[100] animate-flash" />}
 
       {showStartOverlay && (
         <div className="absolute inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full text-center space-y-8">
-            <h2 className="text-2xl text-[#f8d030] uppercase tracking-[0.2em] animate-pulse" style={{ textShadow: '4px 4px 0 #404040' }}>
+            <h2 className="text-2xl text-[#f8d030] uppercase tracking-[0.2em] animate-pulse" style={{ textShadow: '4px 4px 0 #000' }}>
               Battle Ready?
             </h2>
             <button 
               onClick={handleStartBattle}
-              className="gba-box w-full py-6 text-xl hover:bg-[#ffffeb] transition-colors uppercase tracking-widest"
+              className="gba-box w-full py-6 text-xl hover:bg-[#2d3a4d] transition-colors uppercase tracking-widest text-white"
             >
               START BATTLE
             </button>
@@ -238,150 +236,158 @@ export default function BattlePage() {
         </div>
       )}
 
-      <main className="container mx-auto h-screen flex flex-col relative z-10 max-w-4xl pt-8">
+      {/* MAIN SHOWDOWN-STYLE LAYOUT */}
+      <main className="flex-1 flex h-screen overflow-hidden p-4 gap-4">
         
-        {/* TOP SECTION: Opponent Status (Left) & Sprite (Right) */}
-        <div className="relative h-[40%] w-full">
-          {/* Opponent Status Box - Top Left */}
-          <div className="absolute top-4 left-0">
-            <PokemonCard
-              name={battleState.opponent_pokemon.name}
-              sprite={battleState.opponent_pokemon.sprite}
-              currentHp={battleState.opponent_pokemon.current_hp}
-              maxHp={battleState.opponent_pokemon.max_hp}
-              level={100}
-              types={battleState.opponent_pokemon.types}
-              isOpponent
-              showStatus={opponentAnim.status}
-              layout="status-only"
-            />
-          </div>
+        {/* LEFT COLUMN: Visuals & Moves */}
+        <div className="flex-[2] flex flex-col gap-4">
           
-          {/* Opponent Sprite - Top Right */}
-          <div className="absolute top-0 right-10">
-            <PokemonCard
-              name={battleState.opponent_pokemon.name}
-              sprite={battleState.opponent_pokemon.sprite}
-              currentHp={battleState.opponent_pokemon.current_hp}
-              maxHp={battleState.opponent_pokemon.max_hp}
-              level={100}
-              types={battleState.opponent_pokemon.types}
-              isOpponent
-              isVisible={opponentAnim.visible}
-              isShaking={opponentAnim.shaking}
-              isAttacking={opponentAnim.attacking}
-              isFainted={opponentAnim.fainted}
-              layout="sprite-only"
-            />
-          </div>
-        </div>
+          {/* BATTLE ARENA (Smaller defined area) */}
+          <div className="relative flex-1 bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 border-[#475569] rounded-xl overflow-hidden gba-panel-shadow">
+            <div className="absolute inset-0 bg-black/40" />
+            
+            {/* Turn Counter Overlay */}
+            <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 border-2 border-white/10 text-[10px] text-yellow-500 z-20">
+              TURN {events.filter(e => e.includes('used')).length + 1}
+            </div>
 
-        {/* MIDDLE SECTION: Player Sprite (Left) & Status (Right) */}
-        <div className="relative h-[40%] w-full">
-          {/* Player Sprite - Bottom Left */}
-          <div className="absolute bottom-0 left-10">
-            <PokemonCard
-              name={battleState.player_pokemon.name}
-              sprite={battleState.player_pokemon.sprite}
-              currentHp={battleState.player_pokemon.current_hp}
-              maxHp={battleState.player_pokemon.max_hp}
-              level={100}
-              types={battleState.player_pokemon.types}
-              isVisible={playerAnim.visible}
-              isShaking={playerAnim.shaking}
-              isAttacking={playerAnim.attacking}
-              isFainted={playerAnim.fainted}
-              layout="sprite-only"
-              flip={false}
-            />
+            {/* TOP SECTION: Opponent Status (Left) & Sprite (Right) */}
+            <div className="absolute top-8 left-0 right-0 h-[40%] px-8">
+              <div className="absolute top-0 left-8">
+                <PokemonCard
+                  name={battleState.opponent_pokemon.name}
+                  sprite={battleState.opponent_pokemon.sprite}
+                  currentHp={battleState.opponent_pokemon.current_hp}
+                  maxHp={battleState.opponent_pokemon.max_hp}
+                  level={100}
+                  types={battleState.opponent_pokemon.types}
+                  isOpponent
+                  showStatus={opponentAnim.status}
+                  layout="status-only"
+                />
+              </div>
+              <div className="absolute top-0 right-16">
+                <PokemonCard
+                  name={battleState.opponent_pokemon.name}
+                  sprite={battleState.opponent_pokemon.sprite}
+                  currentHp={battleState.opponent_pokemon.current_hp}
+                  maxHp={battleState.opponent_pokemon.max_hp}
+                  level={100}
+                  types={battleState.opponent_pokemon.types}
+                  isOpponent
+                  isVisible={opponentAnim.visible}
+                  isShaking={opponentAnim.shaking}
+                  isAttacking={opponentAnim.attacking}
+                  isFainted={opponentAnim.fainted}
+                  layout="sprite-only"
+                />
+              </div>
+            </div>
+
+            {/* MIDDLE SECTION: Player Sprite (Left) & Status (Right) */}
+            <div className="absolute bottom-8 left-0 right-0 h-[40%] px-8">
+              <div className="absolute bottom-0 left-16">
+                <PokemonCard
+                  name={battleState.player_pokemon.name}
+                  sprite={battleState.player_pokemon.sprite}
+                  currentHp={battleState.player_pokemon.current_hp}
+                  maxHp={battleState.player_pokemon.max_hp}
+                  level={100}
+                  types={battleState.player_pokemon.types}
+                  isVisible={playerAnim.visible}
+                  isShaking={playerAnim.shaking}
+                  isAttacking={playerAnim.attacking}
+                  isFainted={playerAnim.fainted}
+                  layout="sprite-only"
+                  flip={false}
+                />
+              </div>
+              <div className="absolute bottom-0 right-8">
+                <PokemonCard
+                  name={battleState.player_pokemon.name}
+                  sprite={battleState.player_pokemon.sprite}
+                  currentHp={battleState.player_pokemon.current_hp}
+                  maxHp={battleState.player_pokemon.max_hp}
+                  level={100}
+                  types={battleState.player_pokemon.types}
+                  showStatus={playerAnim.status}
+                  layout="status-only"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Player Status Box - Bottom Right */}
-          <div className="absolute bottom-4 right-0">
-            <PokemonCard
-              name={battleState.player_pokemon.name}
-              sprite={battleState.player_pokemon.sprite}
-              currentHp={battleState.player_pokemon.current_hp}
-              maxHp={battleState.player_pokemon.max_hp}
-              level={100}
-              types={battleState.player_pokemon.types}
-              showStatus={playerAnim.status}
-              layout="status-only"
-            />
-          </div>
-        </div>
-
-        {/* BOTTOM SECTION: GBA Control Panel */}
-        <div className="h-[20%] w-full grid grid-cols-1 md:grid-cols-5 gap-0 mt-auto border-t-4 border-black">
-          {/* Text/Log Area */}
-          <div className="md:col-span-3 h-full">
-            <BattleLog events={events} />
-          </div>
-
-            {/* Move Selection Area */}
-            <div className="md:col-span-2 h-full gba-box rounded-none border-l-0 flex flex-col justify-center relative">
-              {gameOver ? (
-                <div className="flex flex-col items-center justify-center h-full p-2">
-                  <p className="text-[10px] text-gray-700 uppercase mb-2">{gameOver}</p>
-                  <button 
-                    onClick={() => router.push('/')}
-                    className="w-full py-2 bg-gray-700 border-2 border-gray-600 text-[10px] uppercase text-white hover:bg-gray-600"
-                  >
-                    RETRY
-                  </button>
+          {/* MOVE SELECTION AREA (Below Arena) */}
+          <div className="h-48 gba-box flex flex-col justify-center relative gba-panel-shadow">
+            {gameOver ? (
+              <div className="flex flex-col items-center justify-center h-full p-4">
+                <p className="text-xl text-yellow-500 uppercase mb-4 tracking-widest animate-pulse">{gameOver}</p>
+                <button 
+                  onClick={() => router.push('/')}
+                  className="px-12 py-3 bg-red-900/40 border-4 border-red-800 text-white text-xs uppercase hover:bg-red-800 transition-colors"
+                >
+                  RETURN TO HOME
+                </button>
+              </div>
+            ) : (
+              <div className="flex h-full">
+                {/* Left: Move Grid */}
+                <div className="w-[70%] grid grid-cols-2 gap-x-2 gap-y-4 p-6 items-center border-r-4 border-[#0f172a]">
+                  {battleState.player_moves.map(move => (
+                    <button
+                      key={move.name}
+                      onClick={() => handleMove(move.name)}
+                      onMouseEnter={() => setHoveredMove(move)}
+                      onMouseLeave={() => setHoveredMove(null)}
+                      disabled={isProcessing || move.pp <= 0 || battleStage !== 'active'}
+                      className={`text-left text-[12px] uppercase group flex items-center gap-3
+                        ${isProcessing || battleStage !== 'active' ? 'opacity-50' : 'hover:text-red-400'}
+                      `}
+                    >
+                      <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[8px] border-l-red-500 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent" />
+                      {move.name.replace('-', ' ')}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex h-full">
-                  {/* Left: Move Grid */}
-                  <div className="w-[65%] grid grid-cols-2 gap-x-1 gap-y-4 p-3 items-center border-r-2 border-white/5">
-                    {battleState.player_moves.map(move => (
-                      <button
-                        key={move.name}
-                        onClick={() => handleMove(move.name)}
-                        onMouseEnter={() => setHoveredMove(move)}
-                        onMouseLeave={() => setHoveredMove(null)}
-                        disabled={isProcessing || move.pp <= 0 || battleStage !== 'active'}
-                        className={`text-left text-[10px] uppercase group flex items-center gap-1
-                          ${isProcessing || battleStage !== 'active' ? 'opacity-50' : 'hover:text-red-400'}
-                        `}
-                      >
-                        <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[6px] border-l-red-500 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent" />
-                        {move.name.replace('-', ' ')}
-                      </button>
-                    ))}
-                  </div>
 
-                  {/* Right: Info & Forfeit */}
-                  <div className="w-[35%] flex flex-col">
-                    {/* PP/Type Info (Fixed, not overlay) */}
-                    <div className="flex-1 p-3 flex flex-col justify-center gap-3 border-b-2 border-white/5">
-                      <div className="flex flex-col">
-                        <span className="text-gray-500 text-[7px] uppercase mb-1">PP</span>
-                        <span className="text-white text-[10px]">{hoveredMove ? `${hoveredMove.pp}/${hoveredMove.max_pp}` : '--/--'}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-gray-500 text-[7px] uppercase mb-1">TYPE</span>
-                        <span className={`text-[8px] px-1 py-0.5 rounded-sm text-center ${hoveredMove ? `type-${hoveredMove.type.toLowerCase()}` : 'bg-gray-800 text-gray-600'}`}>
+                {/* Right: Info & Run */}
+                <div className="w-[30%] flex flex-col bg-black/20">
+                  <div className="flex-1 p-4 flex flex-col justify-center gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-gray-500 text-[8px] uppercase mb-1">Move Detail</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white text-[12px]">{hoveredMove ? `${hoveredMove.pp}/${hoveredMove.max_pp} PP` : '--/--'}</span>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-sm ${hoveredMove ? `type-${hoveredMove.type.toLowerCase()}` : 'bg-gray-800 text-gray-600'}`}>
                           {hoveredMove ? hoveredMove.type : '--'}
                         </span>
                       </div>
                     </div>
-                    
-                    {/* Forfeit button */}
-                    <div className="h-[30%] flex items-center justify-center p-2">
-                      <button 
-                        onClick={() => confirm('Forfeit?') && router.push('/')}
-                        className="text-[8px] uppercase text-gray-500 hover:text-white transition-colors group flex items-center gap-1"
-                      >
-                        <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[4px] border-l-white border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent" />
-                        RUN
-                      </button>
-                    </div>
                   </div>
+                  
+                  <button 
+                    onClick={() => confirm('Forfeit?') && router.push('/')}
+                    className="h-12 border-t-4 border-[#0f172a] text-[10px] uppercase text-gray-500 hover:text-white transition-colors flex items-center justify-center gap-2 group"
+                  >
+                    <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[6px] border-l-white border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent" />
+                    RUN BATTLE
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* RIGHT COLUMN: Battle Log (Full height like Showdown) */}
+        <div className="flex-1 h-full min-w-[320px] flex flex-col gap-2">
+          <div className="px-2 text-gray-500 text-[10px] uppercase tracking-widest flex justify-between">
+            <span>Battle Log</span>
+            <span className="animate-pulse text-green-500">LIVE</span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <BattleLog events={events} />
+          </div>
+        </div>
+
       </main>
     </div>
   );
