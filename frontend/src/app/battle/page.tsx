@@ -219,7 +219,7 @@ export default function BattlePage() {
               isAttacking={opponentAnim.attacking}
               isFainted={opponentAnim.fainted}
               layout="sprite-only"
-              flip={true}
+              flip={false}
             />
           </div>
         </div>
