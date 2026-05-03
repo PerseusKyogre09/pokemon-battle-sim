@@ -130,22 +130,6 @@ class Pokemon:
         self.current_hp = min(self.max_hp, self.current_hp + amount)
 
     def get_stat_stage_multiplier(self, stage):
-        
-        Returns the standard Pokemon stat stage multiplier:
-        Stage -6: 2/8 = 0.25 (25%)
-        Stage -5: 2/7 ≈ 0.286 (28.6%)
-        Stage -4: 2/6 ≈ 0.333 (33.3%)
-        Stage -3: 2/5 = 0.4 (40%)
-        Stage -2: 2/4 = 0.5 (50%)
-        Stage -1: 2/3 ≈ 0.667 (66.7%)
-        Stage 0: 2/2 = 1.0 (100%)
-        Stage +1: 3/2 = 1.5 (150%)
-        Stage +2: 4/2 = 2.0 (200%)
-        Stage +3: 5/2 = 2.5 (250%)
-        Stage +4: 6/2 = 3.0 (300%)
-        Stage +5: 7/2 = 3.5 (350%)
-        Stage +6: 8/2 = 4.0 (400%)
-        """
         stage = max(-6, min(6, stage))
         
         if stage >= 0:
