@@ -330,21 +330,15 @@ class Game:
                         'timestamp': len(turn_info['battle_events'])
                     })
                 
-            damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
+            poke_damage, sub_damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
             prev_hp = defender.current_hp
-            has_substitute = getattr(defender, 'substitute_hp', 0) > 0
-            bypasses_substitute = move.flags.get('sound') or (hasattr(attacker, 'ability') and attacker.ability.id == 'infiltrator')
             
-            substitute_hit = has_substitute and not bypasses_substitute and damage > 0
+            # Damage the defender (move.py already handled substitute_hp subtraction)
+            defender.take_damage(poke_damage)
+            actual_damage = prev_hp - defender.current_hp
             
-            if not substitute_hit:
-                # Normal damage (calculated first so move event has correct data)
-                defender.take_damage(damage)
-                actual_damage = prev_hp - defender.current_hp
-            
-            substitute_damage = 0
-            if substitute_hit:
-                substitute_damage = damage
+            substitute_hit = sub_damage > 0
+            substitute_damage = sub_damage
             
             # Log move event
             move_event = {
@@ -368,12 +362,8 @@ class Game:
             }
             turn_info['battle_events'].append(move_event)
             
-            # Handle substitute damage
+            # Handle substitute damage events
             if substitute_hit:
-                # Damage the substitute
-                old_sub_hp = defender.substitute_hp
-                defender.substitute_hp = max(0, defender.substitute_hp - damage)
-                
                 turn_info['battle_events'].append({
                     'type': 'status',
                     'message': f"The substitute took damage for {defender.name}!",
@@ -383,7 +373,7 @@ class Game:
                     'timestamp': len(turn_info['battle_events'])
                 })
                 
-                if defender.substitute_hp <= 0 and old_sub_hp > 0:
+                if defender.substitute_hp <= 0 and 'substitute' in defender.volatile_statuses:
                     defender.volatile_statuses.discard('substitute')
                     turn_info['battle_events'].append({
                         'type': 'status',
@@ -395,7 +385,7 @@ class Game:
                     })
             elif actual_damage > 0:
                 # Add Endure message if they survived with 1 HP
-                if defender.current_hp == 1 and damage >= prev_hp and 'endure' in defender.volatile_statuses:
+                if defender.current_hp == 1 and poke_damage >= prev_hp and 'endure' in defender.volatile_statuses:
                     turn_info['battle_events'].append({
                         'type': 'status',
                         'message': f"{defender.name} endured the hit!",

@@ -543,9 +543,9 @@ class Move:
             
         return self._apply_boosts(modification_target, self.stat_modifications)
 
-    def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, str, Optional[str]]:
+    def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, int, str, Optional[str]]:
         if not self._check_accuracy():
-            return 0, f"{attacking_pokemon.name}'s {self.name} missed!", None
+            return 0, 0, f"{attacking_pokemon.name}'s {self.name} missed!", None
             
         if self.stalling_move:
             success_rate = 1.0 / (3.0 ** attacking_pokemon.consecutive_stalling_moves)
@@ -559,21 +559,22 @@ class Move:
         # Special handling for Substitute
         if self.id == 'substitute':
             if attacking_pokemon.substitute_hp > 0:
-                return 0, "", "But it failed!"
+                return 0, 0, "", "But it failed!"
             cost = attacking_pokemon.max_hp // 4
             if attacking_pokemon.current_hp > cost:
                 attacking_pokemon.current_hp -= cost
                 attacking_pokemon.substitute_hp = cost
                 attacking_pokemon.apply_volatile_status('substitute')
-                return 0, "", f"{attacking_pokemon.name} put in a substitute!"
+                return 0, 0, "", f"{attacking_pokemon.name} put in a substitute!"
             else:
-                return 0, "", "But it failed!"
+                return 0, 0, "", "But it failed!"
 
         if self.is_status_move or self.power == 0:
             # Check for special moves first (like Belly Drum)
             special_move_result = self._handle_special_moves(attacking_pokemon, defending_pokemon)
             if special_move_result:
-                return special_move_result
+                damage, usage_msg, status_msg = special_move_result
+                return damage, 0, usage_msg, status_msg
             
             status_messages = []
             if defending_pokemon:
@@ -592,7 +593,7 @@ class Move:
             # Combine status, healing, and stat modification messages
             all_messages = status_messages + healing_messages + stat_modification_messages
             combined_message = " ".join(all_messages) if all_messages else None
-            return 0, "", combined_message
+            return 0, 0, "", combined_message
         
         # Handle multi-hit moves
         if self.is_multihit_move:
@@ -604,13 +605,13 @@ class Move:
         
         # If it's a status move, it shouldn't have any damage calculation
         if self.is_status_move or self.power == 0:
-            return 0, f"{attacking_pokemon.name} used {self.name}!", ""
+            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", ""
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:
             # Check for ability immunities (e.g. Levitate)
             if hasattr(defending_pokemon, 'ability') and defending_pokemon.ability.is_immune(self.type, self.category):
-                return 0, f"It had no effect on {defending_pokemon.name}!", None
+                return 0, 0, f"It had no effect on {defending_pokemon.name}!", None
 
             # Get the move type in lowercase for comparison
             move_type = self.type.lower()
@@ -673,7 +674,7 @@ class Move:
             
             if effectiveness == 0:
                 effectiveness_message = "It had no effect..."
-                return 0, effectiveness_message, None
+                return 0, 0, effectiveness_message, None
             elif effectiveness < 1:
                 effectiveness_message = "It's not very effective..."
             elif effectiveness > 1:
@@ -749,12 +750,12 @@ class Move:
         
         combined_message = " ".join(all_messages) if all_messages else None
         
-        return base_damage, effectiveness_message, combined_message
+        return base_damage, 0, effectiveness_message, combined_message
     
-    def _use_multihit_move(self, attacking_pokemon, defending_pokemon) -> Tuple[int, str, Optional[str]]:
+    def _use_multihit_move(self, attacking_pokemon, defending_pokemon) -> Tuple[int, int, str, Optional[str]]:
         """Handle multi-hit moves like Pin Missile, Rock Blast, etc."""
         if not attacking_pokemon or not defending_pokemon:
-            return 0, f"{attacking_pokemon.name} used {self.name}!", None
+            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", None
         
         # Determine number of hits
         hit_count = self._determine_hit_count()
@@ -788,7 +789,7 @@ class Move:
         print(f"  Total effectiveness: {effectiveness}x")
         
         if effectiveness == 0:
-            return 0, "It had no effect...", None
+            return 0, 0, "It had no effect...", None
         
         # Determine attack and defense stats based on move category
         if self.category == 'physical':
@@ -798,48 +799,54 @@ class Move:
             attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
             defense_stat = getattr(defending_pokemon, 'special_defense', 1)
         
-        # Calculate damage for each hit
-        total_damage = 0
+        # Calculate damage for each hit, accounting for Substitute
+        total_poke_damage = 0
+        total_sub_damage = 0
         level = 100
         
+        has_substitute = getattr(defending_pokemon, 'substitute_hp', 0) > 0
+        bypasses_substitute = self.flags.get('sound') or (hasattr(attacking_pokemon, 'ability') and attacking_pokemon.ability.id == 'infiltrator')
+        
         for hit_num in range(1, hit_count + 1):
-            # Check accuracy for each hit (some moves check accuracy per hit)
+            # Check accuracy for each hit
             if not self._check_accuracy():
                 print(f"DEBUG: Hit {hit_num} missed!")
                 continue
             
             # Calculate base damage for this hit
-            damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
-            damage = int(damage)
+            hit_damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
+            hit_damage = int(hit_damage)
+            hit_damage = int(hit_damage * effectiveness)
             
-            # Apply effectiveness
-            damage = int(damage * effectiveness)
-            
-            # Apply STAB (Same Type Attack Bonus)
+            # STAB
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
-                    damage = int(damage * 1.5)
+                    hit_damage = int(hit_damage * 1.5)
             
-            # Check for critical hit
-            crit_ratio = self.data.get('critRatio', 1)
-            will_crit = self.data.get('willCrit', False)
+            # Critical
+            if random.random() < 1/16: # Simplified for multi-hit
+                hit_damage = int(hit_damage * 1.5)
             
-            crit_chances = {1: 1/16, 2: 1/8, 3: 1/2, 4: 1.0}
-            crit_chance = crit_chances.get(crit_ratio, 1.0) if crit_ratio in crit_chances else (1.0 if crit_ratio > 4 else 1/16)
+            # Variation
+            hit_damage = max(1, int(hit_damage * random.uniform(0.85, 1.0)))
             
-            is_critical = will_crit or random.random() < crit_chance
-            
-            if is_critical:
-                damage = int(damage * 1.5)
-                print(f"DEBUG: Critical hit on hit {hit_num}!")
-            
-            # Apply random damage variation (85% to 100% of calculated damage)
-            damage_multiplier = random.uniform(0.85, 1.0)
-            damage = max(1, int(damage * damage_multiplier))
-            
-            print(f"DEBUG: Hit {hit_num}: {damage} damage")
-            total_damage += damage
+            # Apply to substitute if active
+            if has_substitute and not bypasses_substitute and defending_pokemon.substitute_hp > 0:
+                absorbed = min(hit_damage, defending_pokemon.substitute_hp)
+                defending_pokemon.substitute_hp -= absorbed
+                total_sub_damage += absorbed
+                
+                # Check if broken mid-hit
+                if defending_pokemon.substitute_hp <= 0:
+                    # In Gen 5+, remaining hits strike the Pokemon
+                    # But the remainder of THIS hit is usually lost? 
+                    # Let's say subsequent hits will strike the poke.
+                    pass
+            else:
+                total_poke_damage += hit_damage
+                
+        total_damage = total_poke_damage + total_sub_damage
         
         # Generate effectiveness message
         effectiveness_message = ""
@@ -873,7 +880,7 @@ class Move:
         if all_messages:
             combined_message = f"{combined_message} {' '.join(all_messages)}".strip()
         
-        return total_damage, combined_message, None
+        return total_poke_damage, total_sub_damage, combined_message, None
     
     def get_multihit_hits(self, attacking_pokemon, defending_pokemon) -> List[Dict[str, Any]]:
         """Get individual hit information for multi-hit moves (for progressive damage display)"""

@@ -1,7 +1,7 @@
 from move import Move
 from data_loader import data_loader
 from status_effects import StatusEffect, BurnStatusEffect, ParalysisStatusEffect, FreezeStatusEffect, SleepStatusEffect, PoisonStatusEffect, StatusType
-from abilities import create_ability
+from ability_system import create_ability
 import random
 
 class Pokemon:

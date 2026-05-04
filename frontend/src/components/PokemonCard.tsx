@@ -59,9 +59,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     const majorStatus = status_effects.find(s => s.is_major);
     const filter = majorStatus ? statusFilters[majorStatus.type] : '';
     
-    const displaySprite = hasSubstitute 
-      ? (isOpponent ? '/images/substitute/sub_front.png' : '/images/substitute/sub_back.png')
-      : sprite;
+    const subSprite = isOpponent ? '/images/substitute/sub_front.png' : '/images/substitute/sub_back.png';
     
     return (
       <div className={`relative group transition-all duration-500 flex flex-col items-center
@@ -73,16 +71,30 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
         {/* GBA Battle Pod (Dark) */}
         <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
         
-        <img 
-          src={displaySprite} 
-          alt={name} 
-          className={`w-36 h-36 md:w-56 md:h-56 object-contain relative z-10 
-            ${flip ? 'scale-x-[-1]' : ''}
-            drop-shadow-lg
-            ${hasSubstitute ? 'scale-90 brightness-110' : ''}
-          `}
-          style={{ filter: filter || undefined }}
-        />
+        <div className="relative w-36 h-36 md:w-56 md:h-56 z-10 flex items-center justify-center">
+          {/* Base Sprite */}
+          <img 
+            src={sprite} 
+            alt={name} 
+            className={`w-full h-full object-contain absolute inset-0 transition-all duration-500
+              ${flip ? 'scale-x-[-1]' : ''}
+              ${hasSubstitute ? 'opacity-0 scale-75 blur-sm' : 'opacity-100 scale-100'}
+              drop-shadow-lg
+            `}
+            style={{ filter: filter || undefined }}
+          />
+          
+          {/* Substitute Sprite */}
+          <img 
+            src={subSprite} 
+            alt="Substitute" 
+            className={`w-full h-full object-contain absolute inset-0 transition-all duration-500
+              ${flip ? 'scale-x-[-1]' : ''}
+              ${hasSubstitute ? 'opacity-100 scale-100' : 'opacity-0 scale-125 blur-md'}
+              drop-shadow-lg
+            `}
+          />
+        </div>
         
         {/* Status Sparkles/Effects Overlay */}
         {majorStatus?.type === 'paralysis' && (
