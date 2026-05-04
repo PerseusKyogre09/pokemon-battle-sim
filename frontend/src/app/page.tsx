@@ -17,8 +17,10 @@ export default function Home() {
   const [selectedOpponent, setSelectedOpponent] = useState('random');
   const [opponentSearch, setOpponentSearch] = useState('');
   const [isRandomOpponent, setIsRandomOpponent] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Safety: stop any leftover battle audio on mount
@@ -56,30 +58,45 @@ export default function Home() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleSearch = async (val: string) => {
     setQuery(val);
-    console.log('Typing:', val); // Debug to ensure typing works
-    if (val.length > 1) {
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (val.length < 2) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+    
+    // Debounce search by 300ms to reduce API calls
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
       try {
         const data = await searchPokemon(val);
-        if (data.success) {
+        if (data.success && data.results) {
           setSuggestions(data.results);
         } else {
-          // Fallback to basic pokeapi search if backend fails
-          const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=2000`);
-          const pokeData = await response.json();
-          const matches = pokeData.results.filter((p: any) => p.name.includes(val.toLowerCase())).slice(0, 8);
-          setSuggestions(matches);
+          setSuggestions([]);
         }
       } catch (err) {
         console.error('Search error:', err);
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
       }
-    } else {
-      setSuggestions([]);
-    }
+    }, 300);
   };
 
   const selectPokemon = async (name: string) => {
@@ -91,6 +108,9 @@ export default function Home() {
       const data = await response.json();
       setSelectedPokemon(data);
 
+      // Get primary ability from PokeAPI
+      const primaryAbility = data.abilities[0]?.ability?.name?.replace('-', ' ')?.toUpperCase() || 'UNKNOWN';
+
       const [speciesRes, setsRes] = await Promise.all([
         fetch(`https://pokeapi.co/api/v2/pokemon-species/${data.id}/`).then(res => res.json()),
         getAllSets(name)
@@ -100,11 +120,17 @@ export default function Home() {
       setPokedexEntry(entry ? entry.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ') : '');
 
       if (setsRes.success && setsRes.sets.length > 0) {
-        setAvailableSets(setsRes.sets);
+        // Add ability to each set
+        const setsWithAbility = setsRes.sets.map((set: any) => ({
+          ...set,
+          ability: primaryAbility
+        }));
+        setAvailableSets(setsWithAbility);
       } else {
         const movesRes = await getMoveset(name);
         setAvailableSets([{
           set_name: 'Default Set',
+          ability: primaryAbility,
           moves: movesRes.moves || ['tackle', 'growl']
         }]);
       }
@@ -184,17 +210,39 @@ export default function Home() {
             </div>
           </div>
 
-          {suggestions.length > 0 && (
+          {(suggestions.length > 0 || isSearching) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border-4 border-gray-800 overflow-hidden shadow-2xl z-40 animate-in fade-in slide-in-from-top-2">
-              {suggestions.map((p) => (
-                <button
-                  key={p.name}
-                  onClick={() => selectPokemon(p.name)}
-                  className="w-full text-left px-6 py-3 hover:bg-yellow-500 hover:text-gray-900 transition-colors capitalize font-retro text-[10px] border-b-2 border-gray-800 last:border-0"
-                >
-                  {p.name}
-                </button>
-              ))}
+              {isSearching ? (
+                <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
+                  Searching...
+                </div>
+              ) : suggestions.length > 0 ? (
+                suggestions.map((p) => (
+                  <button
+                    key={p.name}
+                    onClick={() => selectPokemon(p.name)}
+                    className="w-full text-left px-4 py-3 hover:bg-yellow-500 hover:text-gray-900 transition-colors capitalize font-retro text-[9px] border-b-2 border-gray-800 last:border-0 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-bold text-[10px] mb-0.5">{p.name}</div>
+                        <div className="text-gray-400 group-hover:text-gray-700 text-[8px] space-x-2">
+                          <span>Ability: {p.ability || 'Unknown'}</span>
+                        </div>
+                        {p.moveset && (
+                          <div className="text-gray-500 group-hover:text-gray-700 text-[8px] mt-1 truncate">
+                            Moves: {p.moveset.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
+                  No battle-ready Pok&eacute;mon found
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -273,6 +321,10 @@ export default function Home() {
                   <p className="text-gray-500 text-[8px] md:text-sm uppercase tracking-widest">{availableSets[currentSetIndex]?.format || 'Standard'}</p>
                 </div>
 
+                  <div className="mb-4">
+                  <p className="text-yellow-500 font-bold uppercase text-[8px] md:text-[9px] tracking-widest mb-2">Primary Ability</p>
+                  <p className="text-white text-[10px] md:text-sm font-medium">{availableSets[currentSetIndex]?.ability || 'Unknown'}</p>
+                </div>
                 <div className="grid grid-cols-2 gap-2 md:gap-3">
                   {availableSets[currentSetIndex]?.moves.map((move: string) => (
                     <div key={move} className="bg-white/5 border border-white/10 px-3 py-2 md:px-4 md:py-3 rounded-xl text-[9px] md:text-sm font-medium capitalize truncate">

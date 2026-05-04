@@ -192,32 +192,40 @@ def get_pokemon_moves(pokemon_data):
 
 @app.get("/api/search-pokemon")
 async def search_pokemon(q: str = ""):
+    """Fast search limited to battle-ready Pokemon with movesets."""
     query = q.lower()
-    if not query:
-        return []
+    if not query or len(query) < 2:
+        return {"success": False, "results": []}
     
     try:
-        response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{query}')
-        if response.status_code == 200:
-            pokemon = response.json()
-            return [{
-                'name': pokemon['name'],
-                'sprite': pokemon['sprites']['front_default'],
-                'types': [t['type']['name'] for t in pokemon['types']]
-            }]
-    except:
-        pass
-    
-    try:
-        response = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1000')
-        if response.status_code == 200:
-            data = response.json()
-            matches = [p for p in data['results'] if query in p['name']][:5]
-            return [{'name': p['name']} for p in matches]
+        # Use battle-ready list for faster, filtered search
+        battle_ready = get_battle_ready_pokemon_list()
+        matches = [p for p in battle_ready if query in p.lower()][:8]
+        
+        results = []
+        for pokemon_name in matches:
+            try:
+                # Get pokemon data for ability
+                pokemon_data = get_pokemon_data(pokemon_name)
+                ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
+                
+                # Get strategic moveset
+                moveset = get_strategic_moveset(pokemon_name, debug=False)
+                
+                results.append({
+                    'name': pokemon_name,
+                    'ability': ability_name.replace('-', ' ').title(),
+                    'moveset': moveset[:4] if moveset else ['Tackle'],
+                    'has_sets': bool(moveset)
+                })
+            except:
+                # Skip Pokemon that fail to load
+                continue
+        
+        return {"success": True, "results": results}
     except Exception as e:
         print(f"Error searching Pokémon: {e}")
-    
-    return []
+        return {"success": False, "results": []}
 
 @app.get("/api/get_moveset/{pokemon_name}")
 async def get_moveset(pokemon_name: str):
@@ -252,6 +260,38 @@ async def get_all_sets(pokemon_name: str):
         return {'success': False, 'error': 'No sets found'}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/search-pokemon-optimized")
+async def search_pokemon_optimized(q: str = ""):
+    """Ultra-fast search using pre-cached battle-ready list."""
+    query = q.lower()
+    if not query or len(query) < 2:
+        return {"success": False, "results": []}
+    
+    try:
+        battle_ready = get_battle_ready_pokemon_list()
+        matches = [p for p in battle_ready if query in p.lower()][:8]
+        
+        results = []
+        for pokemon_name in matches:
+            try:
+                pokemon_data = get_pokemon_data(pokemon_name)
+                ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
+                moveset = get_strategic_moveset(pokemon_name, debug=False)
+                
+                results.append({
+                    'name': pokemon_name,
+                    'ability': ability_name.replace('-', ' ').title(),
+                    'moveset': moveset[:4] if moveset else ['Tackle'],
+                    'has_sets': bool(moveset)
+                })
+            except:
+                continue
+        
+        return {"success": True, "results": results}
+    except Exception as e:
+        print(f"Error in optimized search: {e}")
+        return {"success": False, "results": []}
 
 @app.get("/api/battle-ready-pokemon")
 async def get_battle_ready_list():
