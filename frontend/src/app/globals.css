@@ -171,3 +171,81 @@ body {
 .animate-ability-out-opponent {
   animation: ability-slide-out-opponent 0.4s cubic-bezier(0.64, 0, 0.78, 0) forwards;
 }
+
+/* Premium Builder Styles */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.builder-input {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.builder-input:focus {
+  border-color: #eab308;
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.2);
+}
+
+/* Custom Range Slider */
+input[type="range"].stat-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+}
+
+input[type="range"].stat-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+input[type="range"].stat-slider::-webkit-slider-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #eab308;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -5px;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+  border: 2px solid #1e293b;
+}
+
+/* Stat Bars */
+.stat-bar-bg {
+  height: 8px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-bar-fill {
+  height: 100%;
+}
+
+.glow-yellow {
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+}
+
+.glow-type {
+  filter: drop-shadow(0 0 8px var(--type-color));
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

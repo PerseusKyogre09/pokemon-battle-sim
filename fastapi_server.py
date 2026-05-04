@@ -163,6 +163,43 @@ POKEAPI_NAME_MAP = {
     'mrrime': 'mr-rime',
     'mr-rime': 'mr-rime',
 }
+def get_best_sprite(data, side='front', shiny=False):
+    """Prioritize Gen 5 animated, then Showdown animated, then fallbacks."""
+    pokemon_name = data.get('name', '').lower()
+    sprites = data.get('sprites', {})
+    versions = sprites.get('versions', {})
+    gen5 = versions.get('generation-v', {}).get('black-white', {})
+    animated = gen5.get('animated', {})
+    
+    key = f"{side}_{'shiny' if shiny else 'default'}"
+    
+    # 1. Try PokeAPI Gen 5 Animated
+    url = animated.get(key)
+    if url: return url
+    
+    # 2. Try Pokemon Showdown Animated (Excellent for Gen 6+ Pixel Art)
+    # The user pointed out that 'gen5ani-back' is the correct folder for these custom sprites
+    sd_side = "gen5ani-back" if side == 'back' else "gen5ani"
+    if shiny:
+        sd_side += "-shiny"
+    
+    # Showdown URL format
+    sd_url = f"https://play.pokemonshowdown.com/sprites/{sd_side}/{pokemon_name}.gif"
+    
+    # We return this as a high-priority fallback for newer Pokémon
+    if data.get('id', 0) > 649:
+        return sd_url
+
+    # 3. Try PokeAPI Gen 5 Static
+    url = gen5.get(key)
+    if url: return url
+    
+    # 4. Try Modern/Default
+    url = sprites.get(key)
+    if url: return url
+    
+    # 5. Absolute Fallback (Front Default)
+    return sprites.get('front_default', '')
 
 def get_pokemon_data(pokemon_name):
     normalized_name = pokemon_name.lower().replace(' ', '')
@@ -350,8 +387,9 @@ async def start_game(request: Request):
             player_ability=player_ability, opponent_ability=opponent_ability
         )
         
-        player_sprite = game_instance.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
-        opponent_sprite = game_instance.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
+        is_shiny = selected_set.get('shiny', False) if selected_set else False
+        player_sprite = get_best_sprite(player_data, side='back', shiny=is_shiny)
+        opponent_sprite = get_best_sprite(opponent_data, side='front', shiny=False)
         
         base_url = get_public_base_url(request)
         
