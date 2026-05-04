@@ -547,12 +547,12 @@ export default function BattlePage() {
                       onMouseLeave={() => setHoveredMove(null)}
                       onTouchStart={() => setHoveredMove(move)}
                       disabled={isProcessing || move.pp <= 0 || battleStage !== 'active'}
-                      className={`text-left text-[11px] md:text-[18px] 2xl:text-[24px] uppercase group flex items-center gap-2 md:gap-6 transition-all
+                      className={`text-left text-[11px] md:text-[18px] 2xl:text-[24px] uppercase group flex items-center gap-2 md:gap-6 transition-all break-words line-clamp-2 md:line-clamp-none
                         ${isProcessing || battleStage !== 'active' ? 'opacity-50' : 'hover:text-red-400 md:hover:translate-x-4'}
                       `}
                     >
-                      <span className="hidden md:block opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[12px] border-l-red-500 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent" />
-                      {move.name.replace('-', ' ')}
+                      <span className="hidden md:block opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[12px] border-l-red-500 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent shrink-0" />
+                      <span className="break-words">{move.name.replace('-', ' ')}</span>
                     </button>
                   ))}
                 </div>
