@@ -89,15 +89,11 @@ export default function PokemonBuilder() {
     // In a real app, we'd fetch these once and cache
     const fetchCommonData = async () => {
       try {
-        const [movesRes, itemsRes, abilsRes, speciesRes] = await Promise.all([
-          fetch('https://pokeapi.co/api/v2/move?limit=1000').then(r => r.json()),
+        const [itemsRes, speciesRes] = await Promise.all([
           fetch('https://pokeapi.co/api/v2/item?limit=2000').then(r => r.json()),
-          fetch('https://pokeapi.co/api/v2/ability?limit=1000').then(r => r.json()),
           fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1000').then(r => r.json())
         ]);
-        setAllMoves(movesRes.results.map((m: any) => m.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())));
         setAllItems(itemsRes.results.map((i: any) => i.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())));
-        setAllAbilities(abilsRes.results.map((a: any) => a.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())));
         setAllSpecies(speciesRes.results);
       } catch (e) {
         console.error("Failed to fetch common data", e);
@@ -450,9 +446,6 @@ export default function PokemonBuilder() {
                     <option value="" disabled>Select Ability...</option>
                     <optgroup label="Species Abilities">
                       {currentMon.availableAbilities.map(a => <option key={`avail-${a}`} value={a}>{a}</option>)}
-                    </optgroup>
-                    <optgroup label="All Abilities">
-                      {allAbilities.map(a => <option key={`all-${a}`} value={a}>{a}</option>)}
                     </optgroup>
                   </select>
                   {!isAbilityValid && <p className="text-red-500 text-[7px] mt-1 uppercase tracking-widest animate-pulse">Illegal Ability</p>}
