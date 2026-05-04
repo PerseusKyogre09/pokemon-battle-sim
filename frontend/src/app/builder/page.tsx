@@ -448,7 +448,12 @@ export default function PokemonBuilder() {
                     className={`w-full px-4 py-3 bg-[#1e293b] border rounded-xl text-[10px] outline-none transition-all ${isAbilityValid ? 'border-white/10 focus:border-yellow-500' : 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]'}`}
                   >
                     <option value="" disabled>Select Ability...</option>
-                    {currentMon.availableAbilities.map(a => <option key={a} value={a}>{a}</option>)}
+                    <optgroup label="Species Abilities">
+                      {currentMon.availableAbilities.map(a => <option key={`avail-${a}`} value={a}>{a}</option>)}
+                    </optgroup>
+                    <optgroup label="All Abilities">
+                      {allAbilities.map(a => <option key={`all-${a}`} value={a}>{a}</option>)}
+                    </optgroup>
                   </select>
                   {!isAbilityValid && <p className="text-red-500 text-[7px] mt-1 uppercase tracking-widest animate-pulse">Illegal Ability</p>}
                 </div>
@@ -561,8 +566,19 @@ export default function PokemonBuilder() {
                     </div>
 
                     {/* Base */}
-                    <div className="col-span-1 text-center text-[10px] font-mono text-gray-400">
-                      {currentMon.baseStats[stat]}
+                    <div className="col-span-1 text-center">
+                      <input
+                        type="number"
+                        min="1"
+                        max="255"
+                        value={currentMon.baseStats[stat]}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          const newBase = { ...currentMon.baseStats, [stat]: val };
+                          updateCurrentMon({ baseStats: newBase });
+                        }}
+                        className="w-12 px-1 py-1 bg-white/5 border border-white/10 rounded text-[9px] text-center font-mono text-gray-400 focus:border-yellow-500 outline-none"
+                      />
                     </div>
 
                     {/* EV Slider & Input */}

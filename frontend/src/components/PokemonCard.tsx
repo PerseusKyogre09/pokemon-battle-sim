@@ -135,8 +135,11 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       borderWidth: isOpponent ? '2px 0 4px 4px' : '4px 4px 2px 0'
     }}>
       <div className="flex justify-between items-center mb-1 border-b-2 border-white/10 pb-1">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[10px] font-retro uppercase text-white flex items-center gap-1">
+        <div className="flex items-center gap-2 max-w-[75%]">
+          <h3 
+            className="font-retro uppercase text-white flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis"
+            style={{ fontSize: name.length > 15 ? '7px' : name.length > 12 ? '8px' : name.length > 10 ? '9px' : '10px' }}
+          >
             {name}
             <span className="text-[8px] text-blue-400">♂</span>
           </h3>

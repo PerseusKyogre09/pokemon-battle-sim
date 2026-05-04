@@ -203,195 +203,67 @@ class Ability:
         return abbr_map.get(abbr.lower())
 
     def on_switch_in(self, pokemon, opponent) -> List[Dict[str, Any]]:
-        """Triggers effects when the Pokemon enters the battle."""
         results = []
+        is_p = hasattr(pokemon, "is_player") and pokemon.is_player
         
-        # Hardcoded common switch-in abilities
-        if self.id == "intimidate":
-            if hasattr(opponent, "modify_stat_stage"):
-                msg = opponent.modify_stat_stage("attack", -1)
-                if msg:
-                    results.append({
-                        "type": "ability",
-                        "ability_name": self.name,
-                        "pokemon_name": pokemon.name,
-                        "message": f"{pokemon.name}'s Intimidate cuts {opponent.name}'s attack!",
-                        "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                    })
-        elif self.id == "download":
-            if hasattr(opponent, "defense") and hasattr(opponent, "special_defense"):
-                if opponent.defense < opponent.special_defense:
-                    msg = pokemon.modify_stat_stage("attack", 1)
-                    stat_name = "Attack"
-                else:
-                    msg = pokemon.modify_stat_stage("special_attack", 1)
-                    stat_name = "Special Attack"
-                if msg:
-                    results.append({
-                        "type": "ability",
-                        "ability_name": self.name,
-                        "pokemon_name": pokemon.name,
-                        "message": f"{pokemon.name}'s Download boosted its {stat_name}!",
-                        "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                    })
-        elif self.id == "unnerve":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Unnerve prevented {opponent.name} from using berries!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "drizzle":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Drizzle made it rain!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "drought":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Drought made the sunlight harsh!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "sandstream":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Sand Stream whipped up a sandstorm!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "snowwarning":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Snow Warning whipped up a hailstorm!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "pressure":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Pressure is bearing down on {opponent.name}!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "electricsurge":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Electric Surge set the Electric Terrain!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "grassysurge":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Grassy Surge set the Grassy Terrain!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "mistsurge":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Misty Surge set the Misty Terrain!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-        elif self.id == "psychicsurge":
-            results.append({
-                "type": "ability",
-                "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Psychic Surge set the Psychic Terrain!",
-                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-            })
-            
-        # Generic parsing for boosts in onStart/onSwitchIn hooks
+        # Priority handlers for common switch-in mechanics
+        MECHANICS = {
+            "intimidate": ("attack", -1, "{user}'s Intimidate cuts {target}'s attack!"),
+            "download": None, # Complex logic below
+            "unnerve": ("unnerve", 0, "{user}'s Unnerve prevents {target} from using berries!"),
+            "drizzle": ("weather", 0, "{user}'s Drizzle made it rain!"),
+            "drought": ("weather", 0, "{user}'s Drought made the sunlight harsh!"),
+            "sandstream": ("weather", 0, "{user}'s Sand Stream whipped up a sandstorm!"),
+            "snowwarning": ("weather", 0, "{user}'s Snow Warning whipped up a hailstorm!"),
+            "pressure": ("pressure", 0, "{user}'s Pressure is bearing down on {target}!"),
+            "electricsurge": ("terrain", 0, "{user}'s Electric Surge set the Electric Terrain!"),
+            "grassysurge": ("terrain", 0, "{user}'s Grassy Surge set the Grassy Terrain!"),
+            "mistsurge": ("terrain", 0, "{user}'s Misty Surge set the Misty Terrain!"),
+            "psychicsurge": ("terrain", 0, "{user}'s Psychic Surge set the Psychic Terrain!")
+        }
+        
+        if self.id in MECHANICS:
+            if self.id == "download":
+                if hasattr(opponent, "defense") and hasattr(opponent, "special_defense"):
+                    stat = "attack" if opponent.defense < opponent.special_defense else "special_attack"
+                    msg = pokemon.modify_stat_stage(stat, 1)
+                    if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s Download boosted its {stat.replace('_', ' ').title()}!", "is_player": is_p})
+            else:
+                stat, stages, template = MECHANICS[self.id]
+                msg = template.format(user=pokemon.name, target=opponent.name)
+                if stages != 0 and hasattr(opponent, "modify_stat_stage"):
+                    res_msg = opponent.modify_stat_stage(stat, stages)
+                    if res_msg: msg = res_msg
+                results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": msg, "is_player": is_p})
+
+        # Process dynamic hooks (onStart, onSwitchIn)
         for hook in ["onStart", "onSwitchIn"]:
             logic = self.config.get(hook)
             if not logic: continue
             
-            # Weather setting
-            match = re.search(r"this\.field\.setWeather\('([^']+)'\)", logic)
-            if match:
-                weather = match.group(1).lower()
-                results.append({
-                    "type": "ability",
-                    "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s {self.name} changed the weather!",
-                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                })
+            # Weather/Terrain
+            if "setWeather" in logic or "setTerrain" in logic:
+                results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} changed the field!", "is_player": is_p})
             
-            # Terrain setting
-            match = re.search(r"this\.field\.setTerrain\('([^']+)'\)", logic)
-            if match:
-                terrain = match.group(1).lower()
-                results.append({
-                    "type": "ability",
-                    "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s {self.name} set the terrain!",
-                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                })
-            
-            # Parse boost patterns
+            # Boosts
             boosts = self._parse_boost_amounts(logic)
             if boosts:
-                # Determine target (self or opponent)
-                target = pokemon if "this.boost" in logic and "source" not in logic else opponent
-                if "target" in logic:
-                    target = opponent
-                
-                for stat_name, stages in boosts.items():
+                target = opponent if "target" in logic else pokemon
+                for s_name, stages in boosts.items():
                     if hasattr(target, "modify_stat_stage"):
-                        msg = target.modify_stat_stage(stat_name, stages)
-                        if msg:
-                            results.append({
-                                "type": "ability",
-                                "ability_name": self.name,
-                                "pokemon_name": pokemon.name,
-                                "message": msg if isinstance(msg, str) else f"{pokemon.name}'s {self.name} activated!",
-                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                            })
+                        msg = target.modify_stat_stage(s_name, stages)
+                        if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": msg if isinstance(msg, str) else f"{pokemon.name}'s {self.name} activated!", "is_player": is_p})
 
-        # Generic parsing for boost effects in JSON
-        effects = self.config.get("on_switch_in", [])
-        
-        for effect in effects:
-            action = effect.get("action")
-            target_type = effect.get("target", "self")
-            target = opponent if target_type == "opponent" else pokemon
-            
-            if action == "boost":
-                stats = effect.get("stats", {})
-                for stat_name, stages in stats.items():
+        # Process effect list
+        for effect in self.config.get("on_switch_in", []):
+            target = opponent if effect.get("target") == "opponent" else pokemon
+            if effect.get("action") == "boost":
+                for s_name, stages in effect.get("stats", {}).items():
                     if hasattr(target, "modify_stat_stage"):
-                        msg = target.modify_stat_stage(stat_name, stages)
+                        msg = target.modify_stat_stage(s_name, stages)
                         if msg:
-                            # Format message if provided
-                            custom_msg = effect.get("message")
-                            if custom_msg:
-                                final_msg = custom_msg.format(user=pokemon.name, target=target.name)
-                            else:
-                                final_msg = msg
-                            
-                            results.append({
-                                "type": "ability",
-                                "ability_name": self.name,
-                                "pokemon_name": pokemon.name,
-                                "message": final_msg,
-                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
-                            })
+                            f_msg = effect.get("message", msg).format(user=pokemon.name, target=target.name)
+                            results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f_msg, "is_player": is_p})
         
         return results
 
