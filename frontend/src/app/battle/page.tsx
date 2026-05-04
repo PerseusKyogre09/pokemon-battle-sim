@@ -47,6 +47,7 @@ export default function BattlePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hitSoundRef = useRef<HTMLAudioElement | null>(null);
   const pokeballSoundRef = useRef<HTMLAudioElement | null>(null);
+  const abilityPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const savedState = localStorage.getItem('initialBattleState');
@@ -121,6 +122,32 @@ export default function BattlePage() {
     } catch (e) {}
   };
 
+  const showAbilityPopup = (popup: { name: string; pokemon: string; isPlayer: boolean }) => {
+    if (abilityPopupTimerRef.current) {
+      clearTimeout(abilityPopupTimerRef.current);
+      abilityPopupTimerRef.current = null;
+    }
+
+    setAbilityPopup(popup);
+
+    abilityPopupTimerRef.current = setTimeout(() => {
+      setAbilityPopup(prev => prev ? { ...prev, exiting: true } : null);
+
+      abilityPopupTimerRef.current = setTimeout(() => {
+        setAbilityPopup(null);
+        abilityPopupTimerRef.current = null;
+      }, 500);
+    }, 2400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (abilityPopupTimerRef.current) {
+        clearTimeout(abilityPopupTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleStartBattle = () => {
     if (!battleState) return;
     setShowStartOverlay(false);
@@ -179,22 +206,16 @@ export default function BattlePage() {
     if (state.start_events && state.start_events.length > 0) {
       for (const event of state.start_events) {
         if (event.type === 'ability') {
-          setAbilityPopup({ 
+          showAbilityPopup({ 
             name: event.ability_name, 
             pokemon: event.pokemon_name, 
             isPlayer: event.is_player 
           });
-          
+
           await new Promise(resolve => setTimeout(resolve, 600));
           setEvents(prev => [...prev, event.message]);
-          
-          await new Promise(resolve => setTimeout(resolve, 1400));
-          
-          setAbilityPopup(prev => prev ? { ...prev, exiting: true } : null);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          setAbilityPopup(null);
-          await new Promise(resolve => setTimeout(resolve, 300));
+
+          await new Promise(resolve => setTimeout(resolve, 1800));
         }
       }
     }
@@ -264,7 +285,7 @@ export default function BattlePage() {
           }
         } else if (eventObj.type === 'ability') {
           // 1. Show the Banner first
-          setAbilityPopup({ 
+          showAbilityPopup({ 
             name: eventObj.ability_name, 
             pokemon: eventObj.pokemon_name, 
             isPlayer: eventObj.target === 'player'
@@ -274,14 +295,8 @@ export default function BattlePage() {
           await new Promise(resolve => setTimeout(resolve, 600));
           setEvents(prev => [...prev, eventObj.message]);
           
-          // 3. Wait for the player to read
-          await new Promise(resolve => setTimeout(resolve, 1400));
-          
-          // 4. Trigger Exit (Out)
-          setAbilityPopup(prev => prev ? { ...prev, exiting: true } : null);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          setAbilityPopup(null);
+          // Let the popup stay up through the related follow-up lines.
+          await new Promise(resolve => setTimeout(resolve, 1800));
         } else if (eventObj.message) {
           setEvents(prev => [...prev, eventObj.message]);
         }
