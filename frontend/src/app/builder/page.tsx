@@ -75,9 +75,7 @@ export default function PokemonBuilder() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [allMoves, setAllMoves] = useState<string[]>([]);
   const [allItems, setAllItems] = useState<string[]>([]);
-  const [allAbilities, setAllAbilities] = useState<string[]>([]);
   const [smogonSets, setSmogonSets] = useState<any[]>([]);
   const [allSpecies, setAllSpecies] = useState<any[]>([]);
 
