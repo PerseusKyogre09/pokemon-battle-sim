@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { searchPokemon, getMoveset, getAllSets, startBattle } from '@/lib/api';
+import { API_BASE_URL, searchPokemon, getMoveset, getAllSets, startBattle } from '@/lib/api';
 import PokemonCard from '@/components/PokemonCard';
 
 export default function Home() {
@@ -41,7 +41,7 @@ export default function Home() {
     // Fetch battle-ready list for opponent selection
     const fetchOpponents = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7860/api'}/battle-ready-pokemon`);
+        const res = await fetch(`${API_BASE_URL}/battle-ready-pokemon`);
         const data = await res.json();
         if (data.success) setBattleReadyList(data.pokemon);
       } catch (err) {

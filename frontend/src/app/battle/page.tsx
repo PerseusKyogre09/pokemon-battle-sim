@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { BattleState, executeMove, TurnResult } from '@/lib/api';
+import { API_BASE_URL, BattleState, executeMove, TurnResult } from '@/lib/api';
 import PokemonCard from '@/components/PokemonCard';
 import BattleLog from '@/components/BattleLog';
 import Pokeball from '@/components/Pokeball';
@@ -13,8 +13,7 @@ type BattleStage = 'intro-opponent' | 'intro-player' | 'active' | 'gameover';
 const getAudioUrl = async (filename: string) => {
   try {
     // Determine base URL (strip /api if needed)
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7860/api';
-    const baseUrl = apiBase.endsWith('/api') ? apiBase.replace(/\/api$/, '') : apiBase;
+    const baseUrl = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace(/\/api$/, '') : API_BASE_URL;
     
     const response = await fetch(`${baseUrl}/api/audio/signed-url/${filename}`);
     const data = await response.json();
