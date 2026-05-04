@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL, searchPokemon, getMoveset, getAllSets, startBattle } from '@/lib/api';
 import PokemonCard from '@/components/PokemonCard';
@@ -173,6 +174,9 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex items-center space-x-6">
+            <Link href="/builder" className="text-gray-500 hover:text-yellow-500 transition-all text-[10px] uppercase tracking-widest border border-transparent hover:border-yellow-500 px-3 py-1 rounded-lg font-retro">
+              [ BUILD ]
+            </Link>
             <a href="https://github.com/PerseusKyogre09/pokemon-battle-sim" target="_blank" className="text-gray-500 hover:text-white transition-all text-[10px] uppercase tracking-widest hidden sm:block">
               [ GITHUB ]
             </a>
