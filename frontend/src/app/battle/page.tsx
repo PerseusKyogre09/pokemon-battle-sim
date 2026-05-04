@@ -42,6 +42,7 @@ export default function BattlePage() {
   const [hoveredMove, setHoveredMove] = useState<any>(null);
   const [abilityPopup, setAbilityPopup] = useState<{ name: string, pokemon: string, isPlayer: boolean, exiting?: boolean } | null>(null);
   const [audioReady, setAudioReady] = useState(false);
+  const [showForfeitModal, setShowForfeitModal] = useState(false);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -409,6 +410,47 @@ export default function BattlePage() {
               </div>
             )}
 
+            {/* Custom Forfeit Modal */}
+            {showForfeitModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="bg-gradient-to-br from-slate-700/80 to-slate-900/90 border border-red-500/40 rounded-xl shadow-[0_20px_60px_rgba(220,38,38,0.3)] p-6 md:p-8 w-80 md:w-96 animate-in fade-in scale-95">
+                  {/* Pokeball Icon */}
+                  <div className="flex justify-center mb-5">
+                    <img src="/images/pokeball.png" alt="Pokeball" className="w-16 h-16 md:w-20 md:h-20 drop-shadow-lg" />
+                  </div>
+
+                  {/* Title and Text */}
+                  <div className="text-center mb-6">
+                    <h2 className="text-white text-xl md:text-2xl font-bold uppercase tracking-[0.2em] mb-2">
+                      Forfeit?
+                    </h2>
+                    <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+                      Give up this battle?
+                    </p>
+                  </div>
+
+                  {/* Button Group */}
+                  <div className="flex gap-3 md:gap-4">
+                    <button
+                      onClick={() => setShowForfeitModal(false)}
+                      className="flex-1 px-4 py-2.5 md:py-3 bg-slate-600/60 hover:bg-slate-600 text-white font-semibold uppercase tracking-[0.15em] rounded-lg transition-all duration-200 text-xs md:text-sm border border-slate-500/40"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowForfeitModal(false);
+                        handleQuit();
+                      }}
+                      className="flex-1 px-4 py-2.5 md:py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold uppercase tracking-[0.15em] rounded-lg transition-all duration-200 text-xs md:text-sm shadow-[0_4px_12px_rgba(220,38,38,0.35)]"
+                    >
+                      Forfeit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* OPPONENT SECTION */}
             <div className="absolute top-4 left-4 md:top-8 md:left-8 scale-75 md:scale-100 2xl:scale-[1.4] origin-top-left transition-all duration-500">
               <PokemonCard
@@ -530,7 +572,7 @@ export default function BattlePage() {
                   </div>
                   
                   <button 
-                    onClick={() => confirm('Forfeit?') && handleQuit()}
+                    onClick={() => setShowForfeitModal(true)}
                     className="h-12 md:h-20 border-t-4 border-[#0f172a] text-[10px] md:text-[14px] 2xl:text-[18px] uppercase text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-white/5 tracking-[0.2em]"
                   >
                     <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[10px] border-l-white border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent" />

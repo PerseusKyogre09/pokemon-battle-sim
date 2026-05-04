@@ -333,6 +333,10 @@ class Game:
             poke_damage, sub_damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
             prev_hp = defender.current_hp
             
+            # Apply defender's ability damage modifications (e.g. Filter, Solid Rock, Thick Fat)
+            if hasattr(defender, 'ability'):
+                poke_damage = defender.ability.modify_damage_taken(defender, attacker, move, poke_damage)
+            
             # Damage the defender (move.py already handled substitute_hp subtraction)
             defender.take_damage(poke_damage)
             actual_damage = prev_hp - defender.current_hp

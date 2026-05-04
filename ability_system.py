@@ -170,6 +170,38 @@ class Ability:
         
         return value
 
+    def _parse_boost_amounts(self, logic_str: str) -> Dict[str, int]:
+        """Extract boost amounts from ability logic strings."""
+        boosts = {}
+        
+        if not logic_str:
+            return boosts
+        
+        # Pattern: this.boost({ atk: 2, spa: 1 }, target, ...)
+        match = re.search(r"this\.boost\(\{\s*([^}]+)\s*\}", logic_str)
+        if match:
+            boost_str = match.group(1)
+            # Extract individual stats: atk: 1, def: -1, etc.
+            stat_pairs = re.findall(r"(\w+):\s*(-?\d+)", boost_str)
+            for stat_abbr, value in stat_pairs:
+                stat_name = self._abbr_to_stat_name(stat_abbr)
+                if stat_name:
+                    boosts[stat_name] = int(value)
+        
+        return boosts
+    
+    def _abbr_to_stat_name(self, abbr: str) -> Optional[str]:
+        """Convert stat abbreviations to full names."""
+        abbr_map = {
+            'hp': 'hp',
+            'atk': 'attack',
+            'def': 'defense',
+            'spa': 'special_attack',
+            'spd': 'special_defense',
+            'spe': 'speed'
+        }
+        return abbr_map.get(abbr.lower())
+
     def on_switch_in(self, pokemon, opponent) -> List[Dict[str, Any]]:
         """Triggers effects when the Pokemon enters the battle."""
         results = []
@@ -202,22 +234,88 @@ class Ability:
                         "message": f"{pokemon.name}'s Download boosted its {stat_name}!",
                         "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                     })
-        elif self.id in ["drizzle", "drought", "sandstream", "snowwarning"]:
-            weather_msgs = {
-                "drizzle": "made it rain!",
-                "drought": "made the sunlight harsh!",
-                "sandstream": "whipped up a sandstorm!",
-                "snowwarning": "whipped up a hailstorm!"
-            }
+        elif self.id == "unnerve":
             results.append({
                 "type": "ability",
                 "ability_name": self.name,
                 "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s {self.name} {weather_msgs[self.id]}",
+                "message": f"{pokemon.name}'s Unnerve prevented {opponent.name} from using berries!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "drizzle":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Drizzle made it rain!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "drought":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Drought made the sunlight harsh!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "sandstream":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Sand Stream whipped up a sandstorm!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "snowwarning":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Snow Warning whipped up a hailstorm!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "pressure":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Pressure is bearing down on {opponent.name}!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "electricsurge":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Electric Surge set the Electric Terrain!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "grassysurge":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Grassy Surge set the Grassy Terrain!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "mistsurge":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Misty Surge set the Misty Terrain!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        elif self.id == "psychicsurge":
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Psychic Surge set the Psychic Terrain!",
                 "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
             })
             
-        # Generic parsing for weather and terrain in onStart/onSwitchIn
+        # Generic parsing for boosts in onStart/onSwitchIn hooks
         for hook in ["onStart", "onSwitchIn"]:
             logic = self.config.get(hook)
             if not logic: continue
@@ -230,7 +328,7 @@ class Ability:
                     "type": "ability",
                     "ability_name": self.name,
                     "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s {self.name} changed the weather to {weather}!",
+                    "message": f"{pokemon.name}'s {self.name} changed the weather!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
             
@@ -242,9 +340,29 @@ class Ability:
                     "type": "ability",
                     "ability_name": self.name,
                     "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s {self.name} set the terrain to {terrain}!",
+                    "message": f"{pokemon.name}'s {self.name} set the terrain!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
+            
+            # Parse boost patterns
+            boosts = self._parse_boost_amounts(logic)
+            if boosts:
+                # Determine target (self or opponent)
+                target = pokemon if "this.boost" in logic and "source" not in logic else opponent
+                if "target" in logic:
+                    target = opponent
+                
+                for stat_name, stages in boosts.items():
+                    if hasattr(target, "modify_stat_stage"):
+                        msg = target.modify_stat_stage(stat_name, stages)
+                        if msg:
+                            results.append({
+                                "type": "ability",
+                                "ability_name": self.name,
+                                "pokemon_name": pokemon.name,
+                                "message": msg if isinstance(msg, str) else f"{pokemon.name}'s {self.name} activated!",
+                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                            })
 
         # Generic parsing for boost effects in JSON
         effects = self.config.get("on_switch_in", [])
@@ -280,6 +398,8 @@ class Ability:
     def on_turn_end(self, pokemon, opponent) -> List[Dict[str, Any]]:
         """Trigger end-of-turn effects (e.g. Speed Boost)."""
         results = []
+        
+        # Common turn-end abilities
         if self.id == "speedboost":
             msg = pokemon.modify_stat_stage("speed", 1)
             if msg:
@@ -290,6 +410,50 @@ class Ability:
                     "message": f"{pokemon.name}'s Speed Boost increased its Speed!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
+        elif self.id == "losteye":
+            msg = pokemon.modify_stat_stage("accuracy", -1)
+            if msg:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s Lost Eye lowered its Accuracy!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        elif self.id == "powerspotboost":
+            msg = pokemon.modify_stat_stage("special_attack", 1)
+            if msg:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s ability boosted its Special Attack!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        elif self.id == "contrariness":
+            # Flips stat changes
+            msg = pokemon.modify_stat_stage("attack", 1)  # Placeholder - actual logic would flip boosts
+            if msg:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s Contrariness flipped the stat changes!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        
+        # Parse onResidual for passive damage/healing
+        residual_logic = self.config.get("onResidual")
+        if residual_logic:
+            if "damage" in residual_logic.lower():
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s {self.name} activated!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        
         return results
 
     def on_faint(self, pokemon, opponent) -> List[Dict[str, Any]]:
@@ -307,9 +471,104 @@ class Ability:
             })
         return results
 
+    def modify_damage_taken(self, pokemon, opponent, move, damage: int) -> int:
+        """Modifies damage taken by the Pokemon."""
+        final_damage = damage
+        
+        # Abilities that reduce damage
+        if self.id == "filter" or self.id == "solidrock":
+            # Reduces super-effective damage to 1/4x (6/8 = 0.75)
+            if hasattr(move, 'effectiveness'):
+                if move.effectiveness > 1:
+                    final_damage = int(final_damage * 0.75)
+        elif self.id == "thickfat":
+            # Reduces Fire and Ice type moves by 50%
+            if hasattr(move, 'type') and move.type.lower() in ['fire', 'ice']:
+                final_damage = int(final_damage * 0.5)
+        elif self.id == "waterabsorb" or self.id == "dryskin":
+            # Heals from Water type moves instead of taking damage
+            if hasattr(move, 'type') and move.type.lower() == 'water':
+                return 0
+        elif self.id == "flashfire":
+            # Absorbs Fire type moves
+            if hasattr(move, 'type') and move.type.lower() == 'fire':
+                return 0
+        elif self.id == "voltabsorb":
+            # Absorbs Electric type moves
+            if hasattr(move, 'type') and move.type.lower() == 'electric':
+                return 0
+        elif self.id == "sapsipper":
+            # Absorbs Grass type moves
+            if hasattr(move, 'type') and move.type.lower() == 'grass':
+                return 0
+        elif self.id == "furcoat":
+            # Halves physical damage
+            if hasattr(move, 'category') and move.category == 'physical':
+                final_damage = int(final_damage * 0.5)
+        elif self.id == "marvelscale":
+            # Reduces all damage to 50% when having status
+            if pokemon.major_status:
+                final_damage = int(final_damage * 0.5)
+        elif self.id == "unaware":
+            # Ignores opponent stat boosts (reduce damage)
+            final_damage = int(final_damage * 0.8)  # Simplified
+        elif self.id == "regenerator":
+            # Heals 1/3 HP per turn (handled elsewhere)
+            pass
+        
+        # Generic damage reduction from onDamage hooks
+        on_damage = self.config.get("onDamage")
+        if on_damage:
+            if "damage * 0.5" in on_damage or "chainModify(0.5)" in on_damage:
+                final_damage = int(final_damage * 0.5)
+            elif "damage * 0.75" in on_damage or "chainModify(0.75)" in on_damage:
+                final_damage = int(final_damage * 0.75)
+        
+        return final_damage
+
     def modify_damage_dealt(self, pokemon, opponent, move, damage: int) -> int:
         """Modifies damage dealt by the Pokemon."""
         final_damage = damage
+        
+        # Hardcoded abilities with damage modifiers
+        if self.id == "technician":
+            # 1.5x damage for moves with 60 or less base power
+            if hasattr(move, 'power') and 0 < move.power <= 60:
+                final_damage = int(final_damage * 1.5)
+        elif self.id == "adaptability":
+            # 2.25x STAB instead of 1.5x (handled in STAB calculation)
+            pass
+        elif self.id == "sheerforce":
+            # 1.3125x (1.3x boost) for moves with secondary effects
+            if hasattr(move, 'secondary') and move.secondary:
+                final_damage = int(final_damage * 1.3125)
+        elif self.id == "hugepower" or self.id == "purplepower":
+            # Doubles attack (handled in modify_stat)
+            pass
+        elif self.id == "ironbarbs":
+            # Reflects 1/8 damage back (handled separately)
+            pass
+        elif self.id == "roughskin":
+            # Reflects 1/8 damage back (handled separately)
+            pass
+        elif self.id == "effectspore":
+            # 30% chance to cause status on contact (handled separately)
+            pass
+        elif self.id == "sandstream":
+            # Weakens water moves (handled with weather)
+            pass
+        elif self.id == "swordofruin":
+            # Reduces opponent Special Defense (handled separately)
+            final_damage = int(final_damage * 0.8)  # Simplified
+        elif self.id == "beadsofruin":
+            # Reduces opponent Special Defense (handled separately)
+            final_damage = int(final_damage * 0.8)  # Simplified
+        elif self.id == "tabletsofruin":
+            # Reduces opponent Special Defense (handled separately)
+            final_damage = int(final_damage * 0.8)  # Simplified
+        elif self.id == "vesselofruin":
+            # Reduces opponent Special Defense (handled separately)
+            final_damage = int(final_damage * 0.8)  # Simplified
         
         # 1. Check direct modifiers list (legacy/simple)
         modifiers = self.config.get("damage_modifiers", [])
@@ -352,8 +611,33 @@ class Ability:
         # 1. Check direct immunities (e.g. Levitate)
         if move_type.lower() in [t.lower() for t in immunities.get("types", [])]:
             return True
+        
+        # 2. Hardcoded type immunities
+        type_immunities = {
+            'levitate': ['ground'],
+            'waterabsorb': ['water'],
+            'voltabsorb': ['electric'],
+            'dryskin': ['water'],
+            'flashfire': ['fire'],
+            'sapsipper': ['grass'],
+            'lightningrod': ['electric'],
+            'motordrive': ['electric'],
+            'magnetpull': [],  # No immunity, just attracts steel
+            'static': [],  # No immunity, just chance to paralyze
+            'immunity': ['poison'],
+            'comatose': [],  # No type immunity, just sleep immunity
+            'waterveil': ['fire'],
+            'heatproof': ['fire'],
+            'thickfat': ['fire', 'ice'],
+            'wonderguard': [],  # Only takes super-effective damage
+            'goodasgold': ['item-based'],
+        }
+        
+        if self.id in type_immunities:
+            if move_type.lower() in type_immunities[self.id]:
+                return True
             
-        # 2. Check raw logic for immunity (onTryHit)
+        # 3. Check raw logic for immunity (onTryHit)
         on_try_hit = self.config.get("onTryHit")
         if on_try_hit:
             # Check if this move type is mentioned as being blocked
@@ -363,11 +647,52 @@ class Ability:
 
         return False
 
+    def get_type_change(self, move) -> Optional[str]:
+        """Returns the type a move is changed to by this ability (e.g. Aerilate)."""
+        type_changes = {
+            'aerilate': 'flying',
+            'pixilate': 'fairy',
+            'refrigerate': 'ice',
+            'iondeluge': 'electric',
+            'normalize': 'normal',
+        }
+        
+        if self.id in type_changes and hasattr(move, 'type') and move.type.lower() == 'normal':
+            return type_changes[self.id]
+        
+        return None
+
+    def get_weather_boost(self, move_type: str, weather: Optional[str]) -> float:
+        """Returns damage multiplier based on weather and this ability."""
+        if not weather:
+            return 1.0
+        
+        weather_boosts = {
+            'drizzle': {'water': 1.5, 'fire': 0.5},
+            'drought': {'fire': 1.5, 'water': 0.5},
+            'sandstream': {'rock': 1.5, 'steel': 1.5, 'ground': 1.5, 'fire': 0.5},
+            'snowwarning': {'ice': 1.5, 'fire': 0.5},
+            'hail': {'ice': 1.5},
+        }
+        
+        if weather in weather_boosts:
+            return weather_boosts[weather].get(move_type.lower(), 1.0)
+        
+        return 1.0
+
     def get_stab_multiplier(self) -> float:
         """Returns the STAB multiplier (usually 1.5, Adaptability makes it 2.0)."""
         # 1. Check direct config
         if "on_modify_stab" in self.config:
             return self.config["on_modify_stab"]
+        
+        # Hardcoded STAB multipliers
+        stab_multipliers = {
+            'adaptability': 2.25,  # 2.25x instead of 1.5x
+        }
+        
+        if self.id in stab_multipliers:
+            return stab_multipliers[self.id]
             
         # 2. Check raw logic for Adaptability pattern
         on_modify_stab = self.config.get("onModifySTAB")
@@ -382,6 +707,15 @@ class Ability:
         # 1. Check direct config
         if "secondary_multiplier" in self.config:
             return self.config["secondary_multiplier"]
+        
+        # Hardcoded secondary multipliers
+        secondary_multipliers = {
+            'serenegrace': 2.0,  # 2x secondary chance
+            'sheerforce': 1.3,  # 1.3x damage but removes secondary effects
+        }
+        
+        if self.id in secondary_multipliers:
+            return secondary_multipliers[self.id]
             
         # 2. Check raw logic for Serene Grace pattern
         on_modify_move = self.config.get("onModifyMove")
@@ -390,6 +724,46 @@ class Ability:
             if "* 3" in on_modify_move or "*= 3" in on_modify_move: return 3.0
             
         return 1.0
+
+    def get_accuracy_modifier(self) -> float:
+        """Returns the accuracy multiplier for moves used by this ability."""
+        accuracy_modifiers = {
+            'compoundeyes': 1.3,  # 1.3x accuracy
+            'victorystar': 1.1,  # 1.1x accuracy
+            'keeneye': 1.0,  # Prevents accuracy lowering
+        }
+        
+        if self.id in accuracy_modifiers:
+            return accuracy_modifiers[self.id]
+        
+        return 1.0
+
+    def get_ability_summary(self) -> Dict[str, Any]:
+        """Returns a summary of what this ability does."""
+        summary = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'rating': self.config.get('rating', 0),
+        }
+        
+        # Determine ability category
+        hooks = list(self.config.keys())
+        
+        if any(h in hooks for h in ['onStart', 'onSwitchIn', 'drizzle', 'drought']):
+            summary['type'] = 'Stat/Weather Setter'
+        elif any(h in hooks for h in ['onBasePower', 'onModifyAtk', 'onModifySpA']):
+            summary['type'] = 'Damage Modifier'
+        elif any(h in hooks for h in ['onDamage', 'onTryHit']):
+            summary['type'] = 'Defensive'
+        elif any(h in hooks for h in ['onResidual']):
+            summary['type'] = 'End-of-turn'
+        elif any(h in hooks for h in ['onTryBoost']):
+            summary['type'] = 'Stat Protection'
+        else:
+            summary['type'] = 'Special Effect'
+        
+        return summary
 
 def create_ability(name: str) -> Ability:
     """Helper to create an ability instance."""
