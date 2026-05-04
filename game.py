@@ -7,8 +7,11 @@ class Game:
         self.player_pokemon = None
         self.opponent_pokemon = None
         self.battle_over = False
+        self.weather = 'none'
+        self.weather_duration = 0
         self.priority_resolver = PriorityResolver()
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves, player_ability="noability", opponent_ability="noability"):
+        # ... (keep existing setup code)
         player_sprite = (
             player_data['sprites'].get('versions', {})
             .get('generation-v', {})
@@ -52,8 +55,16 @@ class Game:
         
         # Trigger switch-in effects (abilities like Intimidate)
         messages = []
-        messages.extend(self.player_pokemon.on_switch_in(self.opponent_pokemon))
-        messages.extend(self.opponent_pokemon.on_switch_in(self.player_pokemon))
+        p_messages = self.player_pokemon.on_switch_in(self.opponent_pokemon)
+        o_messages = self.opponent_pokemon.on_switch_in(self.player_pokemon)
+        
+        all_msgs = p_messages + o_messages
+        for msg in all_msgs:
+            if 'set_weather' in msg:
+                self.weather = msg['set_weather']
+                self.weather_duration = 5
+            messages.append(msg)
+            
         return messages
 
     def process_turn(self, move_name):
@@ -240,8 +251,17 @@ class Game:
                 s_msg = self.priority_resolver.get_priority_counter_success_message(move, attacker.name, defender.name, action.counter_target_move.name if action.counter_target_move else "unknown")
                 if s_msg: turn_info['battle_events'].append({'type': 'priority_counter_success', 'message': s_msg, 'target': 'player' if is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
                 
-            dmg, sub_dmg, eff_msg, stat_msg = move.use_move(attacker, defender)
+            dmg, sub_dmg, eff_msg, stat_msg, weather_to_set = move.use_move(attacker, defender, self.weather)
             if hasattr(defender, 'ability'): dmg = defender.ability.modify_damage_taken(defender, attacker, move, dmg)
+            
+            if weather_to_set:
+                self.weather = weather_to_set
+                self.weather_duration = 5
+                w_name = weather_to_set.replace('day', ' sunlight').replace('dance', '').replace('hail', 'snow')
+                turn_info['battle_events'].append({
+                    'type': 'status', 'message': f"The weather changed to {w_name}!", 
+                    'set_weather': weather_to_set, 'timestamp': len(turn_info['battle_events'])
+                })
             
             prev_hp = defender.current_hp
             defender.take_damage(dmg)
@@ -349,7 +369,41 @@ class Game:
                     'is_player': False,
                     'timestamp': len(turn_info['battle_events'])
                 })
-                print(f"DEBUG: {self.opponent_pokemon.name} fainted from status effects!")
+
+        # Process weather duration and effects
+        if self.weather != 'none':
+            self.weather_duration -= 1
+            if self.weather_duration <= 0:
+                turn_info['battle_events'].append({
+                    'type': 'status', 'message': "The weather returned to normal!", 
+                    'set_weather': 'none', 'timestamp': len(turn_info['battle_events'])
+                })
+                self.weather = 'none'
+            else:
+                if self.weather in ['sandstorm']: # Hail (Snow) no longer damages
+                    for p in [self.player_pokemon, self.opponent_pokemon]:
+                        if p and p.current_hp > 0:
+                            is_immune = False
+                            p_types = [t.lower() for t in p.types]
+                            if self.weather == 'sandstorm':
+                                is_immune = any(t in ['rock', 'ground', 'steel'] for t in p_types)
+                            
+                            if not is_immune:
+                                dmg = p.max_hp // 16
+                                p.take_damage(dmg)
+                                turn_info['battle_events'].append({
+                                    'type': 'status', 'message': f"{p.name} is buffeted by the {self.weather}!", 
+                                    'target': 'player' if p == self.player_pokemon else 'opponent',
+                                    'pokemon_hp': p.current_hp, 'timestamp': len(turn_info['battle_events'])
+                                })
+                                if p.current_hp <= 0:
+                                    self.battle_over = True
+                                    turn_info['battle_events'].append({
+                                        'type': 'faint', 'pokemon_name': p.name, 
+                                        'is_player': p == self.player_pokemon, 'timestamp': len(turn_info['battle_events'])
+                                    })
+
+        turn_info['weather'] = self.weather
         
         # Collect status change events from both Pokemon
         player_status_events = self.player_pokemon.get_status_change_events()

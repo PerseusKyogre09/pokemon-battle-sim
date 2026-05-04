@@ -256,6 +256,7 @@ class Pokemon:
         self._recalculate_stats()
         
     def _recalculate_stats(self):
+        self.max_hp = self._calculate_stat('hp')
         self.attack = self._calculate_stat('attack')
         self.defense = self._calculate_stat('defense')
         self.special_attack = self._calculate_stat('special_attack')

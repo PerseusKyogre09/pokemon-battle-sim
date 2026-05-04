@@ -543,15 +543,15 @@ class Move:
             
         return self._apply_boosts(modification_target, self.stat_modifications)
 
-    def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, int, str, Optional[str]]:
+    def use_move(self, attacking_pokemon=None, defending_pokemon=None, weather='none') -> Tuple[int, int, str, Optional[str], Optional[str]]:
         if not self._check_accuracy():
-            return 0, 0, f"{attacking_pokemon.name}'s {self.name} missed!", None
+            return 0, 0, f"{attacking_pokemon.name}'s {self.name} missed!", None, None
             
         if self.stalling_move:
             success_rate = 1.0 / (3.0 ** attacking_pokemon.consecutive_stalling_moves)
             if random.random() >= success_rate:
                 attacking_pokemon.consecutive_stalling_moves = 0
-                return 0, f"But it failed!", None
+                return 0, 0, "", f"But it failed!", None
             attacking_pokemon.consecutive_stalling_moves += 1
         else:
             attacking_pokemon.consecutive_stalling_moves = 0
@@ -559,22 +559,22 @@ class Move:
         # Special handling for Substitute
         if self.id == 'substitute':
             if attacking_pokemon.substitute_hp > 0:
-                return 0, 0, "", "But it failed!"
+                return 0, 0, "", "But it failed!", None
             cost = attacking_pokemon.max_hp // 4
             if attacking_pokemon.current_hp > cost:
                 attacking_pokemon.current_hp -= cost
                 attacking_pokemon.substitute_hp = cost
                 attacking_pokemon.apply_volatile_status('substitute')
-                return 0, 0, "", f"{attacking_pokemon.name} put in a substitute!"
+                return 0, 0, "", f"{attacking_pokemon.name} put in a substitute!", None
             else:
-                return 0, 0, "", "But it failed!"
+                return 0, 0, "", "But it failed!", None
 
         if self.is_status_move or self.power == 0:
             # Check for special moves first (like Belly Drum)
             special_move_result = self._handle_special_moves(attacking_pokemon, defending_pokemon)
             if special_move_result:
                 damage, usage_msg, status_msg = special_move_result
-                return damage, 0, usage_msg, status_msg
+                return damage, 0, usage_msg, status_msg, None
             
             status_messages = []
             if defending_pokemon:
@@ -593,7 +593,7 @@ class Move:
             # Combine status, healing, and stat modification messages
             all_messages = status_messages + healing_messages + stat_modification_messages
             combined_message = " ".join(all_messages) if all_messages else None
-            return 0, 0, "", combined_message
+            return 0, 0, "", combined_message, None
         
         # Handle multi-hit moves
         if self.is_multihit_move:
@@ -603,15 +603,24 @@ class Move:
         base_damage = self.power
         effectiveness_message = ""
         
+        # Check for weather-setting moves
+        weather_to_set = None
+        WEATHER_MOVES = {
+            'raindance': 'raindance', 'sunnyday': 'sunnyday',
+            'sandstorm': 'sandstorm', 'hail': 'hail', 'snowscape': 'hail'
+        }
+        if self.id in WEATHER_MOVES:
+            weather_to_set = WEATHER_MOVES[self.id]
+
         # If it's a status move, it shouldn't have any damage calculation
         if self.is_status_move or self.power == 0:
-            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", ""
+            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", "", weather_to_set
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:
             # Check for ability immunities (e.g. Levitate)
             if hasattr(defending_pokemon, 'ability') and defending_pokemon.ability.is_immune(self.type, self.category):
-                return 0, 0, f"It had no effect on {defending_pokemon.name}!", None
+                return 0, 0, f"It had no effect on {defending_pokemon.name}!", None, weather_to_set
 
             # Get the move type in lowercase for comparison
             move_type = self.type.lower()
@@ -634,14 +643,21 @@ class Move:
             effectiveness = round(effectiveness, 2)
             
             # Determine attack and defense stats based on move category
+            defending_types_lower = [t.lower() for t in defending_pokemon.types]
             if self.category == 'physical':
                 attack_stat = getattr(attacking_pokemon, 'attack', 1)
                 defense_stat = getattr(defending_pokemon, 'defense', 1)
+                # Gen 9 Snow (replaces Hail): +50% Defense for Ice types
+                if weather == 'hail' and 'ice' in defending_types_lower:
+                    defense_stat = int(defense_stat * 1.5)
                 attack_name = 'Attack'
                 defense_name = 'Defense'
-            else:  # 'special' or 'status' (though status moves are handled earlier)
-                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)  # Special Attack
-                defense_stat = getattr(defending_pokemon, 'special_defense', 1)  # Special Defense
+            else:  # 'special'
+                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+                defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+                # Sandstorm: +50% Special Defense for Rock types
+                if weather == 'sandstorm' and 'rock' in defending_types_lower:
+                    defense_stat = int(defense_stat * 1.5)
                 attack_name = 'Special Attack'
                 defense_name = 'Special Defense'
             level = 100
@@ -672,9 +688,24 @@ class Move:
             # Apply effectiveness
             damage = int(damage * effectiveness)
             
+            # Apply weather multipliers
+            if weather == 'raindance':
+                if move_type == 'water':
+                    damage = int(damage * 1.5)
+                elif move_type == 'fire':
+                    damage = int(damage * 0.5)
+            elif weather == 'sunnyday':
+                if move_type == 'fire':
+                    damage = int(damage * 1.5)
+                elif move_type == 'water':
+                    damage = int(damage * 0.5)
+            elif weather == 'hail': # Gen 9 Snow
+                if move_type == 'ice':
+                    damage = int(damage * 1.5)
+            
             if effectiveness == 0:
                 effectiveness_message = "It had no effect..."
-                return 0, 0, effectiveness_message, None
+                return 0, 0, effectiveness_message, None, weather_to_set
             elif effectiveness < 1:
                 effectiveness_message = "It's not very effective..."
             elif effectiveness > 1:
@@ -750,12 +781,12 @@ class Move:
         
         combined_message = " ".join(all_messages) if all_messages else None
         
-        return base_damage, 0, effectiveness_message, combined_message
+        return base_damage, 0, effectiveness_message, combined_message, weather_to_set
     
     def _use_multihit_move(self, attacking_pokemon, defending_pokemon) -> Tuple[int, int, str, Optional[str]]:
         """Handle multi-hit moves like Pin Missile, Rock Blast, etc."""
         if not attacking_pokemon or not defending_pokemon:
-            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", None
+            return 0, 0, f"{attacking_pokemon.name} used {self.name}!", None, None
         
         # Determine number of hits
         hit_count = self._determine_hit_count()
@@ -789,7 +820,7 @@ class Move:
         print(f"  Total effectiveness: {effectiveness}x")
         
         if effectiveness == 0:
-            return 0, 0, "It had no effect...", None
+            return 0, 0, "It had no effect...", None, None
         
         # Determine attack and defense stats based on move category
         if self.category == 'physical':
@@ -880,7 +911,7 @@ class Move:
         if all_messages:
             combined_message = f"{combined_message} {' '.join(all_messages)}".strip()
         
-        return total_poke_damage, total_sub_damage, combined_message, None
+        return total_poke_damage, total_sub_damage, combined_message, None, None
     
     def get_multihit_hits(self, attacking_pokemon, defending_pokemon) -> List[Dict[str, Any]]:
         """Get individual hit information for multi-hit moves (for progressive damage display)"""

@@ -6,6 +6,7 @@ import { API_BASE_URL, BattleState, executeMove, TurnResult } from '@/lib/api';
 import PokemonCard from '@/components/PokemonCard';
 import BattleLog from '@/components/BattleLog';
 import Pokeball from '@/components/Pokeball';
+import WeatherOverlay from '@/components/WeatherOverlay';
 
 type BattleStage = 'intro-opponent' | 'intro-player' | 'active' | 'gameover';
 
@@ -31,6 +32,7 @@ export default function BattlePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [gameOver, setGameOver] = useState<string | null>(null);
   const [battleStage, setBattleStage] = useState<BattleStage>('intro-opponent');
+  const [weather, setWeather] = useState('none');
   
   // Animation states for cards
   const [playerAnim, setPlayerAnim] = useState({ visible: false, status: false, attacking: false, shaking: false, fainted: false });
@@ -213,6 +215,7 @@ export default function BattlePage() {
           });
 
           await new Promise(resolve => setTimeout(resolve, 600));
+          if (event.set_weather) setWeather(event.set_weather);
           setEvents(prev => [...prev, event.message]);
 
           await new Promise(resolve => setTimeout(resolve, 1800));
@@ -241,6 +244,12 @@ export default function BattlePage() {
     
     try {
       const result: TurnResult = await executeMove(moveName);
+      
+      if (!result || !result.turn_info) {
+        console.error('Invalid turn result:', result);
+        setIsProcessing(false);
+        return;
+      }
       
       for (const eventObj of (result.turn_info.battle_events as any[])) {
         const isPlayer = eventObj.is_player;
@@ -299,6 +308,10 @@ export default function BattlePage() {
           await new Promise(resolve => setTimeout(resolve, 1800));
         } else if (eventObj.message) {
           setEvents(prev => [...prev, eventObj.message]);
+        }
+
+        if (eventObj.set_weather) {
+          setWeather(eventObj.set_weather);
         }
 
         if (eventObj.type === 'move') {
@@ -384,6 +397,9 @@ export default function BattlePage() {
           {/* BATTLE ARENA */}
           <div className="relative h-[300px] md:flex-[4] md:min-h-[450px] 2xl:min-h-[650px] bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 2xl:border-8 border-[#475569] rounded-xl 2xl:rounded-3xl overflow-hidden gba-panel-shadow shrink-0 transition-all duration-700">
             <div className="absolute inset-0 bg-black/10" />
+            
+            {/* Weather Effects */}
+            <WeatherOverlay weather={weather} />
             
             {/* Pokeball Animations */}
             <Pokeball type="player" visible={pokeballState.player} />

@@ -6,6 +6,7 @@ import requests
 import os
 import random
 from game import Game
+from pokemon import Pokemon
 from data_loader import data_loader
 from moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
 import json
@@ -164,42 +165,72 @@ POKEAPI_NAME_MAP = {
     'mr-rime': 'mr-rime',
 }
 def get_best_sprite(data, side='front', shiny=False):
-    """Prioritize Gen 5 animated, then Showdown animated, then fallbacks."""
-    pokemon_name = data.get('name', '').lower()
-    sprites = data.get('sprites', {})
-    versions = sprites.get('versions', {})
-    gen5 = versions.get('generation-v', {}).get('black-white', {})
-    animated = gen5.get('animated', {})
+    """
+    Intelligently fetch the best possible sprite.
+    Follows priority: Gen 5 Animated Pixel > Gen 5 Static Pixel > 3D Animated.
+    Includes form normalization for Showdown compatibility.
+    """
+    name = data['name'].lower()
     
-    key = f"{side}_{'shiny' if shiny else 'default'}"
+    # Normalization for Showdown sprite filenames
+    # 1. Strip spaces and hyphens
+    # 2. Handle specific form patterns (e.g. "kyogre-primal" -> "kyogre-primal")
+    # Showdown often uses lowercased, hyphenated names for forms.
+    pokemon_name = name.replace(' ', '').replace('-', '')
     
-    # 1. Try PokeAPI Gen 5 Animated
-    url = animated.get(key)
-    if url: return url
+    # Specific common overrides for Showdown's naming conventions
+    OVERRIDES = {
+        'ho-oh': 'hooh',
+        'porygon-z': 'porygonz',
+        'jangmo-o': 'jangmoo',
+        'hakamo-o': 'hakamoo',
+        'kommo-o': 'kommoo',
+        'sirfetch’d': 'sirfetchd',
+        'farfetch’d': 'farfetchd',
+        'mr.-mime': 'mrmime',
+        'mr.-rime': 'mrrime',
+        'mime-jr.': 'mimejr'
+    }
     
-    # 2. Try Pokemon Showdown Animated (Excellent for Gen 6+ Pixel Art)
-    # The user pointed out that 'gen5ani-back' is the correct folder for these custom sprites
-    sd_side = "gen5ani-back" if side == 'back' else "gen5ani"
-    if shiny:
-        sd_side += "-shiny"
+    # Handle forms more explicitly (e.g. Alolan, Galar, Primal, Mega)
+    if '-' in name:
+        parts = name.split('-')
+        # If it's a known form, Showdown usually uses 'name-form'
+        if any(f in name for f in ['alola', 'galar', 'hisui', 'paldea', 'mega', 'primal', 'origin', 'therian', 'crowned', 'eternamax', 'ultra', 'dusk', 'dawn']):
+            pokemon_name = name.replace(' ', '') # Keep the hyphen for forms
     
-    # Showdown URL format
-    sd_url = f"https://play.pokemonshowdown.com/sprites/{sd_side}/{pokemon_name}.gif"
-    
-    # We return this as a high-priority fallback for newer Pokémon
-    if data.get('id', 0) > 649:
-        return sd_url
+    if pokemon_name in OVERRIDES:
+        pokemon_name = OVERRIDES[pokemon_name]
 
-    # 3. Try PokeAPI Gen 5 Static
-    url = gen5.get(key)
-    if url: return url
+    # Showdown Path Logic
+    prefix = ""
+    back_suffix = "-back" if side == 'back' else ""
+    shiny_suffix = "-shiny" if shiny else ""
+
+    # Priority 1: Pixel Animated (Gen 5 style)
+    # Path: /sprites/gen5ani[-back][-shiny]/name.gif
+    url_pixel_ani = f"https://play.pokemonshowdown.com/sprites/gen5ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
     
-    # 4. Try Modern/Default
-    url = sprites.get(key)
-    if url: return url
+    # Priority 2: Pixel Static (Gen 5 style)
+    # Path: /sprites/gen5[-back][-shiny]/name.png
+    url_pixel_static = f"https://play.pokemonshowdown.com/sprites/gen5{back_suffix}{shiny_suffix}/{pokemon_name}.png"
     
-    # 5. Absolute Fallback (Front Default)
-    return sprites.get('front_default', '')
+    # Priority 3: Modern 3D Animated (Gen 6+ style)
+    # Path: /sprites/ani[-back][-shiny]/name.gif
+    url_3d_ani = f"https://play.pokemonshowdown.com/sprites/ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
+    
+    poke_id = data.get('id', 0)
+    
+    # Since we can't check existence synchronously without adding latency,
+    # we use the generation as a heuristic.
+    # Gen 1-5 (ID <= 649) almost always have gen5ani.
+    if poke_id > 0 and poke_id <= 649:
+        # Check for specific forms that might only be in static gen5
+        return url_pixel_ani
+    
+    # Gen 6+ (including Mega/Primal forms which are often ID > 10000)
+    # Default to static pixel as requested ("use gen 5 static first instead of the 3d model")
+    return url_pixel_static
 
 def get_pokemon_data(pokemon_name):
     normalized_name = pokemon_name.lower().replace(' ', '')
@@ -365,7 +396,7 @@ async def start_game(request: Request):
                 'evs': selected_set.get('evs', {}),
                 'ivs': selected_set.get('ivs', {}),
                 'nature': selected_set.get('nature', 'Hardy'),
-                'ability': selected_set.get('ability', 'noability')
+                'ability': selected_set.get('ability', player_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability'))
             }
         else:
             player_moves = get_pokemon_moves(player_data)
@@ -421,8 +452,15 @@ async def start_game(request: Request):
         
         # Trigger switch-in effects
         start_messages = []
-        start_messages.extend(game_instance.player_pokemon.on_switch_in(game_instance.opponent_pokemon))
-        start_messages.extend(game_instance.opponent_pokemon.on_switch_in(game_instance.player_pokemon))
+        p_msgs = game_instance.player_pokemon.on_switch_in(game_instance.opponent_pokemon)
+        o_msgs = game_instance.opponent_pokemon.on_switch_in(game_instance.player_pokemon)
+        
+        all_msgs = p_msgs + o_msgs
+        for msg in all_msgs:
+            if 'set_weather' in msg:
+                game_instance.weather = msg['set_weather']
+                game_instance.weather_duration = 5
+            start_messages.append(msg)
         
         is_shiny = selected_set.get('shiny', False) if selected_set else False
         player_sprite = get_best_sprite(player_data, side='back', shiny=is_shiny)
@@ -432,6 +470,7 @@ async def start_game(request: Request):
         
         battle_data = {
             'start_events': start_messages,
+            'weather': game_instance.weather,
             'player_pokemon': {
                 **game_instance.player_pokemon.to_dict(),
                 'sprite': player_sprite,
@@ -483,6 +522,11 @@ async def move(request: Request):
         "is_game_over": game_instance.battle_over,
         "battle_result": game_instance.get_battle_result() if game_instance.battle_over else None
     }
+    
+    print(f"DEBUG: Move {move_name} result: {list(response_data.keys())}")
+    if response_data["turn_info"]:
+        print(f"DEBUG: Turn Info Events: {len(response_data['turn_info'].get('battle_events', []))}")
+        
     return response_data
 
 if __name__ == "__main__":

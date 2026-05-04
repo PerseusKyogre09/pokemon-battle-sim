@@ -242,6 +242,15 @@ input[type="range"].stat-slider::-webkit-slider-thumb {
   filter: drop-shadow(0 0 8px var(--type-color));
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-10px) translateX(-50%); }
+  to { opacity: 1; transform: translateY(0) translateX(-50%); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

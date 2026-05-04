@@ -41,6 +41,10 @@ class Ability:
         self.config = ABILITIES_CONFIG.get(self.id, {})
         self.name = self.config.get("name", name)
         self.description = self.config.get("desc", "No effect.")
+        if not self.config:
+            print(f"DEBUG: Ability {name} (ID: {self.id}) not found in config!")
+        else:
+            print(f"DEBUG: Loaded Ability {self.name} (ID: {self.id})")
         
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
@@ -208,18 +212,18 @@ class Ability:
         
         # Priority handlers for common switch-in mechanics
         MECHANICS = {
-            "intimidate": ("attack", -1, "{user}'s Intimidate cuts {target}'s attack!"),
-            "download": None, # Complex logic below
-            "unnerve": ("unnerve", 0, "{user}'s Unnerve prevents {target} from using berries!"),
-            "drizzle": ("weather", 0, "{user}'s Drizzle made it rain!"),
-            "drought": ("weather", 0, "{user}'s Drought made the sunlight harsh!"),
-            "sandstream": ("weather", 0, "{user}'s Sand Stream whipped up a sandstorm!"),
-            "snowwarning": ("weather", 0, "{user}'s Snow Warning whipped up a hailstorm!"),
-            "pressure": ("pressure", 0, "{user}'s Pressure is bearing down on {target}!"),
-            "electricsurge": ("terrain", 0, "{user}'s Electric Surge set the Electric Terrain!"),
-            "grassysurge": ("terrain", 0, "{user}'s Grassy Surge set the Grassy Terrain!"),
-            "mistsurge": ("terrain", 0, "{user}'s Misty Surge set the Misty Terrain!"),
-            "psychicsurge": ("terrain", 0, "{user}'s Psychic Surge set the Psychic Terrain!")
+            "intimidate": ("attack", -1, "{user}'s Intimidate cuts {target}'s attack!", None),
+            "download": None,
+            "unnerve": ("unnerve", 0, "{user}'s Unnerve prevents {target} from using berries!", None),
+            "drizzle": ("weather", 0, "{user}'s Drizzle made it rain!", "raindance"),
+            "drought": ("weather", 0, "{user}'s Drought made the sunlight harsh!", "sunnyday"),
+            "sandstream": ("weather", 0, "{user}'s Sand Stream whipped up a sandstorm!", "sandstorm"),
+            "snowwarning": ("weather", 0, "{user}'s Snow Warning made it snow!", "hail"),
+            "pressure": ("pressure", 0, "{user}'s Pressure is bearing down on {target}!", None),
+            "electricsurge": ("terrain", 0, "{user}'s Electric Surge set the Electric Terrain!", "electricterrain"),
+            "grassysurge": ("terrain", 0, "{user}'s Grassy Surge set the Grassy Terrain!", "grassyterrain"),
+            "mistsurge": ("terrain", 0, "{user}'s Misty Surge set the Misty Terrain!", "mistyterrain"),
+            "psychicsurge": ("terrain", 0, "{user}'s Psychic Surge set the Psychic Terrain!", "psychicterrain")
         }
         
         if self.id in MECHANICS:
@@ -229,12 +233,18 @@ class Ability:
                     msg = pokemon.modify_stat_stage(stat, 1)
                     if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s Download boosted its {stat.replace('_', ' ').title()}!", "is_player": is_p})
             else:
-                stat, stages, template = MECHANICS[self.id]
+                mech = MECHANICS[self.id]
+                stat, stages, template, weather = mech[0], mech[1], mech[2], mech[3]
                 msg = template.format(user=pokemon.name, target=opponent.name)
                 if stages != 0 and hasattr(opponent, "modify_stat_stage"):
                     res_msg = opponent.modify_stat_stage(stat, stages)
                     if res_msg: msg = res_msg
-                results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": msg, "is_player": is_p})
+                
+                res = {"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": msg, "is_player": is_p}
+                if weather:
+                    if "terrain" in stat: res["set_terrain"] = weather
+                    else: res["set_weather"] = weather
+                results.append(res)
 
         # Process dynamic hooks (onStart, onSwitchIn)
         for hook in ["onStart", "onSwitchIn"]:
@@ -243,7 +253,15 @@ class Ability:
             
             # Weather/Terrain
             if "setWeather" in logic or "setTerrain" in logic:
-                results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} changed the field!", "is_player": is_p})
+                res = {"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} changed the field!", "is_player": is_p}
+                
+                # Extract the weather/terrain name if possible
+                w_match = re.search(r"setWeather\('([^']+)'\)", logic)
+                t_match = re.search(r"setTerrain\('([^']+)'\)", logic)
+                if w_match: res["set_weather"] = w_match.group(1).lower()
+                if t_match: res["set_terrain"] = t_match.group(1).lower()
+                
+                results.append(res)
             
             # Boosts
             boosts = self._parse_boost_amounts(logic)
