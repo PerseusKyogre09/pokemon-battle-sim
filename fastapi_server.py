@@ -43,25 +43,43 @@ music_path = os.path.join(os.path.dirname(__file__), 'music')
 if os.path.exists(music_path):
     app.mount("/api/music/local", StaticFiles(directory=music_path), name="music")
 
+
+def get_public_base_url(request: Request) -> str:
+    configured = os.getenv("PUBLIC_BASE_URL") or os.getenv("NEXT_PUBLIC_API_URL")
+    if configured:
+        return configured.rstrip('/')
+
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    forwarded_host = request.headers.get("x-forwarded-host")
+    host = forwarded_host or request.headers.get("host")
+
+    if host:
+        scheme = forwarded_proto or request.url.scheme
+        if scheme == "http" and host not in {"localhost", "127.0.0.1"} and not host.startswith("localhost:") and not host.startswith("127.0.0.1:"):
+            scheme = "https"
+        return f"{scheme}://{host}"
+
+    return str(request.base_url).rstrip('/')
+
 @app.get("/api/audio/signed-url/{filename}")
 async def get_signed_url(filename: str, request: Request):
     if not supabase:
         print(f"[AUDIO] ⚠️ Supabase not configured. Falling back to local: {filename}")
-        base_url = str(request.base_url).rstrip('/')
+        base_url = get_public_base_url(request)
         return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
     
     try:
         response = supabase.storage.from_(bucket_name).create_signed_url(filename, 3600)
         if "error" in response:
             print(f"[AUDIO] ❌ Supabase error: {response['error']}")
-            base_url = str(request.base_url).rstrip('/')
+            base_url = get_public_base_url(request)
             return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
         
         print(f"[AUDIO] ✅ Serving {filename} from Supabase")
         return {"url": response["signedURL"], "source": "supabase"}
     except Exception as e:
         print(f"[AUDIO] ❌ Exception: {e}")
-        base_url = str(request.base_url).rstrip('/')
+        base_url = get_public_base_url(request)
         return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
 
 @app.get("/api/pokemon/cry/{pokemon_name}")
@@ -295,7 +313,7 @@ async def start_game(request: Request):
         player_sprite = game_instance.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
         opponent_sprite = game_instance.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
         
-        base_url = str(request.base_url).rstrip('/')
+        base_url = get_public_base_url(request)
         
         battle_data = {
             'start_events': start_messages,
