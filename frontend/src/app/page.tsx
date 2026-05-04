@@ -28,6 +28,13 @@ export default function Home() {
         a.pause();
         a.currentTime = 0;
       });
+      // Also stop off-DOM audios
+      if ((window as any).__activeAudios) {
+        (window as any).__activeAudios.forEach((a: HTMLAudioElement) => {
+          try { a.pause(); a.currentTime = 0; } catch (e) {}
+        });
+        (window as any).__activeAudios = [];
+      }
     };
     stopAllAudio();
 

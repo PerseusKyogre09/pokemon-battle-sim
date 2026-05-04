@@ -140,3 +140,34 @@ body {
 .animate-spin-slow {
   animation: spin-slow 8s linear infinite;
 }
+
+/* Ability Popup Animations - Pro Smoothness */
+@keyframes ability-slide-in-player {
+  0% { transform: translateX(-120%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes ability-slide-out-player {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-120%); opacity: 0; }
+}
+@keyframes ability-slide-in-opponent {
+  0% { transform: translateX(120%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes ability-slide-out-opponent {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
+.animate-ability-in-player {
+  animation: ability-slide-in-player 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.animate-ability-out-player {
+  animation: ability-slide-out-player 0.4s cubic-bezier(0.64, 0, 0.78, 0) forwards;
+}
+.animate-ability-in-opponent {
+  animation: ability-slide-in-opponent 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.animate-ability-out-opponent {
+  animation: ability-slide-out-opponent 0.4s cubic-bezier(0.64, 0, 0.78, 0) forwards;
+}

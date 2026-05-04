@@ -8,6 +8,7 @@ class DataLoader:
         self.moves_desc_data = {}
         self.learnsets_data = {}
         self.typechart_data = {}
+        self.abilities_data = {}
         self._load_all_data()
     
     def _load_all_data(self):
@@ -15,6 +16,7 @@ class DataLoader:
         self._load_moves_descriptions()
         self._load_learnsets()
         self._load_typechart()
+        self._load_abilities()
     
     def _load_moves(self):
         """Load moves data from datasets/moves.json."""
@@ -113,6 +115,20 @@ class DataLoader:
             print(f"Error parsing type chart data: {e}")
         except Exception as e:
             print(f"Error loading type chart data: {e}")
+            raise
+            
+    def _load_abilities(self):
+        """Load abilities data from datasets/abilities_logic.json."""
+        try:
+            with open('datasets/abilities_logic.json', 'r', encoding='utf-8') as f:
+                self.abilities_data = json.load(f)
+            
+            print(f"=== LOADED {len(self.abilities_data)} ABILITIES FROM abilities_logic.json ===")
+            
+        except FileNotFoundError:
+            print("Warning: abilities_logic.json file not found")
+        except Exception as e:
+            print(f"Error loading abilities data: {e}")
             raise
     
     def get_move(self, move_name):
@@ -232,6 +248,14 @@ class DataLoader:
                 return data
                 
         return None
+        
+    def get_ability(self, ability_name: str) -> Optional[Dict[str, Any]]:
+        """Get ability data from the loaded abilities."""
+        if not ability_name:
+            return None
+            
+        ability_key = ability_name.lower().replace(' ', '').replace('-', '')
+        return self.abilities_data.get(ability_key)
     
     def get_move_description(self, move_name: str) -> Optional[Dict[str, Any]]:
         """Get move description data including special mechanics descriptions."""

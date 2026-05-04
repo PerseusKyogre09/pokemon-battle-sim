@@ -269,6 +269,9 @@ class BurnStatusEffect(StatusEffect):
     
     def modify_stat(self, pokemon, stat_name: str, stat_value: int) -> int:
         if stat_name == 'attack':
+            # Guts ignores the Attack drop from Burn
+            if hasattr(pokemon, 'ability') and pokemon.ability.id == 'guts':
+                return stat_value
             return int(stat_value * 0.5)
         
         return stat_value

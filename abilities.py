@@ -1,0 +1,398 @@
+from typing import Dict, List, Any, Optional
+import json
+import os
+import re
+
+LOGIC_PATH = os.path.join(os.path.dirname(__file__), "datasets/abilities_logic.json")
+METADATA_PATH = os.path.join(os.path.dirname(__file__), "datasets/abilities.json")
+
+def load_abilities_config():
+    config = {}
+    
+    if os.path.exists(LOGIC_PATH):
+        with open(LOGIC_PATH, 'r') as f:
+            config = json.load(f)
+            
+    if os.path.exists(METADATA_PATH):
+        with open(METADATA_PATH, 'r') as f:
+            metadata = json.load(f)
+            for id, data in metadata.items():
+                if id in config:
+                    config[id]["desc"] = data.get("desc", config[id].get("desc", ""))
+                    config[id]["shortDesc"] = data.get("shortDesc", config[id].get("shortDesc", ""))
+                else:
+                    config[id] = {
+                        "id": id,
+                        "name": data.get("name", id),
+                        "desc": data.get("desc", ""),
+                        "shortDesc": data.get("shortDesc", "")
+                    }
+    
+    if "levitate" in config:
+        config["levitate"]["immunities"] = {"types": ["ground"]}
+        
+    return config
+
+ABILITIES_CONFIG = load_abilities_config()
+
+class Ability:
+    def __init__(self, name: str):
+        self.id = name.lower().replace(" ", "").replace("-", "")
+        self.config = ABILITIES_CONFIG.get(self.id, {})
+        self.name = self.config.get("name", name)
+        self.description = self.config.get("desc", "No effect.")
+        
+    def _parse_chain_modify(self, logic_str: str) -> float:
+        """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
+        if not logic_str or "chainModify" not in logic_str:
+            return 1.0
+            
+        # Look for [num1, num2] pattern
+        match = re.search(r'chainModify\(\[?([\d., ]+)\]?\)', logic_str)
+        if match:
+            parts = [p.strip() for p in match.group(1).split(',')]
+            if len(parts) >= 2:
+                try:
+                    return float(parts[0]) / float(parts[1])
+                except (ValueError, ZeroDivisionError):
+                    return 1.0
+            else:
+                try:
+                    return float(parts[0])
+                except ValueError:
+                    return 1.0
+        
+        # Look for modify(stat, mult) pattern
+        match = re.search(r'this\.modify\([^,]+,\s*([\d.]+)\)', logic_str)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                return 1.0
+                
+        return 1.0
+
+    def _check_condition(self, logic_str: str, pokemon, opponent, move=None) -> bool:
+        """Check if conditions in logic_str are met."""
+        if not logic_str:
+            return True
+            
+        # Pattern: pokemon.hp <= pokemon.maxhp / 3
+        if "hp <= pokemon.maxhp / 3" in logic_str or "hp <= attacker.maxhp / 3" in logic_str:
+            if pokemon.current_hp <= pokemon.max_hp / 3:
+                return True
+            return False
+            
+        if "hp <= pokemon.maxhp / 2" in logic_str:
+            if pokemon.current_hp <= pokemon.max_hp / 2:
+                return True
+            return False
+
+        # Pattern: pokemon.status
+        if "pokemon.status" in logic_str or "attacker.status" in logic_str:
+            if pokemon.major_status:
+                return True
+            return False
+            
+        # Pattern: move.type === 'Fire'
+        match = re.search(r"move\.type === '([^']+)'", logic_str)
+        if match:
+            target_type = match.group(1).lower()
+            if move and move.type.lower() == target_type:
+                return True
+            return False
+
+        # Pattern: this.field.isTerrain('electricterrain')
+        match = re.search(r"isTerrain\('([^']+)'\)", logic_str)
+        if match:
+            target_terrain = match.group(1).lower()
+            # Simple check for now - would need terrain system in game.py
+            return False # Fallback until terrain is implemented
+            
+        # Handle basePowerAfterMultiplier <= 60 or move.power <= 60
+        if "power <= 60" in logic_str or "basePowerAfterMultiplier <= 60" in logic_str:
+            if move and 0 < move.power <= 60:
+                return True
+            return False
+        
+        # Generic power check
+        match = re.search(r"power <= (\d+)", logic_str)
+        if match:
+            threshold = int(match.group(1))
+            if move and 0 < move.power <= threshold:
+                return True
+            return False
+
+        # 6. Specific moves
+        match = re.search(r"move\.id === '([^']+)'", logic_str)
+        if match:
+            target_move = match.group(1).lower()
+            if move and move.name.lower().replace(" ", "").replace("-", "") == target_move:
+                return True
+            return False
+
+        # If no obvious condition, assume it applies
+        return True
+
+    def modify_stat(self, pokemon, stat_name: str, value: int) -> int:
+        """Applies stat multipliers based on the ability."""
+        # 1. Check direct config (legacy/simple)
+        condition = self.config.get("condition")
+        if condition == "has_status":
+            if not pokemon.major_status:
+                return value
+        
+        stat_modifiers = self.config.get("stat_modifiers", {})
+        multiplier = stat_modifiers.get(stat_name, 1.0)
+        
+        if multiplier != 1.0:
+            value = int(value * multiplier)
+            
+        # 2. Check dynamic logic from JSON
+        stat_map = {
+            'attack': 'onModifyAtk',
+            'defense': 'onModifyDef',
+            'special_attack': 'onModifySpA',
+            'special_defense': 'onModifySpD',
+            'speed': 'onModifySpe'
+        }
+        
+        hook = stat_map.get(stat_name)
+        if hook and hook in self.config:
+            logic = self.config[hook]
+            if self._check_condition(logic, pokemon, None):
+                multiplier = self._parse_chain_modify(logic)
+                value = int(value * multiplier)
+        
+        # 3. Hardcoded special cases - Only for things that cannot be parsed
+        # Guts Attack boost is handled by generic onModifyAtk in JSON
+        # Huge Power is handled by generic onModifyAtk in JSON
+        
+        return value
+
+    def on_switch_in(self, pokemon, opponent) -> List[Dict[str, Any]]:
+        """Triggers effects when the Pokemon enters the battle."""
+        results = []
+        
+        # Hardcoded common switch-in abilities
+        if self.id == "intimidate":
+            if hasattr(opponent, "modify_stat_stage"):
+                msg = opponent.modify_stat_stage("attack", -1)
+                if msg:
+                    results.append({
+                        "type": "ability",
+                        "ability_name": self.name,
+                        "pokemon_name": pokemon.name,
+                        "message": f"{pokemon.name}'s Intimidate cuts {opponent.name}'s attack!",
+                        "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                    })
+        elif self.id == "download":
+            if hasattr(opponent, "defense") and hasattr(opponent, "special_defense"):
+                if opponent.defense < opponent.special_defense:
+                    msg = pokemon.modify_stat_stage("attack", 1)
+                    stat_name = "Attack"
+                else:
+                    msg = pokemon.modify_stat_stage("special_attack", 1)
+                    stat_name = "Special Attack"
+                if msg:
+                    results.append({
+                        "type": "ability",
+                        "ability_name": self.name,
+                        "pokemon_name": pokemon.name,
+                        "message": f"{pokemon.name}'s Download boosted its {stat_name}!",
+                        "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                    })
+        elif self.id in ["drizzle", "drought", "sandstream", "snowwarning"]:
+            weather_msgs = {
+                "drizzle": "made it rain!",
+                "drought": "made the sunlight harsh!",
+                "sandstream": "whipped up a sandstorm!",
+                "snowwarning": "whipped up a hailstorm!"
+            }
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s {self.name} {weather_msgs[self.id]}",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+            
+        # Generic parsing for weather and terrain in onStart/onSwitchIn
+        for hook in ["onStart", "onSwitchIn"]:
+            logic = self.config.get(hook)
+            if not logic: continue
+            
+            # Weather setting
+            match = re.search(r"this\.field\.setWeather\('([^']+)'\)", logic)
+            if match:
+                weather = match.group(1).lower()
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s {self.name} changed the weather to {weather}!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+            
+            # Terrain setting
+            match = re.search(r"this\.field\.setTerrain\('([^']+)'\)", logic)
+            if match:
+                terrain = match.group(1).lower()
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s {self.name} set the terrain to {terrain}!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+
+        # Generic parsing for boost effects in JSON
+        effects = self.config.get("on_switch_in", [])
+        
+        for effect in effects:
+            action = effect.get("action")
+            target_type = effect.get("target", "self")
+            target = opponent if target_type == "opponent" else pokemon
+            
+            if action == "boost":
+                stats = effect.get("stats", {})
+                for stat_name, stages in stats.items():
+                    if hasattr(target, "modify_stat_stage"):
+                        msg = target.modify_stat_stage(stat_name, stages)
+                        if msg:
+                            # Format message if provided
+                            custom_msg = effect.get("message")
+                            if custom_msg:
+                                final_msg = custom_msg.format(user=pokemon.name, target=target.name)
+                            else:
+                                final_msg = msg
+                            
+                            results.append({
+                                "type": "ability",
+                                "ability_name": self.name,
+                                "pokemon_name": pokemon.name,
+                                "message": final_msg,
+                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                            })
+        
+        return results
+
+    def on_turn_end(self, pokemon, opponent) -> List[Dict[str, Any]]:
+        """Trigger end-of-turn effects (e.g. Speed Boost)."""
+        results = []
+        if self.id == "speedboost":
+            msg = pokemon.modify_stat_stage("speed", 1)
+            if msg:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s Speed Boost increased its Speed!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        return results
+
+    def on_faint(self, pokemon, opponent) -> List[Dict[str, Any]]:
+        """Trigger effects when the Pokemon faints (e.g. Aftermath)."""
+        results = []
+        if self.id == "aftermath":
+            damage = opponent.max_hp // 4
+            opponent.current_hp = max(0, opponent.current_hp - damage)
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name}'s Aftermath hurt {opponent.name}!",
+                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+            })
+        return results
+
+    def modify_damage_dealt(self, pokemon, opponent, move, damage: int) -> int:
+        """Modifies damage dealt by the Pokemon."""
+        final_damage = damage
+        
+        # 1. Check direct modifiers list (legacy/simple)
+        modifiers = self.config.get("damage_modifiers", [])
+        for mod in modifiers:
+            condition = mod.get("condition")
+            multiplier = mod.get("multiplier", 1.0)
+            
+            if condition == "hp_threshold":
+                threshold = mod.get("threshold", 0.33)
+                required_type = mod.get("move_type")
+                if pokemon.current_hp / pokemon.max_hp <= threshold:
+                    if not required_type or move.type.lower() == required_type.lower():
+                        final_damage = int(final_damage * multiplier)
+            elif condition == "base_power_below":
+                threshold = mod.get("threshold", 60)
+                if move.power <= threshold and move.power > 0:
+                    final_damage = int(final_damage * multiplier)
+                    
+        # 2. Check raw logic for multipliers (Technician, Aerilate, etc.)
+        for hook in ["onBasePower", "onModifyAtk", "onModifySpA"]:
+            # Only apply Atk/SpA hooks if they match the move category
+            if hook == "onModifyAtk" and move.category != 'physical':
+                continue
+            if hook == "onModifySpA" and move.category != 'special':
+                continue
+                
+            logic = self.config.get(hook)
+            if not logic: continue
+            
+            if self._check_condition(logic, pokemon, opponent, move):
+                multiplier = self._parse_chain_modify(logic)
+                final_damage = int(final_damage * multiplier)
+                            
+        return final_damage
+
+    def is_immune(self, move_type: str, move_category: str) -> bool:
+        """Checks if the ability provides immunity to a certain move type/category."""
+        immunities = self.config.get("immunities", {})
+        
+        # 1. Check direct immunities (e.g. Levitate)
+        if move_type.lower() in [t.lower() for t in immunities.get("types", [])]:
+            return True
+            
+        # 2. Check raw logic for immunity (onTryHit)
+        on_try_hit = self.config.get("onTryHit")
+        if on_try_hit:
+            # Check if this move type is mentioned as being blocked
+            if f"move.type === '{move_type.capitalize()}'" in on_try_hit or f"move.type === '{move_type.lower()}'" in on_try_hit:
+                if "return null" in on_try_hit or "return false" in on_try_hit:
+                    return True
+
+        return False
+
+    def get_stab_multiplier(self) -> float:
+        """Returns the STAB multiplier (usually 1.5, Adaptability makes it 2.0)."""
+        # 1. Check direct config
+        if "on_modify_stab" in self.config:
+            return self.config["on_modify_stab"]
+            
+        # 2. Check raw logic for Adaptability pattern
+        on_modify_stab = self.config.get("onModifySTAB")
+        if on_modify_stab:
+            if "return 2.25" in on_modify_stab: return 2.25
+            if "return 2" in on_modify_stab: return 2.0
+            
+        return 1.5
+
+    def get_secondary_multiplier(self) -> float:
+        """Returns the multiplier for secondary effect chances."""
+        # 1. Check direct config
+        if "secondary_multiplier" in self.config:
+            return self.config["secondary_multiplier"]
+            
+        # 2. Check raw logic for Serene Grace pattern
+        on_modify_move = self.config.get("onModifyMove")
+        if on_modify_move:
+            if "* 2" in on_modify_move or "*= 2" in on_modify_move: return 2.0
+            if "* 3" in on_modify_move or "*= 3" in on_modify_move: return 3.0
+            
+        return 1.0
+
+def create_ability(name: str) -> Ability:
+    """Helper to create an ability instance."""
+    if not name:
+        return Ability("noability")
+    return Ability(name)

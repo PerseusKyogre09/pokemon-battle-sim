@@ -40,6 +40,8 @@ export default function BattlePage() {
   const [showFlash, setShowFlash] = useState(false);
   const [showStartOverlay, setShowStartOverlay] = useState(true);
   const [hoveredMove, setHoveredMove] = useState<any>(null);
+  const [abilityPopup, setAbilityPopup] = useState<{ name: string, pokemon: string, isPlayer: boolean, exiting?: boolean } | null>(null);
+  const [audioReady, setAudioReady] = useState(false);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -48,10 +50,16 @@ export default function BattlePage() {
 
   useEffect(() => {
     const savedState = localStorage.getItem('initialBattleState');
-    if (savedState) {
-      const state = JSON.parse(savedState);
-      setBattleState(state);
-      setupAudio();
+    if (savedState && savedState !== 'undefined') {
+      try {
+        const state = JSON.parse(savedState);
+        setBattleState(state);
+        setupAudio();
+      } catch (e) {
+        console.error('Failed to parse saved battle state:', e);
+        localStorage.removeItem('initialBattleState');
+        router.push('/');
+      }
     } else {
       router.push('/');
     }
@@ -65,6 +73,13 @@ export default function BattlePage() {
           ref.current = null;
         }
       });
+      // Also stop any dynamically created audios in this window
+      if ((window as any).__activeAudios) {
+        (window as any).__activeAudios.forEach((a: HTMLAudioElement) => {
+          try { a.pause(); a.currentTime = 0; } catch (e) {}
+        });
+        (window as any).__activeAudios = [];
+      }
     };
   }, [router]);
 
@@ -86,9 +101,24 @@ export default function BattlePage() {
       
       pokeballSoundRef.current = new Audio(pokeballSoundUrl);
       pokeballSoundRef.current.preload = 'auto';
+      
+      // Store globally for homepage cleanup
+      (window as any).__activeAudios = [audioRef.current, hitSoundRef.current, pokeballSoundRef.current];
+      
+      setAudioReady(true);
     } catch (err) {
       console.error('Audio setup failed:', err);
+      setAudioReady(true); // Proceed anyway if audio fails
     }
+  };
+
+  const playDynamicAudio = (url: string) => {
+    try {
+      const audio = new Audio(url);
+      if (!(window as any).__activeAudios) (window as any).__activeAudios = [];
+      (window as any).__activeAudios.push(audio);
+      audio.play().catch(() => {});
+    } catch (e) {}
   };
 
   const handleStartBattle = () => {
@@ -101,26 +131,23 @@ export default function BattlePage() {
     // Wait for audio to be ready
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // 1. Music starts
     audioRef.current?.play().catch(() => console.log('Autoplay blocked'));
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // 2. Opponent Throw
     setPokeballState({ player: false, opponent: true });
     pokeballSoundRef.current?.play().catch(() => {});
     setEvents([`A wild ${state.opponent_pokemon.name} appeared!`]);
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // 3. Opponent Flash & Appear
     setPokeballState({ player: false, opponent: false });
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 300);
     setOpponentAnim(prev => ({ ...prev, visible: true }));
     
     if (state.opponent_pokemon.cry_url) {
-      new Audio(state.opponent_pokemon.cry_url).play().catch(() => {});
+      playDynamicAudio(state.opponent_pokemon.cry_url);
     }
     
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -128,7 +155,6 @@ export default function BattlePage() {
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // 4. Player Throw
     setBattleStage('intro-player');
     setPokeballState({ player: true, opponent: false });
     pokeballSoundRef.current?.play().catch(() => {});
@@ -136,20 +162,43 @@ export default function BattlePage() {
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // 5. Player Flash & Appear
     setPokeballState({ player: false, opponent: false });
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 300);
     setPlayerAnim(prev => ({ ...prev, visible: true }));
     
     if (state.player_pokemon.cry_url) {
-      new Audio(state.player_pokemon.cry_url).play().catch(() => {});
+      playDynamicAudio(state.player_pokemon.cry_url);
     }
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setPlayerAnim(prev => ({ ...prev, status: true }));
     
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (state.start_events && state.start_events.length > 0) {
+      for (const event of state.start_events) {
+        if (event.type === 'ability') {
+          setAbilityPopup({ 
+            name: event.ability_name, 
+            pokemon: event.pokemon_name, 
+            isPlayer: event.is_player 
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, 600));
+          setEvents(prev => [...prev, event.message]);
+          
+          await new Promise(resolve => setTimeout(resolve, 1400));
+          
+          setAbilityPopup(prev => prev ? { ...prev, exiting: true } : null);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          setAbilityPopup(null);
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+    }
+
     setBattleStage('active');
   };
 
@@ -188,7 +237,7 @@ export default function BattlePage() {
           
           await new Promise(resolve => setTimeout(resolve, 400));
           
-          if (eventObj.damage > 0) {
+          if (eventObj.damage > 0 || eventObj.substitute_damage > 0) {
             hitSoundRef.current?.play();
             if (isPlayer) {
               setOpponentAnim(prev => ({ ...prev, shaking: true }));
@@ -213,6 +262,26 @@ export default function BattlePage() {
           } else {
             setOpponentAnim(prev => ({ ...prev, fainted: true }));
           }
+        } else if (eventObj.type === 'ability') {
+          // 1. Show the Banner first
+          setAbilityPopup({ 
+            name: eventObj.ability_name, 
+            pokemon: eventObj.pokemon_name, 
+            isPlayer: eventObj.target === 'player'
+          });
+          
+          // 2. Short wait before the message appears in the log
+          await new Promise(resolve => setTimeout(resolve, 600));
+          setEvents(prev => [...prev, eventObj.message]);
+          
+          // 3. Wait for the player to read
+          await new Promise(resolve => setTimeout(resolve, 1400));
+          
+          // 4. Trigger Exit (Out)
+          setAbilityPopup(prev => prev ? { ...prev, exiting: true } : null);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          setAbilityPopup(null);
         } else if (eventObj.message) {
           setEvents(prev => [...prev, eventObj.message]);
         }
@@ -223,12 +292,14 @@ export default function BattlePage() {
             player_pokemon: {
               ...prev.player_pokemon,
               current_hp: isPlayer ? eventObj.attacker_hp : eventObj.defender_hp,
-              status_effects: isPlayer ? eventObj.attacker_status : eventObj.defender_status
+              status_effects: isPlayer ? eventObj.attacker_status : eventObj.defender_status,
+              substitute_hp: isPlayer ? eventObj.attacker_substitute_hp : eventObj.defender_substitute_hp
             },
             opponent_pokemon: {
               ...prev.opponent_pokemon,
               current_hp: isPlayer ? eventObj.defender_hp : eventObj.attacker_hp,
-              status_effects: isPlayer ? eventObj.defender_status : eventObj.attacker_status
+              status_effects: isPlayer ? eventObj.defender_status : eventObj.attacker_status,
+              substitute_hp: isPlayer ? eventObj.defender_substitute_hp : eventObj.attacker_substitute_hp
             }
           } : null);
         } else if (eventObj.type === 'status') {
@@ -238,12 +309,14 @@ export default function BattlePage() {
             player_pokemon: isTargetPlayer ? {
               ...prev.player_pokemon,
               current_hp: eventObj.pokemon_hp ?? prev.player_pokemon.current_hp,
-              status_effects: eventObj.status_effects ?? prev.player_pokemon.status_effects
+              status_effects: eventObj.status_effects ?? prev.player_pokemon.status_effects,
+              substitute_hp: eventObj.substitute_hp !== undefined ? eventObj.substitute_hp : prev.player_pokemon.substitute_hp
             } : prev.player_pokemon,
             opponent_pokemon: !isTargetPlayer ? {
               ...prev.opponent_pokemon,
               current_hp: eventObj.pokemon_hp ?? prev.opponent_pokemon.current_hp,
-              status_effects: eventObj.status_effects ?? prev.opponent_pokemon.status_effects
+              status_effects: eventObj.status_effects ?? prev.opponent_pokemon.status_effects,
+              substitute_hp: eventObj.substitute_hp !== undefined ? eventObj.substitute_hp : prev.opponent_pokemon.substitute_hp
             } : prev.opponent_pokemon
           } : null);
         }
@@ -278,9 +351,10 @@ export default function BattlePage() {
             </h2>
             <button 
               onClick={handleStartBattle}
-              className="gba-box w-full py-6 text-xl hover:bg-[#2d3a4d] transition-colors uppercase tracking-widest text-white"
+              disabled={!audioReady}
+              className={`gba-box w-full py-6 text-xl hover:bg-[#2d3a4d] transition-colors uppercase tracking-widest text-white ${!audioReady ? 'opacity-50 cursor-wait' : ''}`}
             >
-              START BATTLE
+              {audioReady ? 'START BATTLE' : 'LOADING AUDIO...'}
             </button>
           </div>
         </div>
@@ -305,6 +379,36 @@ export default function BattlePage() {
               TURN {events.filter(e => e.includes('used')).length + 1}
             </div>
 
+            {/* Ability Activation Popup (Gen 5 Style) */}
+            {abilityPopup && (
+              <div 
+                key={`${abilityPopup.pokemon}-${abilityPopup.name}`}
+                className={`absolute z-[100] ${abilityPopup.isPlayer ? 'bottom-[35%] left-0' : 'top-[28%] right-0'}`}
+                style={{ willChange: 'transform, opacity' }}
+              >
+                <div className={`
+                  relative flex items-center
+                  ${abilityPopup.isPlayer 
+                    ? (abilityPopup.exiting ? 'animate-ability-out-player' : 'animate-ability-in-player') 
+                    : (abilityPopup.exiting ? 'animate-ability-out-opponent' : 'animate-ability-in-opponent')}
+                `}>
+                  {/* The Black Bar Background */}
+                  <div className={`
+                    bg-black/90 border-y-2 border-white/20 px-6 py-2.5 flex items-center gap-5 min-w-[220px] shadow-[0_10px_25px_rgba(0,0,0,0.5)]
+                    ${abilityPopup.isPlayer ? 'rounded-r-full pl-12 pr-10' : 'rounded-l-full pr-12 pl-10'}
+                  `}>
+                    <div className="bg-[#4a5568] text-white text-[7px] md:text-[9px] px-2 py-0.5 rounded-sm tracking-widest font-bold border border-white/10 shadow-sm">ABILITY</div>
+                    <span className="text-white text-[12px] md:text-[17px] font-bold uppercase tracking-[0.2em]" style={{ textShadow: '2px 2px 2px rgba(0,0,0,0.8)' }}>
+                      {abilityPopup.name}
+                    </span>
+                  </div>
+                  
+                  {/* Decorative edge line - Yellow for emphasis */}
+                  <div className={`absolute top-0 bottom-0 w-1.5 bg-yellow-400 ${abilityPopup.isPlayer ? 'left-0' : 'right-0'}`} />
+                </div>
+              </div>
+            )}
+
             {/* OPPONENT SECTION */}
             <div className="absolute top-4 left-4 md:top-8 md:left-8 scale-75 md:scale-100 2xl:scale-[1.4] origin-top-left transition-all duration-500">
               <PokemonCard
@@ -318,6 +422,7 @@ export default function BattlePage() {
                 isOpponent
                 showStatus={opponentAnim.status}
                 layout="status-only"
+                hasSubstitute={(battleState.opponent_pokemon.substitute_hp ?? 0) > 0}
               />
             </div>
             <div className="absolute top-2 right-4 md:top-8 md:right-8 scale-75 md:scale-100 2xl:scale-[1.4] origin-top-right transition-all duration-500">
@@ -335,6 +440,7 @@ export default function BattlePage() {
                 isAttacking={opponentAnim.attacking}
                 isFainted={opponentAnim.fainted}
                 layout="sprite-only"
+                hasSubstitute={(battleState.opponent_pokemon.substitute_hp ?? 0) > 0}
               />
             </div>
 
@@ -354,6 +460,7 @@ export default function BattlePage() {
                 isFainted={playerAnim.fainted}
                 layout="sprite-only"
                 flip={false}
+                hasSubstitute={(battleState.player_pokemon.substitute_hp ?? 0) > 0}
               />
             </div>
             <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 scale-75 md:scale-100 2xl:scale-[1.4] origin-bottom-right transition-all duration-500">
@@ -367,6 +474,7 @@ export default function BattlePage() {
                 status_effects={battleState.player_pokemon.status_effects}
                 showStatus={playerAnim.status}
                 layout="status-only"
+                hasSubstitute={(battleState.player_pokemon.substitute_hp ?? 0) > 0}
               />
             </div>
           </div>

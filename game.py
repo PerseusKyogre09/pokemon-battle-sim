@@ -8,7 +8,7 @@ class Game:
         self.opponent_pokemon = None
         self.battle_over = False
         self.priority_resolver = PriorityResolver()
-    def start_battle(self, player_data, opponent_data, player_moves, opponent_moves):
+    def start_battle(self, player_data, opponent_data, player_moves, opponent_moves, player_ability="noability", opponent_ability="noability"):
         player_sprite = (
             player_data['sprites'].get('versions', {})
             .get('generation-v', {})
@@ -35,22 +35,38 @@ class Game:
             player_types,
             player_sprite, 
             player_data['stats'], 
-            player_moves
+            player_moves,
+            ability=player_ability
         )
+        self.player_pokemon.is_player = True
+        
         self.opponent_pokemon = Pokemon(
             opponent_data['name'], 
             opponent_types,
             opponent_sprite, 
             opponent_data['stats'], 
-            opponent_moves
+            opponent_moves,
+            ability=opponent_ability
         )
+        self.opponent_pokemon.is_player = False
+        
+        # Trigger switch-in effects (abilities like Intimidate)
+        messages = []
+        messages.extend(self.player_pokemon.on_switch_in(self.opponent_pokemon))
+        messages.extend(self.opponent_pokemon.on_switch_in(self.player_pokemon))
+        return messages
 
     def process_turn(self, move_name):
         # Reset turn-based volatile statuses
+        STALLING_STATUSES = ['protect', 'spikyshield', 'banefulbunker', 'kingsshield', 'obstruct', 'silktrap', 'burningbulwark', 'endure']
         if self.player_pokemon:
             self.player_pokemon.is_flinched = False
+            for status in STALLING_STATUSES:
+                self.player_pokemon.volatile_statuses.discard(status)
         if self.opponent_pokemon:
             self.opponent_pokemon.is_flinched = False
+            for status in STALLING_STATUSES:
+                self.opponent_pokemon.volatile_statuses.discard(status)
             
         turn_info = {
             'player_move': move_name,
@@ -84,6 +100,18 @@ class Game:
                 })
         
         if self.player_pokemon.current_hp <= 0:
+            # Trigger fainted abilities (e.g. Aftermath)
+            faint_events = self.player_pokemon.on_faint(self.opponent_pokemon)
+            for event in faint_events:
+                turn_info['battle_events'].append({
+                    'type': 'ability',
+                    'ability_name': event.get('ability_name'),
+                    'pokemon_name': event.get('pokemon_name'),
+                    'message': event.get('message'),
+                    'target': 'player',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+            
             self.battle_over = True
             turn_info['battle_events'].append({
                 'type': 'faint',
@@ -93,6 +121,18 @@ class Game:
             })
             return turn_info
         elif self.opponent_pokemon.current_hp <= 0:
+            # Trigger fainted abilities
+            faint_events = self.opponent_pokemon.on_faint(self.player_pokemon)
+            for event in faint_events:
+                turn_info['battle_events'].append({
+                    'type': 'ability',
+                    'ability_name': event.get('ability_name'),
+                    'pokemon_name': event.get('pokemon_name'),
+                    'message': event.get('message'),
+                    'target': 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+
             self.battle_over = True
             turn_info['battle_events'].append({
                 'type': 'faint',
@@ -181,6 +221,13 @@ class Game:
             # Skip if no move (shouldn't happen, but just in case)
             if not move:
                 return False
+                
+            # Reset stalling counter if this is not a stalling move
+            if not getattr(move, 'stalling_move', False):
+                attacker.consecutive_stalling_moves = 0
+            
+            # Update last move name
+            attacker.last_move_name = move_name
             
             # Check for priority counter failure
             if action and action.effective_priority == -999:
@@ -191,6 +238,8 @@ class Game:
             # Check if the attacker can use a move this turn
             can_use_move, prevention_message = attacker.can_use_move()
             if not can_use_move:
+                # Reset stalling counter if move failed due to status
+                attacker.consecutive_stalling_moves = 0
                 # Pokemon is prevented from using move
                 turn_info['battle_events'].append({
                     'type': 'status',
@@ -201,6 +250,71 @@ class Game:
                     'timestamp': len(turn_info['battle_events'])
                 })
                 print(f"DEBUG: {attacker.name} is prevented from using {move_name}: {prevention_message}")
+                return False
+                
+            # Check if defender is protected (Protect, Detect, Spiky Shield, etc)
+            PROTECTION_STATUSES = {
+                'protect': 'all',
+                'spikyshield': 'all',
+                'banefulbunker': 'all',
+                'silktrap': 'all',
+                'burningbulwark': 'all',
+                'kingsshield': 'damaging',
+                'obstruct': 'damaging'
+            }
+            
+            active_protections = [s for s in PROTECTION_STATUSES if s in defender.volatile_statuses]
+            is_blocked = False
+            protection_used = None
+            
+            if active_protections and attacker != defender:
+                protection_used = active_protections[0]
+                protection_type = PROTECTION_STATUSES[protection_used]
+                
+                if move.category in ['physical', 'special']:
+                    is_blocked = True
+                elif protection_type == 'all':
+                    is_blocked = True
+            
+            if is_blocked:
+                # Move is blocked
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': f"{defender.name} protected itself!",
+                    'target': 'player' if not is_player_attacking else 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                
+                # Handle contact effects (Spiky Shield, King's Shield)
+                if move.flags.get('contact'):
+                    if protection_used == 'spikyshield':
+                        damage = defender.max_hp // 8
+                        attacker.take_damage(damage)
+                        turn_info['battle_events'].append({
+                            'type': 'status',
+                            'message': f"{attacker.name} was hurt by {defender.name}'s Spiky Shield!",
+                            'target': 'player' if is_player_attacking else 'opponent',
+                            'timestamp': len(turn_info['battle_events'])
+                        })
+                    elif protection_used == 'kingsshield':
+                        msg = attacker.modify_stat_stage('attack', -1)
+                        if msg:
+                            turn_info['battle_events'].append({
+                                'type': 'status',
+                                'message': msg,
+                                'target': 'player' if is_player_attacking else 'opponent',
+                                'timestamp': len(turn_info['battle_events'])
+                            })
+                
+                
+                # Still consume PP and add the move usage message
+                move.pp -= 1
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': f"{attacker.name} used {move_name}!",
+                    'target': 'player' if is_player_attacking else 'opponent',
+                    'timestamp': len(turn_info['battle_events'])
+                })
                 return False
             
             # Add priority counter success message if applicable
@@ -218,22 +332,28 @@ class Game:
                 
             damage, effectiveness_msg, status_message = move.use_move(attacker, defender)
             prev_hp = defender.current_hp
-            defender.take_damage(damage)
-            actual_damage = prev_hp - defender.current_hp
+            has_substitute = getattr(defender, 'substitute_hp', 0) > 0
+            bypasses_substitute = move.flags.get('sound') or (hasattr(attacker, 'ability') and attacker.ability.id == 'infiltrator')
             
-            # Log the move and damage
-            if is_player_attacking:
-                turn_info['player_damage'] = actual_damage
-            else:
-                turn_info['opponent_damage'] = actual_damage
+            substitute_hit = has_substitute and not bypasses_substitute and damage > 0
             
-            # Create move event with status message included
+            if not substitute_hit:
+                # Normal damage (calculated first so move event has correct data)
+                defender.take_damage(damage)
+                actual_damage = prev_hp - defender.current_hp
+            
+            substitute_damage = 0
+            if substitute_hit:
+                substitute_damage = damage
+            
+            # Log move event
             move_event = {
                 'type': 'move',
                 'attacker_name': attacker.name,
                 'defender_name': defender.name,
                 'move': move_name,
-                'damage': actual_damage,
+                'damage': actual_damage, # 0 if hit substitute
+                'substitute_damage': substitute_damage,
                 'is_player': is_player_attacking,
                 'attacker_hp': attacker.current_hp,
                 'defender_hp': defender.current_hp,
@@ -241,10 +361,54 @@ class Game:
                 'defender_max_hp': defender.max_hp,
                 'attacker_status': attacker.get_status_display(),
                 'defender_status': defender.get_status_display(),
+                'attacker_substitute_hp': attacker.substitute_hp,
+                'defender_substitute_hp': defender.substitute_hp,
                 'timestamp': len(turn_info['battle_events']),
-                'status_message': status_message  # Include status message in move event
+                'status_message': status_message
             }
             turn_info['battle_events'].append(move_event)
+            
+            # Handle substitute damage
+            if substitute_hit:
+                # Damage the substitute
+                old_sub_hp = defender.substitute_hp
+                defender.substitute_hp = max(0, defender.substitute_hp - damage)
+                
+                turn_info['battle_events'].append({
+                    'type': 'status',
+                    'message': f"The substitute took damage for {defender.name}!",
+                    'target': 'player' if not is_player_attacking else 'opponent',
+                    'pokemon_hp': defender.current_hp,
+                    'substitute_hp': defender.substitute_hp,
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                
+                if defender.substitute_hp <= 0 and old_sub_hp > 0:
+                    defender.volatile_statuses.discard('substitute')
+                    turn_info['battle_events'].append({
+                        'type': 'status',
+                        'message': f"{defender.name}'s substitute broke!",
+                        'target': 'player' if not is_player_attacking else 'opponent',
+                        'pokemon_hp': defender.current_hp,
+                        'substitute_hp': 0,
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            elif actual_damage > 0:
+                # Add Endure message if they survived with 1 HP
+                if defender.current_hp == 1 and damage >= prev_hp and 'endure' in defender.volatile_statuses:
+                    turn_info['battle_events'].append({
+                        'type': 'status',
+                        'message': f"{defender.name} endured the hit!",
+                        'target': 'player' if not is_player_attacking else 'opponent',
+                        'pokemon_hp': defender.current_hp,
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
+            # Log damage totals for turn summary
+            if is_player_attacking:
+                turn_info['player_damage'] = actual_damage
+            else:
+                turn_info['opponent_damage'] = actual_damage
             
             # Add effectiveness as a separate event if there is a message
             if effectiveness_msg:
@@ -256,9 +420,6 @@ class Game:
                 }
                 turn_info['battle_events'].append(effectiveness_event)
             
-            print(f"DEBUG: {attacker.name} used {move_name}! {defender.name} lost {actual_damage} HP (Now: {defender.current_hp}/{defender.max_hp})")
-            if effectiveness_msg:
-                print(f"DEBUG: {effectiveness_msg}")
             
             # Decrement PP after successful move
             move.pp -= 1
@@ -381,7 +542,30 @@ class Game:
                 'pokemon_name': event['pokemon_name'],
                 'timestamp': len(turn_info['battle_events'])
             })
+
+        # Process turn-end abilities (e.g. Speed Boost)
+        player_ability_events = self.player_pokemon.on_turn_end(self.opponent_pokemon)
+        for event in player_ability_events:
+            turn_info['battle_events'].append({
+                'type': 'ability',
+                'ability_name': event.get('ability_name'),
+                'pokemon_name': event.get('pokemon_name'),
+                'message': event.get('message'),
+                'target': 'player',
+                'timestamp': len(turn_info['battle_events'])
+            })
             
+        opponent_ability_events = self.opponent_pokemon.on_turn_end(self.player_pokemon)
+        for event in opponent_ability_events:
+            turn_info['battle_events'].append({
+                'type': 'ability',
+                'ability_name': event.get('ability_name'),
+                'pokemon_name': event.get('pokemon_name'),
+                'message': event.get('message'),
+                'target': 'opponent',
+                'timestamp': len(turn_info['battle_events'])
+            })
+
         return turn_info
 
     def _get_priority_explanation_message(self, first_action, second_action):

@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 import requests
 import os
+import random
 from game import Game
 from data_loader import data_loader
 from moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
@@ -96,13 +97,72 @@ async def pokemon_cry(pokemon_name: str):
             return FileResponse(fallback_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+POKEAPI_NAME_MAP = {
+    'wishiwashi': 'wishiwashi-solo',
+    'aegislash': 'aegislash-shield',
+    'basculin': 'basculin-red-striped',
+    'darmanitan': 'darmanitan-standard',
+    'darmanitangalar': 'darmanitan-galar-standard',
+    'deoxys': 'deoxys-normal',
+    'enamorus': 'enamorus-incarnate',
+    'eiscue': 'eiscue-ice',
+    'giratina': 'giratina-altered',
+    'gourgeist': 'gourgeist-average',
+    'indeedee': 'indeedee-male',
+    'indeedeef': 'indeedee-female',
+    'keldeo': 'keldeo-ordinary',
+    'landorus': 'landorus-incarnate',
+    'landorustherian': 'landorus-therian',
+    'lycanroc': 'lycanroc-midday',
+    'meloetta': 'meloetta-aria',
+    'meowstic': 'meowstic-male',
+    'meowsticf': 'meowstic-female',
+    'mimikyu': 'mimikyu-disguised',
+    'morpeko': 'morpeko-full-belly',
+    'oricorio': 'oricorio-baile',
+    'pumpkaboo': 'pumpkaboo-average',
+    'shaymin': 'shaymin-land',
+    'thundurus': 'thundurus-incarnate',
+    'thundurustherian': 'thundurus-therian',
+    'tornadus': 'tornadus-incarnate',
+    'tornadustherian': 'tornadus-therian',
+    'toxtricity': 'toxtricity-amped',
+    'urshifu': 'urshifu-single-strike',
+    'urshifurapidstrike': 'urshifu-rapid-strike',
+    'wormadam': 'wormadam-plant',
+    'tapukoko': 'tapu-koko',
+    'tapulele': 'tapu-lele',
+    'tapubulu': 'tapu-bulu',
+    'tapufini': 'tapu-fini',
+    'kommoo': 'kommo-o',
+    'jangmoo': 'jangmo-o',
+    'hakamoo': 'hakamo-o',
+    'hooh': 'ho-oh',
+    'porygonz': 'porygon-z',
+    'typenull': 'type-null',
+    'mimejr': 'mime-jr',
+    'mrmime': 'mr-mime',
+    'mrrime': 'mr-rime',
+    'mr-rime': 'mr-rime',
+}
+
 def get_pokemon_data(pokemon_name):
-    url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}'
+    normalized_name = pokemon_name.lower().replace(' ', '')
+    api_name = POKEAPI_NAME_MAP.get(normalized_name, normalized_name)
+    
+    url = f'https://pokeapi.co/api/v2/pokemon/{api_name}'
     response = requests.get(url)
     if response.status_code == 200:
         return response.json()
-    else:
-        raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} not found!')
+        
+    if response.status_code == 404 and '-' not in api_name:
+        for p_name in [f"{api_name[:4]}-{api_name[4:]}", f"{api_name[:5]}-{api_name[5:]}", f"{api_name[:6]}-{api_name[6:]}"]:
+            try_url = f'https://pokeapi.co/api/v2/pokemon/{p_name}'
+            res = requests.get(try_url)
+            if res.status_code == 200:
+                return res.json()
+                
+    raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} not found!')
 
 def get_pokemon_moves(pokemon_data):
     pokemon_name = pokemon_data['name'].lower()
@@ -208,8 +268,29 @@ async def start_game(request: Request):
             
         opponent_moves = get_pokemon_moves(opponent_data)
         
+        # Get abilities
+        player_ability = "noability"
+        if selected_set and 'ability' in selected_set:
+            player_ability = selected_set['ability']
+            
+        opponent_ability = "noability"
+        # Try to get a competitive set for the opponent to find an ability
+        opponent_sets = get_all_pokemon_sets(opponent_pokemon_name)
+        if opponent_sets:
+            # Pick a random ability from the available sets
+            all_opponent_abilities = []
+            for fmt_sets in opponent_sets.values():
+                for s in fmt_sets.values():
+                    if s.get('ability'):
+                        all_opponent_abilities.append(s['ability'])
+            if all_opponent_abilities:
+                opponent_ability = random.choice(all_opponent_abilities)
+
         game_instance = Game()
-        game_instance.start_battle(player_data, opponent_data, player_moves, opponent_moves)
+        start_messages = game_instance.start_battle(
+            player_data, opponent_data, player_moves, opponent_moves,
+            player_ability=player_ability, opponent_ability=opponent_ability
+        )
         
         player_sprite = game_instance.player_pokemon.sprite_url or player_data.get('sprites', {}).get('back_default', '')
         opponent_sprite = game_instance.opponent_pokemon.sprite_url or opponent_data.get('sprites', {}).get('front_default', '')
@@ -217,6 +298,7 @@ async def start_game(request: Request):
         base_url = str(request.base_url).rstrip('/')
         
         battle_data = {
+            'start_events': start_messages,
             'player_pokemon': {
                 **game_instance.player_pokemon.to_dict(),
                 'sprite': player_sprite,

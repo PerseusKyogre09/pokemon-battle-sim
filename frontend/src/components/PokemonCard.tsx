@@ -20,6 +20,7 @@ interface PokemonCardProps {
   showStatus?: boolean;
   layout?: 'sprite-only' | 'status-only' | 'full';
   flip?: boolean;
+  hasSubstitute?: boolean;
 }
 
 const statusLabels: Record<string, string> = {
@@ -52,11 +53,15 @@ const statusFilters: Record<string, string> = {
 const PokemonCard: React.FC<PokemonCardProps> = ({ 
   name, sprite, currentHp, maxHp, level, types = [], status_effects = [],
   isOpponent, isVisible = true, isAttacking, isShaking, isFainted, showStatus = true,
-  layout = 'full', flip = false
+  layout = 'full', flip = false, hasSubstitute = false
 }) => {
   const renderSprite = () => {
     const majorStatus = status_effects.find(s => s.is_major);
     const filter = majorStatus ? statusFilters[majorStatus.type] : '';
+    
+    const displaySprite = hasSubstitute 
+      ? (isOpponent ? '/images/substitute/sub_front.png' : '/images/substitute/sub_back.png')
+      : sprite;
     
     return (
       <div className={`relative group transition-all duration-500 flex flex-col items-center
@@ -69,11 +74,12 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
         <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
         
         <img 
-          src={sprite} 
+          src={displaySprite} 
           alt={name} 
           className={`w-36 h-36 md:w-56 md:h-56 object-contain relative z-10 
             ${flip ? 'scale-x-[-1]' : ''}
             drop-shadow-lg
+            ${hasSubstitute ? 'scale-90 brightness-110' : ''}
           `}
           style={{ filter: filter || undefined }}
         />

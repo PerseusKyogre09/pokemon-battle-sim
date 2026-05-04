@@ -1,10 +1,11 @@
 from move import Move
 from data_loader import data_loader
 from status_effects import StatusEffect, BurnStatusEffect, ParalysisStatusEffect, FreezeStatusEffect, SleepStatusEffect, PoisonStatusEffect, StatusType
+from abilities import create_ability
 import random
 
 class Pokemon:
-    def __init__(self, name, type_, sprite_url, stats, moves=None, level=100):
+    def __init__(self, name, type_, sprite_url, stats, moves=None, level=100, **kwargs):
         self.name = self._format_pokemon_name(name) if isinstance(name, str) else name
         if isinstance(type_, list):
             self.types = [t.lower() for t in type_]
@@ -17,6 +18,10 @@ class Pokemon:
         self.sprite = sprite_url
         self.level = level
         
+        # Initialize ability
+        ability_name = kwargs.get('ability', 'noability')
+        self.ability = create_ability(ability_name)
+        
         self.status_effects = {}
         self.major_status = None
         self.volatile_statuses = set()
@@ -25,6 +30,9 @@ class Pokemon:
         self.status_condition = None
         self.status_counter = 0
         self.is_flinched = False
+        self.consecutive_stalling_moves = 0
+        self.last_move_name = None
+        self.substitute_hp = 0
         
         if isinstance(stats, list):
             self.base_stats = {
@@ -71,6 +79,17 @@ class Pokemon:
         else:
             available_moves = data_loader.get_pokemon_moves(self.name.lower(), 4)
             self.moves = {name: Move(name) for name in available_moves}
+
+    def has_ability(self, ability_name: str) -> bool:
+        """Check if the Pokemon has a specific ability."""
+        if not self.ability:
+            return False
+            
+        # Standardize both names for comparison
+        target = ability_name.lower().replace(" ", "").replace("-", "")
+        current = self.ability.name.lower().replace(" ", "").replace("-", "")
+        
+        return target == current
 
     def apply_volatile_status(self, status: str) -> str:
         status = status.lower()
@@ -121,7 +140,13 @@ class Pokemon:
 
     def take_damage(self, damage):
         old_hp = self.current_hp
-        self.current_hp = max(0, self.current_hp - damage)
+        
+        # Handle Endure
+        if damage >= self.current_hp and 'endure' in self.volatile_statuses:
+            self.current_hp = 1
+            # Endure message could be added here if needed, but usually handled in game.py
+        else:
+            self.current_hp = max(0, self.current_hp - damage)
         
         if old_hp > 0 and self.current_hp <= 0:
             self.reset_stats()
@@ -159,12 +184,16 @@ class Pokemon:
         return max(1, stat)
     
     def get_modified_stat_value(self, stat_name: str, base_value: int) -> int:
-        """Get stat value with status effect modifications applied."""
+        """Get stat value with status effect and ability modifications applied."""
         modified_value = base_value
         
         for status_effect in self.status_effects.values():
             modified_value = status_effect.modify_stat(self, stat_name, modified_value)
         
+        # Apply ability modifications
+        if hasattr(self, 'ability'):
+            modified_value = self.ability.modify_stat(self, stat_name, modified_value)
+            
         return modified_value
         
     def apply_status_effect(self, status_type: str, **kwargs) -> str:
@@ -507,9 +536,33 @@ class Pokemon:
             'special_attack': self.special_attack,
             'special_defense': self.special_defense,
             'speed': self.speed,
+            'ability': {
+                'name': self.ability.name,
+                'description': self.ability.description,
+                'id': self.ability.id
+            },
             'moves': {name: move.to_dict() for name, move in self.moves.items()},
             'status_effects': self.get_status_display(),
             'major_status': self.major_status,
             'status_condition': self.status_condition,  # For backward compatibility
-            'stat_stages': self.get_current_stat_stages()
+            'stat_stages': self.get_current_stat_stages(),
+            'substitute_hp': self.substitute_hp
         }
+
+    def on_switch_in(self, opponent) -> List[Dict[str, Any]]:
+        """Trigger ability effects when entering battle."""
+        if hasattr(self, 'ability'):
+            return self.ability.on_switch_in(self, opponent)
+        return []
+
+    def on_faint(self, opponent) -> List[Dict[str, Any]]:
+        """Trigger ability effects when fainted."""
+        if hasattr(self, 'ability'):
+            return self.ability.on_faint(self, opponent)
+        return []
+
+    def on_turn_end(self, opponent) -> List[Dict[str, Any]]:
+        """Trigger ability effects at turn end."""
+        if hasattr(self, 'ability'):
+            return self.ability.on_turn_end(self, opponent)
+        return []

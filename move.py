@@ -1,11 +1,13 @@
 from data_loader import data_loader
 from typing import Optional, Tuple, Dict, Any, Union, List
 import random
+import re
 
 class Move:
     def __init__(self, name: str, move_data: Optional[Dict[str, Any]] = None):
         self.name = name
         self.data = move_data if move_data else data_loader.get_move(name)
+        self.id = self.data.get('id', name.lower().replace(' ', '')) if self.data else name.lower()
         
         if not self.data:
             self.power = 0
@@ -16,6 +18,8 @@ class Move:
             self.category = 'physical'
             self.priority = 0
             self.is_status_move = True
+            self.priority_counter_conditions = None
+            self.is_priority_counter = False
         else:
             self.power = self.data.get('basePower', 0)
             self.pp = self.data.get('pp', 10)
@@ -25,12 +29,64 @@ class Move:
             self.category = self.data.get('category', 'physical').lower()
             self.priority = self.data.get('priority', 0)
             self.is_status_move = self.category == 'status' or self.power == 0
+            self.priority_counter_conditions = self.data.get('priority_counter_conditions')
+            self.is_priority_counter = self.data.get('is_priority_counter', False)
         
         self.is_healing_move, self.heal_amount, self.drain_ratio = self._parse_healing_data()
         self.is_multihit_move, self.multihit_data = self._parse_multihit_data()
         self.stat_modifications, self.targets_self = self._parse_stat_modifications()
         self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
+        
+        self.fixed_damage = self.data.get('damage')
+        self.self_switch = self.data.get('selfSwitch')
+        self.volatile_status = self.data.get('volatileStatus')
+        self.stalling_move = self.data.get('stallingMove', False)
+        self.flags = self.data.get('flags', {})
 
+    def _parse_chain_modify(self, logic_str: str) -> float:
+        """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
+        if not logic_str or "chainModify" not in logic_str:
+            return 1.0
+            
+        # Look for [num1, num2] pattern
+        match = re.search(r'chainModify\(\[?([\d., ]+)\]?\)', logic_str)
+        if match:
+            parts = [p.strip() for p in match.group(1).split(',')]
+            if len(parts) >= 2:
+                try:
+                    return float(parts[0]) / float(parts[1])
+                except (ValueError, ZeroDivisionError):
+                    return 1.0
+            else:
+                try:
+                    return float(parts[0])
+                except ValueError:
+                    return 1.0
+        
+        # Look for modify(stat, mult) pattern
+        match = re.search(r'this\.modify\([^,]+,\s*([\d.]+)\)', logic_str)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                return 1.0
+                
+        return 1.0
+
+    def _check_condition(self, logic_str: str, pokemon, opponent, move=None) -> bool:
+        """Check if conditions in logic_str are met."""
+        if not logic_str:
+            return True
+            
+        if "target.getItem()" in logic_str or "target.item" in logic_str:
+            return True 
+            
+        if "hp <= pokemon.maxhp / 4" in logic_str:
+            if pokemon.current_hp <= pokemon.max_hp / 4:
+                return True
+            return False
+
+        return True
     
     def _parse_healing_data(self) -> Tuple[bool, Optional[List[int]], Optional[List[int]]]:
         if not self.data:
@@ -85,9 +141,9 @@ class Move:
         
         messages = []
         for stat_abbrev, stages in boosts.items():
-            full_stat_name = stat_name_mapping.get(stat_abbrev)
-            if full_stat_name and hasattr(pokemon, 'change_stat_stage'):
-                msg = pokemon.change_stat_stage(full_stat_name, stages)
+            full_stat_name = stat_name_mapping.get(stat_abbrev, stat_abbrev)
+            if hasattr(pokemon, 'modify_stat_stage'):
+                msg = pokemon.modify_stat_stage(full_stat_name, stages)
                 if msg:
                     messages.append(msg)
                     
@@ -145,108 +201,61 @@ class Move:
         return 1
     
     def is_priority_counter_move(self) -> bool:
-        """
-        Determine if this move is a priority counter move.
-        
-        Returns:
-            bool: True if this move is a priority counter (like Sucker Punch), False otherwise
-        """
         return self.is_priority_counter
     
     def can_counter_move(self, target_move: 'Move') -> bool:
-        """
-        Determine if this priority counter move can successfully counter the target move.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            bool: True if this move can counter the target move, False otherwise
-        """
         if not self.is_priority_counter:
             return False
         
         if not target_move:
             return False
         
-        # Import here to avoid circular imports
         from priority_system import SuckerPunchHandler
         
-        # Use SuckerPunchHandler for Sucker Punch logic
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
             return handler.check_success_condition(target_move)
         
-        # Fallback to original logic for other priority counters
         if self.priority_counter_conditions:
-            # Get the categories this move can counter
             counters = self.priority_counter_conditions.get('counters', [])
             fails_against = self.priority_counter_conditions.get('fails_against', [])
-            
-            # Check if target move category is in the list of categories this move counters
             target_category = target_move.category.lower()
             
-            # Priority counter succeeds if target uses a move in the 'counters' list
             if target_category in counters:
                 return True
-            
-            # Priority counter fails if target uses a move in the 'fails_against' list
             if target_category in fails_against:
                 return False
         
-        # Default behavior: counter succeeds against attacking moves, fails against status moves
         return not target_move.is_status_move
     
     def get_priority_counter_failure_message(self) -> str:
-        """
-        Get the failure message for when this priority counter move fails.
-        
-        Returns:
-            str: The failure message to display when the priority counter fails
-        """
         if not self.is_priority_counter:
             return ""
         
-        # Import here to avoid circular imports
         from priority_system import SuckerPunchHandler
         
-        # Use SuckerPunchHandler for Sucker Punch logic
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
             return handler.get_failure_message()
         
-        # Fallback to original logic for other priority counters
         if self.priority_counter_conditions:
             return self.priority_counter_conditions.get('failure_message', "But it failed!")
         
         return "But it failed!"
     
     def validate_move_category_for_counter(self, target_move: 'Move') -> Tuple[bool, str]:
-        """
-        Validate if the target move's category allows this priority counter to succeed.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            Tuple[bool, str]: (success, message) where success indicates if counter succeeds
-                             and message provides explanation
-        """
         if not self.is_priority_counter:
-            return True, ""  # Not a priority counter, no validation needed
+            return True, ""
         
         if not target_move:
             return False, self.get_priority_counter_failure_message()
         
-        # Import here to avoid circular imports
         from priority_system import SuckerPunchHandler
         
-        # Use SuckerPunchHandler for Sucker Punch logic
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
             return handler.validate_target_move_category(target_move)
         
-        # Fallback to original logic for other priority counters
         can_counter = self.can_counter_move(target_move)
         
         if can_counter:
@@ -255,50 +264,35 @@ class Move:
             return False, self.get_priority_counter_failure_message()
     
     def get_effective_priority_against_move(self, target_move: Optional['Move']) -> int:
-        """
-        Get the effective priority of this move when used against a specific target move.
-        For priority counters, this may be different from the base priority.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            int: The effective priority value for this move
-        """
         if not self.is_priority_counter or not target_move:
             return self.priority
         
-        # Import here to avoid circular imports
         from priority_system import SuckerPunchHandler
         
-        # Use SuckerPunchHandler for Sucker Punch logic
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
             return handler.get_effective_priority(target_move)
         
-        # Fallback to original logic for other priority counters
-        # If this is a priority counter and it can counter the target move,
-        # it gets its counter priority
         if self.can_counter_move(target_move):
             if self.priority_counter_conditions:
                 return self.priority_counter_conditions.get('priority_when_successful', self.priority)
         
-        # If it can't counter, it might fail entirely (handled elsewhere)
         return self.priority
 
-
     def _check_accuracy(self) -> bool:
-        if self.accuracy is True:  # Moves that never miss (e.g., Aerial Ace)
+        if self.accuracy is True:
             return True
             
         if isinstance(self.accuracy, (int, float)):
             return random.randint(1, 100) <= self.accuracy
             
-        return True  # Default to True if accuracy is somehow invalid
+        return True
 
-    def _apply_effect_block(self, target, effect_block: Dict[str, Any], chance_override: Optional[int] = None) -> List[str]:
-        """Apply an effect block (secondary or self) to a target Pokemon."""
+    def _apply_effect_block(self, target, effect_block: Dict[str, Any], chance_override: Optional[int] = None, user=None) -> List[str]:
         if not effect_block or not target:
+            return []
+
+        if hasattr(target, 'substitute_hp') and target.substitute_hp > 0 and (user is None or target != user):
             return []
             
         chance = chance_override if chance_override is not None else effect_block.get('chance', 100)
@@ -307,14 +301,12 @@ class Move:
             
         messages = []
         
-        # 1. Apply Status
         if 'status' in effect_block:
             status_type = effect_block['status']
             msg = target.apply_status_effect(status_type)
             if msg:
                 messages.append(msg)
                 
-        # 2. Apply Volatile Status
         if 'volatileStatus' in effect_block:
             v_status = effect_block['volatileStatus']
             if hasattr(target, 'apply_volatile_status'):
@@ -322,40 +314,41 @@ class Move:
                 if msg:
                     messages.append(msg)
                 
-        # 3. Apply Boosts
         if 'boosts' in effect_block:
             boost_msgs = self._apply_boosts(target, effect_block['boosts'])
             messages.extend(boost_msgs)
             
+        if 'self' in effect_block and user:
+            self_msgs = self._apply_effect_block(user, effect_block['self'], user=user)
+            messages.extend(self_msgs)
+            
         return messages
 
     def _apply_secondary_effects(self, user, target) -> List[str]:
-        """Apply secondary effects of the move (chance-based on target)."""
         messages = []
         
-        # Handle 'secondary' field (standard)
+        multiplier = 2.0 if hasattr(user, 'has_ability') and user.has_ability('serenegrace') else 1.0
+        
         if 'secondary' in self.data and self.data['secondary']:
-            msgs = self._apply_effect_block(target, self.data['secondary'])
+            chance = self.data['secondary'].get('chance', 100) * multiplier
+            msgs = self._apply_effect_block(target, self.data['secondary'], chance_override=chance, user=user)
             messages.extend(msgs)
             
-        # Handle 'secondaries' field (multiple possible effects)
         if 'secondaries' in self.data and self.data['secondaries']:
             for effect in self.data['secondaries']:
-                msgs = self._apply_effect_block(target, effect)
+                chance = effect.get('chance', 100) * multiplier
+                msgs = self._apply_effect_block(target, effect, chance_override=chance, user=user)
                 messages.extend(msgs)
                 
         return messages
 
     def _apply_self_effects(self, user, target) -> List[str]:
-        """Apply effects on the user (like stat drops after Overheat)."""
         messages = []
         
-        # Handle 'self' field
         if 'self' in self.data and self.data['self']:
-            msgs = self._apply_effect_block(user, self.data['self'])
+            msgs = self._apply_effect_block(user, self.data['self'], user=user)
             messages.extend(msgs)
             
-        # Also handle standard 'boosts' if they target self (parsed in __init__)
         if self.stat_modifications and self.targets_self:
             boost_msgs = self._apply_boosts(user, self.stat_modifications)
             messages.extend(boost_msgs)
@@ -363,399 +356,219 @@ class Move:
         return messages
 
     def _apply_status_effects(self, user, target) -> List[str]:
-        """Apply primary status effects for status moves."""
         if not self.is_status_move or not self.data or not target:
             return []
             
         messages = []
-        
-        # Status moves usually have 'status' directly in move_data
+        if target.substitute_hp > 0 and target != user:
+            bypasses = self.flags.get('sound') or (hasattr(user, 'ability') and user.ability.id == 'infiltrator')
+            if not bypasses:
+                return [f"{target.name} is behind a substitute!"]
+
         if 'status' in self.data:
             msg = target.apply_status_effect(self.data['status'])
             if msg:
                 messages.append(msg)
+        
+        if 'volatileStatus' in self.data:
+            if hasattr(target, 'apply_volatile_status'):
+                msg = target.apply_volatile_status(self.data['volatileStatus'])
+                if msg:
+                    if self.data['volatileStatus'] == 'protect':
+                        return [f"{target.name} protected itself!"]
+                    else:
+                        messages.append(msg)
                     
-        # Also apply any secondary effects that status moves might have
         secondary_msgs = self._apply_secondary_effects(user, target)
         messages.extend(secondary_msgs)
             
         return messages
     
     def _calculate_heal_amount(self, user, damage_dealt: int = 0) -> int:
-        """
-        Calculate the amount of HP to heal based on move type.
-        
-        Args:
-            user: The Pokemon using the healing move
-            damage_dealt: Amount of damage dealt (for HP-draining moves)
-            
-        Returns:
-            int: Amount of HP to heal (0 if no healing should occur)
-        """
         try:
-            # Validate inputs
             if not user or not hasattr(user, 'max_hp'):
-                print(f"ERROR: Invalid user Pokemon for healing calculation")
                 return 0
             
             if damage_dealt < 0:
-                print(f"WARNING: Negative damage_dealt ({damage_dealt}) provided, using 0")
                 damage_dealt = 0
             
-            # Check if this is actually a healing move
             if not self.is_healing_move:
                 return 0
             
-            # Handle direct healing moves (heal property)
             if self.heal_amount is not None:
                 try:
                     if not isinstance(self.heal_amount, list) or len(self.heal_amount) != 2:
-                        print(f"ERROR: Invalid heal_amount format for {self.name}: {self.heal_amount}")
                         return 0
                     
                     numerator, denominator = self.heal_amount
-                    if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
-                        print(f"ERROR: Non-numeric heal_amount values for {self.name}: {self.heal_amount}")
-                        return 0
-                    
-                    if denominator == 0:
-                        print(f"ERROR: Zero denominator in heal_amount for {self.name}")
-                        return 0
-                    
-                    # Calculate healing as fraction of max HP
                     heal_fraction = numerator / denominator
                     heal_amount = int(user.max_hp * heal_fraction)
                     
-                    # Ensure healing amount is at least 1 if fraction is positive
                     if heal_fraction > 0 and heal_amount == 0:
                         heal_amount = 1
                     
                     return max(0, heal_amount)
-                    
-                except (TypeError, ValueError, ZeroDivisionError) as e:
-                    print(f"ERROR: Failed to calculate direct healing for {self.name}: {e}")
+                except (TypeError, ValueError, ZeroDivisionError):
                     return 0
             
-            # Handle HP-draining moves (drain property)
             elif self.drain_ratio is not None:
                 try:
                     if not isinstance(self.drain_ratio, list) or len(self.drain_ratio) != 2:
-                        print(f"ERROR: Invalid drain_ratio format for {self.name}: {self.drain_ratio}")
                         return 0
                     
                     numerator, denominator = self.drain_ratio
-                    if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
-                        print(f"ERROR: Non-numeric drain_ratio values for {self.name}: {self.drain_ratio}")
-                        return 0
-                    
-                    if denominator == 0:
-                        print(f"ERROR: Zero denominator in drain_ratio for {self.name}")
-                        return 0
-                    
-                    # Only heal if damage was actually dealt
                     if damage_dealt <= 0:
                         return 0
                     
-                    # Calculate healing as fraction of damage dealt
                     drain_fraction = numerator / denominator
                     heal_amount = int(damage_dealt * drain_fraction)
                     
-                    # Ensure healing amount is at least 1 if fraction is positive and damage was dealt
                     if drain_fraction > 0 and damage_dealt > 0 and heal_amount == 0:
                         heal_amount = 1
                     
                     return max(0, heal_amount)
-                    
-                except (TypeError, ValueError, ZeroDivisionError) as e:
-                    print(f"ERROR: Failed to calculate drain healing for {self.name}: {e}")
+                except (TypeError, ValueError, ZeroDivisionError):
                     return 0
-            
-            # If marked as healing move but no heal_amount or drain_ratio, return 0
             else:
-                print(f"WARNING: {self.name} marked as healing move but no heal_amount or drain_ratio found")
                 return 0
                 
-        except Exception as e:
-            print(f"ERROR: Unexpected error in _calculate_heal_amount for {self.name}: {e}")
+        except Exception:
             return 0
 
     def _apply_healing_effects(self, user, target, damage_dealt: int = 0) -> List[str]:
-        """
-        Apply healing effects and return battle messages.
-        
-        Args:
-            user: The Pokemon using the healing move
-            target: The target Pokemon (may be None for self-targeting moves)
-            damage_dealt: Amount of damage dealt (for HP-draining moves)
-            
-        Returns:
-            List[str]: List of battle messages describing healing effects
-        """
         messages = []
-        
         try:
-            # Validate inputs
             if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp'):
-                print(f"ERROR: Invalid user Pokemon for healing effects")
                 return messages
             
-            # Check if this is actually a healing move
             if not self.is_healing_move:
                 return messages
             
-            # Calculate the amount to heal
             heal_amount = self._calculate_heal_amount(user, damage_dealt)
             
             if heal_amount <= 0:
-                # For draining moves that miss or deal no damage, no healing occurs
                 if self.drain_ratio is not None and damage_dealt <= 0:
-                    return messages  # No message needed for failed draining moves
-                
-                # For direct healing moves, show message even if no healing occurs
+                    return messages
                 if self.heal_amount is not None:
                     if user.current_hp >= user.max_hp:
                         messages.append(f"{user.name} is already at full health!")
                     return messages
-                
                 return messages
             
-            # Store HP before healing for message generation
             hp_before = user.current_hp
-            
-            # Apply healing using Pokemon's heal method
             user.heal(heal_amount)
-            
-            # Calculate actual healing that occurred (in case of full HP cap)
             actual_heal = user.current_hp - hp_before
             
-            # Generate appropriate battle messages
             if actual_heal <= 0:
-                # Pokemon was already at full HP
                 messages.append(f"{user.name} is already at full health!")
             else:
-                # Generate healing message based on move type
                 if self.heal_amount is not None:
-                    # Direct healing move
                     messages.append(f"{user.name} recovered {actual_heal} HP!")
                 elif self.drain_ratio is not None:
-                    # HP-draining move
                     messages.append(f"{user.name} drained {actual_heal} HP from {target.name if target else 'the target'}!")
                 else:
-                    # Generic healing message
                     messages.append(f"{user.name} recovered {actual_heal} HP!")
             
-        except Exception as e:
-            print(f"ERROR: Failed to apply healing effects for {self.name}: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
         
         return messages
 
     def _calculate_recoil_damage(self, user, damage_dealt: int) -> int:
-        """
-        Calculate the amount of recoil damage the user should take.
-        
-        Args:
-            user: The Pokemon using the recoil move
-            damage_dealt: Amount of damage dealt to the target
-            
-        Returns:
-            int: Amount of recoil damage to apply (0 if no recoil should occur)
-        """
         try:
-            # Validate inputs
-            if not user or not hasattr(user, 'max_hp'):
-                print(f"ERROR: Invalid user Pokemon for recoil calculation")
-                return 0
-            
-            if damage_dealt <= 0:
-                # No recoil if no damage was dealt
-                return 0
-            
-            # Check if this is actually a recoil move
-            if not self.is_recoil_move or not self.recoil_ratio:
-                return 0
-            
-            # Validate recoil ratio format
-            if not isinstance(self.recoil_ratio, list) or len(self.recoil_ratio) != 2:
-                print(f"ERROR: Invalid recoil_ratio format for {self.name}: {self.recoil_ratio}")
+            if not user or not hasattr(user, 'max_hp') or damage_dealt <= 0 or not self.is_recoil_move or not self.recoil_ratio:
                 return 0
             
             numerator, denominator = self.recoil_ratio
-            if not isinstance(numerator, (int, float)) or not isinstance(denominator, (int, float)):
-                print(f"ERROR: Non-numeric recoil_ratio values for {self.name}: {self.recoil_ratio}")
-                return 0
-            
-            if denominator == 0:
-                print(f"ERROR: Zero denominator in recoil_ratio for {self.name}")
-                return 0
-            
-            # Calculate recoil as fraction of damage dealt
             recoil_fraction = numerator / denominator
             recoil_damage = int(damage_dealt * recoil_fraction)
             
-            # Ensure recoil damage is at least 1 if fraction is positive and damage was dealt
             if recoil_fraction > 0 and damage_dealt > 0 and recoil_damage == 0:
                 recoil_damage = 1
             
             return max(0, recoil_damage)
-            
-        except Exception as e:
-            print(f"ERROR: Unexpected error in _calculate_recoil_damage for {self.name}: {e}")
+        except Exception:
             return 0
 
     def _apply_recoil_effects(self, user, damage_dealt: int) -> List[str]:
-        """
-        Apply recoil effects and return battle messages.
-        
-        Args:
-            user: The Pokemon using the recoil move
-            damage_dealt: Amount of damage dealt to the target
-            
-        Returns:
-            List[str]: List of battle messages describing recoil effects
-        """
         messages = []
-        
         try:
-            # Validate inputs
-            if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp'):
-                print(f"ERROR: Invalid user Pokemon for recoil effects")
+            if not user or not hasattr(user, 'current_hp') or not hasattr(user, 'max_hp') or not self.is_recoil_move:
                 return messages
             
-            # Check if this is actually a recoil move
-            if not self.is_recoil_move:
-                return messages
-            
-            # Calculate the amount of recoil damage
             recoil_damage = self._calculate_recoil_damage(user, damage_dealt)
-            
             if recoil_damage <= 0:
                 return messages
             
-            # Apply recoil damage using Pokemon's take_damage method
             user.take_damage(recoil_damage)
-            
-            # Generate recoil message
             messages.append(f"{user.name} is hurt by recoil!")
-            
-        except Exception as e:
-            print(f"ERROR: Failed to apply recoil effects for {self.name}: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
         
         return messages
 
     def _handle_special_moves(self, attacking_pokemon, defending_pokemon):
-        """Handle special moves with unique mechanics like Belly Drum."""
         move_name_lower = self.name.lower()
-        
-        # Handle Belly Drum
         if move_name_lower == 'belly drum':
             return self._handle_belly_drum(attacking_pokemon)
-        
-        # Add other special moves here as needed
-        # elif move_name_lower == 'other_special_move':
-        #     return self._handle_other_special_move(attacking_pokemon, defending_pokemon)
-        
-        return None  # No special handling needed
+        return None
     
     def _handle_belly_drum(self, user):
-        """Handle Belly Drum: Maximize Attack at the cost of 50% max HP."""
-        # Check if Attack is already at maximum (+6)
         if user.stat_stages.get('attack', 0) >= 6:
             return 0, f"{user.name} used {self.name}!", f"{user.name}'s Attack won't go any higher!"
         
-        # Calculate HP cost (50% of max HP, rounded down)
         hp_cost = user.max_hp // 2
-        
-        # Check if user has enough HP (must have more than 50% to use)
         if user.current_hp <= hp_cost:
             return 0, f"{user.name} used {self.name}!", f"But it failed!"
         
-        # Apply the effects
-        # 1. Reduce HP by 50%
         user.current_hp -= hp_cost
-        
-        # 2. Set Attack to maximum (+6 stages)
-        old_attack_stage = user.stat_stages.get('attack', 0)
         user.stat_stages['attack'] = 6
-        user._recalculate_stats()  # Recalculate stats with new stage
+        user._recalculate_stats()
         
-        # Generate the message
         move_desc = data_loader.get_move_description(self.name)
         if move_desc and 'boost' in move_desc:
-            # Use the official message from the dataset
             boost_message = move_desc['boost'].replace('[POKEMON]', user.name)
         else:
-            # Fallback message
             boost_message = f"{user.name} cut its own HP and maximized its Attack!"
         
         return 0, f"{user.name} used {self.name}!", boost_message
 
     def _apply_stat_modifications(self, user, target) -> List[str]:
-        """
-        Apply stat modifications to appropriate targets and return battle messages.
-        
-        Args:
-            user: The Pokemon using the move
-            target: The target Pokemon (may be None for self-targeting moves)
+        if not self.stat_modifications:
+            return []
             
-        Returns:
-            List[str]: List of battle messages describing stat modifications
-        """
-        messages = []
-        
-        try:
-            # Check if this move has stat modifications
-            if not self.stat_modifications or not isinstance(self.stat_modifications, dict):
-                return messages
+        modification_target = user if self.targets_self else target
+        if not modification_target:
+            return []
             
-            # Determine the target Pokemon for stat modifications
-            if self.targets_self:
-                modification_target = user
-            else:
-                modification_target = target
-            
-            # Validate that we have a valid target
-            if not modification_target or not hasattr(modification_target, 'modify_stat_stage'):
-                return messages
-            
-            # Apply each stat modification
-            for stat_name, change in self.stat_modifications.items():
-                if isinstance(change, int) and change != 0:
-                    # Apply the stat stage change and get the result message
-                    message = modification_target.modify_stat_stage(stat_name, change)
-                    if message:  # Only add non-empty messages
-                        messages.append(message)
-            
-        except Exception as e:
-            print(f"ERROR: Failed to apply stat modifications for {self.name}: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        return messages
-
+        return self._apply_boosts(modification_target, self.stat_modifications)
 
     def use_move(self, attacking_pokemon=None, defending_pokemon=None) -> Tuple[int, str, Optional[str]]:
-        # Debug log for move usage
-        debug_msg = f"{attacking_pokemon.name}'s {self.name} (power: {self.power}, category: {self.category}, type: {self.type})"
-        if defending_pokemon:
-            debug_msg += f" vs {defending_pokemon.name} ({', '.join(defending_pokemon.types) if hasattr(defending_pokemon, 'types') else 'unknown'})"
-        print(f"DEBUG: {debug_msg}")
-        
-        # Validate that the Pokemon can actually use moves (safety check)
-        if attacking_pokemon and hasattr(attacking_pokemon, 'can_use_move'):
-            can_move, reason = attacking_pokemon.can_use_move()
-            if not can_move:
-                print(f"WARNING: Move {self.name} called on {attacking_pokemon.name} who cannot move: {reason}")
-                # Still continue with the move for backward compatibility, but log the issue
-        
-        # Check if the move hits
         if not self._check_accuracy():
             return 0, f"{attacking_pokemon.name}'s {self.name} missed!", None
-        
-        # Handle status moves and 0-power moves - they deal no damage
+            
+        if self.stalling_move:
+            success_rate = 1.0 / (3.0 ** attacking_pokemon.consecutive_stalling_moves)
+            if random.random() >= success_rate:
+                attacking_pokemon.consecutive_stalling_moves = 0
+                return 0, f"But it failed!", None
+            attacking_pokemon.consecutive_stalling_moves += 1
+        else:
+            attacking_pokemon.consecutive_stalling_moves = 0
+
+        # Special handling for Substitute
+        if self.id == 'substitute':
+            if attacking_pokemon.substitute_hp > 0:
+                return 0, "", "But it failed!"
+            cost = attacking_pokemon.max_hp // 4
+            if attacking_pokemon.current_hp > cost:
+                attacking_pokemon.current_hp -= cost
+                attacking_pokemon.substitute_hp = cost
+                attacking_pokemon.apply_volatile_status('substitute')
+                return 0, "", f"{attacking_pokemon.name} put in a substitute!"
+            else:
+                return 0, "", "But it failed!"
+
         if self.is_status_move or self.power == 0:
             # Check for special moves first (like Belly Drum)
             special_move_result = self._handle_special_moves(attacking_pokemon, defending_pokemon)
@@ -795,6 +608,10 @@ class Move:
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:
+            # Check for ability immunities (e.g. Levitate)
+            if hasattr(defending_pokemon, 'ability') and defending_pokemon.ability.is_immune(self.type, self.category):
+                return 0, f"It had no effect on {defending_pokemon.name}!", None
+
             # Get the move type in lowercase for comparison
             move_type = self.type.lower()
             
@@ -826,16 +643,30 @@ class Move:
                 defense_stat = getattr(defending_pokemon, 'special_defense', 1)  # Special Defense
                 attack_name = 'Special Attack'
                 defense_name = 'Special Defense'
-            
-            # Base damage formula: (((2 * Level / 5 + 2) * Power * A/D) / 50 + 2) * Modifiers
-            # Where A is the attacker's Attack/Sp. Atk and D is the defender's Defense/Sp. Def
-            # Using level 100 for standard competitive play
             level = 100
+            move_name_lower = self.name.lower()
             
-            # Calculate base damage
-            # At level 100, the formula simplifies to: (Power * A * 42 / D / 50 + 2) * Modifiers
-            damage = ((2 * level / 5 + 2) * base_damage * attack_stat / defense_stat) / 50 + 2
-            damage = int(damage)
+            # Apply base damage formula if no fixed damage
+            if self.fixed_damage:
+                if isinstance(self.fixed_damage, int):
+                    damage = self.fixed_damage
+                elif self.fixed_damage == 'level':
+                    damage = level
+                else:
+                    damage = 40 # Fallback for unknown fixed damage strings
+            else:
+                # Check for special move logic in JSON generically
+                actual_base_power = base_damage
+                for hook in ["onBasePower", "onModifyMove"]:
+                    logic = self.data.get(hook)
+                    if not logic: continue
+                    
+                    if self._check_condition(logic, attacking_pokemon, defending_pokemon, self):
+                        multiplier = self._parse_chain_modify(logic)
+                        actual_base_power = int(actual_base_power * multiplier)
+
+                damage = ((2 * level / 5 + 2) * actual_base_power * attack_stat / defense_stat) / 50 + 2
+                damage = int(damage)
             
             # Apply effectiveness
             damage = int(damage * effectiveness)
@@ -848,11 +679,14 @@ class Move:
             elif effectiveness > 1:
                 effectiveness_message = "It's super effective!"
             
-            # Apply STAB (Same Type Attack Bonus) - 1.5x if move type matches any of user's types
+            # Apply STAB (Same Type Attack Bonus) - 1.5x (or 2x with Adaptability)
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
-                    damage = int(damage * 1.5)
+                    stab_multiplier = 1.5
+                    if hasattr(attacking_pokemon, 'ability'):
+                        stab_multiplier = attacking_pokemon.ability.get_stab_multiplier()
+                    damage = int(damage * stab_multiplier)
             
             # Check for critical hit
             crit_ratio = self.data.get('critRatio', 1)
@@ -872,6 +706,10 @@ class Move:
             
             damage_multiplier = random.uniform(0.85, 1.0)
             damage = max(1, int(damage * damage_multiplier))
+            
+            # Apply ability damage modifiers (e.g. Blaze, Technician)
+            if hasattr(attacking_pokemon, 'ability'):
+                damage = attacking_pokemon.ability.modify_damage_dealt(attacking_pokemon, defending_pokemon, self, damage)
             
             base_damage = damage
         
@@ -902,6 +740,13 @@ class Move:
         
         # Combine all messages
         all_messages = status_messages + secondary_messages + self_messages + healing_messages + recoil_messages
+        
+        # Handle selfSwitch (U-turn, Volt Switch, etc.)
+        if self.self_switch and attacking_pokemon:
+            all_messages.append(f"{attacking_pokemon.name} switched out!")
+            # Note: The actual switching logic should be handled by the game loop
+            # But we mark it here so the frontend/engine knows.
+        
         combined_message = " ".join(all_messages) if all_messages else None
         
         return base_damage, effectiveness_message, combined_message
