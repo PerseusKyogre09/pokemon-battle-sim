@@ -450,6 +450,34 @@ class Game:
                     target_pokemon = action.target
                     if execute_move(action.pokemon, target_pokemon, move_to_use, move_name_to_use, is_player_action, action):
                         fainted_pokemon = (target_pokemon, target_pokemon == self.player_pokemon)
+                        
+                        # Trigger victory abilities for the attacker (e.g. Moxie)
+                        attacker = action.pokemon
+                        victory_events = attacker.on_victory(target_pokemon)
+                        for event in victory_events:
+                            turn_info['battle_events'].append({
+                                'type': 'ability',
+                                'ability_name': event.get('ability_name'),
+                                'pokemon_name': event.get('pokemon_name'),
+                                'message': event.get('message'),
+                                'target': 'player' if is_player_action else 'opponent',
+                                'timestamp': len(turn_info['battle_events'])
+                            })
+                        
+                        # Trigger any-faint abilities for both (e.g. Soul-Heart)
+                        for p in [self.player_pokemon, self.opponent_pokemon]:
+                            if p and p.current_hp > 0:
+                                any_faint_events = p.on_any_faint()
+                                for event in any_faint_events:
+                                    turn_info['battle_events'].append({
+                                        'type': 'ability',
+                                        'ability_name': event.get('ability_name'),
+                                        'pokemon_name': event.get('pokemon_name'),
+                                        'message': event.get('message'),
+                                        'target': 'player' if p == self.player_pokemon else 'opponent',
+                                        'timestamp': len(turn_info['battle_events'])
+                                    })
+
                         self.battle_over = True
             
             # Add faint event after all other events if a Pokémon fainted

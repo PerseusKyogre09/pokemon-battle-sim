@@ -471,6 +471,89 @@ class Ability:
             })
         return results
 
+    def on_source_after_faint(self, pokemon, opponent) -> List[Dict[str, Any]]:
+        """Trigger effects when this Pokemon faints an opponent (e.g. Moxie)."""
+        results = []
+        
+        # Generic parsing for boost patterns in onSourceAfterFaint hook
+        logic = self.config.get("onSourceAfterFaint")
+        if logic:
+            # Check for bestStat call (Beast Boost)
+            if "getBestStat" in logic:
+                if hasattr(pokemon, "get_best_stat"):
+                    best_stat_abbr = pokemon.get_best_stat(True, True)
+                    # Convert to full name for modify_stat_stage
+                    stat_map = {'atk': 'attack', 'def': 'defense', 'spa': 'special_attack', 'spd': 'special_defense', 'spe': 'speed'}
+                    stat_name = stat_map.get(best_stat_abbr, best_stat_abbr)
+                    
+                    if hasattr(pokemon, "modify_stat_stage"):
+                        msg = pokemon.modify_stat_stage(stat_name, 1)
+                        if msg:
+                            results.append({
+                                "type": "ability",
+                                "ability_name": self.name,
+                                "pokemon_name": pokemon.name,
+                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                            })
+                return results
+
+            boosts = self._parse_boost_amounts(logic)
+            if boosts:
+                for stat_name, stages in boosts.items():
+                    # In onSourceAfterFaint, 'length' is usually used for boost amount (usually 1)
+                    # We'll use the parsed value or default to 1
+                    amount = stages if stages != 0 else 1
+                    if hasattr(pokemon, "modify_stat_stage"):
+                        msg = pokemon.modify_stat_stage(stat_name, amount)
+                        if msg:
+                            results.append({
+                                "type": "ability",
+                                "ability_name": self.name,
+                                "pokemon_name": pokemon.name,
+                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                            })
+                            
+        return results
+
+    def on_any_faint(self, pokemon) -> List[Dict[str, Any]]:
+        """Trigger effects when any Pokemon faints (e.g. Soul-Heart)."""
+        results = []
+        
+        logic = self.config.get("onAnyFaint")
+        if logic:
+            boosts = self._parse_boost_amounts(logic)
+            if boosts:
+                for stat_name, stages in boosts.items():
+                    if hasattr(pokemon, "modify_stat_stage"):
+                        msg = pokemon.modify_stat_stage(stat_name, stages)
+                        if msg:
+                            results.append({
+                                "type": "ability",
+                                "ability_name": self.name,
+                                "pokemon_name": pokemon.name,
+                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                            })
+                            
+        return results
+
+    def on_stat_drop(self, pokemon, stat_name: str) -> List[Dict[str, Any]]:
+        """Trigger effects when a stat is lowered (e.g. Defiant)."""
+        results = []
+        
+        if self.id == "defiant":
+            # Defiant: +2 Atk when any stat is lowered
+            if hasattr(pokemon, "modify_stat_stage"):
+                pokemon.modify_stat_stage("attack", 2)
+        elif self.id == "competitive":
+            # Competitive: +2 SpA when any stat is lowered
+            if hasattr(pokemon, "modify_stat_stage"):
+                pokemon.modify_stat_stage("special_attack", 2)
+                
+        return results
+
     def modify_damage_taken(self, pokemon, opponent, move, damage: int) -> int:
         """Modifies damage taken by the Pokemon."""
         final_damage = damage

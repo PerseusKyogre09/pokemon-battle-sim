@@ -23,6 +23,11 @@ class Pokemon:
         ability_name = kwargs.get('ability', 'noability')
         self.ability = create_ability(ability_name)
         
+        # New: Full competitive stat configuration
+        self.evs = kwargs.get('evs', {'hp': 0, 'atk': 0, 'def': 0, 'spa': 0, 'spd': 0, 'spe': 0})
+        self.ivs = kwargs.get('ivs', {'hp': 31, 'atk': 31, 'def': 31, 'spa': 31, 'spd': 31, 'spe': 31})
+        self.nature = kwargs.get('nature', 'Hardy')
+        
         self.status_effects = {}
         self.major_status = None
         self.volatile_statuses = set()
@@ -35,6 +40,7 @@ class Pokemon:
         self.last_move_name = None
         self.substitute_hp = 0
         
+        # Base stats from PokeAPI format
         if isinstance(stats, list):
             self.base_stats = {
                 'hp': stats[0]['base_stat'] if isinstance(stats[0], dict) else stats[0],
@@ -47,9 +53,6 @@ class Pokemon:
         else:
             self.base_stats = stats
         
-        self.max_hp = int(((self.base_stats['hp'] * 2) * self.level / 100) + self.level + 10)
-        self.current_hp = self.max_hp
-        
         self.stat_stages = {
             'attack': 0,
             'defense': 0,
@@ -60,11 +63,10 @@ class Pokemon:
             'evasion': 0
         }
         
-        self.attack = self._calculate_stat('attack')
-        self.defense = self._calculate_stat('defense')
-        self.special_attack = self._calculate_stat('special_attack')
-        self.special_defense = self._calculate_stat('special_defense')
-        self.speed = self._calculate_stat('speed')
+        # Initial calculation
+        self._recalculate_stats()
+        # Set current HP to max HP after first calculation
+        self.current_hp = self.max_hp
         
         if moves:
             self.moves = {}
@@ -164,22 +166,68 @@ class Pokemon:
             return 2 / (2 - stage)
 
     def _calculate_stat(self, stat_name):
-        """Calculate a stat based on base stat, level, and stat stages."""
-        if stat_name == 'hp':
-            return self.max_hp
-            
-        base = self.base_stats[stat_name]
+        """Calculate a stat based on base stat, level, IVs, EVs, Nature, and stat stages."""
+        base = self.base_stats.get(stat_name, 10)
         level = self.level
         
-        if stat_name in ['attack', 'defense', 'special_attack', 'special_defense', 'speed']:
-            stat = int(((base * 2) * level / 100) + 5)
-        else:
-            stat = base
+        # Stat name mapping for EVs/IVs
+        mapping = {
+            'attack': 'atk',
+            'defense': 'def',
+            'special_attack': 'spa',
+            'special_defense': 'spd',
+            'speed': 'spe',
+            'hp': 'hp'
+        }
+        key = mapping.get(stat_name, stat_name)
+        iv = self.ivs.get(key, 31)
+        ev = self.evs.get(key, 0)
+        
+        if stat_name == 'hp':
+            if self.name.lower() == 'shedinja': return 1
+            stat = int(((2 * base + iv + int(ev / 4)) * level) / 100) + level + 10
+            self.max_hp = stat
+            return stat
             
+        # Calculate base value
+        stat = int(((2 * base + iv + int(ev / 4)) * level) / 100) + 5
+        
+        # Apply Nature
+        NATURES = {
+            'Adamant': {'plus': 'attack', 'minus': 'special_attack'},
+            'Bold': {'plus': 'defense', 'minus': 'attack'},
+            'Brave': {'plus': 'attack', 'minus': 'speed'},
+            'Calm': {'plus': 'special_defense', 'minus': 'attack'},
+            'Careful': {'plus': 'special_defense', 'minus': 'special_attack'},
+            'Gentle': {'plus': 'special_defense', 'minus': 'defense'},
+            'Hasty': {'plus': 'speed', 'minus': 'defense'},
+            'Impish': {'plus': 'defense', 'minus': 'special_attack'},
+            'Jolly': {'plus': 'speed', 'minus': 'special_attack'},
+            'Lax': {'plus': 'defense', 'minus': 'special_defense'},
+            'Lonely': {'plus': 'attack', 'minus': 'defense'},
+            'Mild': {'plus': 'special_attack', 'minus': 'defense'},
+            'Modest': {'plus': 'special_attack', 'minus': 'attack'},
+            'Naive': {'plus': 'speed', 'minus': 'special_defense'},
+            'Naughty': {'plus': 'attack', 'minus': 'special_defense'},
+            'Quiet': {'plus': 'special_attack', 'minus': 'speed'},
+            'Rash': {'plus': 'special_attack', 'minus': 'special_defense'},
+            'Relaxed': {'plus': 'defense', 'minus': 'speed'},
+            'Sassy': {'plus': 'special_defense', 'minus': 'speed'},
+            'Timid': {'plus': 'speed', 'minus': 'attack'},
+        }
+        
+        nature_mod = NATURES.get(self.nature, {})
+        if nature_mod.get('plus') == stat_name:
+            stat = int(stat * 1.1)
+        elif nature_mod.get('minus') == stat_name:
+            stat = int(stat * 0.9)
+            
+        # Apply Stat Stages
         stage = self.stat_stages.get(stat_name, 0)
         multiplier = self.get_stat_stage_multiplier(stage)
         stat = int(stat * multiplier)
             
+        # Apply Status/Ability Modifications
         stat = self.get_modified_stat_value(stat_name, stat)
             
         return max(1, stat)
@@ -496,6 +544,10 @@ class Pokemon:
         if actual_change != 0:
             self.stat_stages[stat_name] = clamped_stage
             self._recalculate_stats()
+            
+            # Trigger Defiant/Competitive if stat was lowered
+            if change < 0 and hasattr(self, 'ability'):
+                self.ability.on_stat_drop(self, stat_name)
         
         return message
     
@@ -567,3 +619,47 @@ class Pokemon:
         if hasattr(self, 'ability'):
             return self.ability.on_turn_end(self, opponent)
         return []
+
+    def on_victory(self, opponent) -> List[Dict[str, Any]]:
+        """Trigger ability effects when this Pokemon defeats an opponent."""
+        if hasattr(self, 'ability') and hasattr(self.ability, 'on_source_after_faint'):
+            return self.ability.on_source_after_faint(self, opponent)
+        return []
+
+    def on_any_faint(self) -> List[Dict[str, Any]]:
+        """Trigger ability effects when any Pokemon faints."""
+        if hasattr(self, 'ability') and hasattr(self.ability, 'on_any_faint'):
+            return self.ability.on_any_faint(self)
+        return []
+
+    def get_best_stat(self, ignore_boosts=True, ignore_modifiers=True) -> str:
+        """Returns the name of the highest stat (excluding HP)."""
+        stats_to_check = ['attack', 'defense', 'special_attack', 'special_defense', 'speed']
+        best_val = -1
+        best_stat = 'attack'
+        
+        for stat_name in stats_to_check:
+            # For Beast Boost, it typically uses the value BEFORE in-battle boosts?
+            # Actually Showdown says source.getBestStat(true, true) ignores boosts and modifiers.
+            val = self.base_stats.get(stat_name, 0)
+            
+            # If we were to use current values:
+            if not ignore_boosts:
+                val = getattr(self, stat_name, val)
+                
+            if val > best_val:
+                best_val = val
+                best_stat = stat_name
+            elif val == best_val:
+                # Tie-breaker order in Showdown: atk, def, spa, spd, spe
+                pass 
+                
+        # Map to internal names if needed
+        mapping = {
+            'attack': 'atk',
+            'defense': 'def',
+            'special_attack': 'spa',
+            'special_defense': 'spd',
+            'speed': 'spe'
+        }
+        return mapping.get(best_stat, best_stat)

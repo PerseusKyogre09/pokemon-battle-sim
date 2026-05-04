@@ -355,37 +355,74 @@ async def start_game(request: Request):
         opponent_data = get_pokemon_data(opponent_pokemon_name)
         
         player_moves = []
-        if selected_set and 'moves' in selected_set:
-            for move_name in selected_set['moves']:
-                player_moves.append({'name': move_name})
+        player_stats_config = {}
+        if selected_set:
+            if 'moves' in selected_set:
+                for move_name in selected_set['moves']:
+                    player_moves.append({'name': move_name})
+            
+            player_stats_config = {
+                'evs': selected_set.get('evs', {}),
+                'ivs': selected_set.get('ivs', {}),
+                'nature': selected_set.get('nature', 'Hardy'),
+                'ability': selected_set.get('ability', 'noability')
+            }
         else:
             player_moves = get_pokemon_moves(player_data)
             
         opponent_moves = get_pokemon_moves(opponent_data)
         
-        # Get abilities
-        player_ability = "noability"
-        if selected_set and 'ability' in selected_set:
-            player_ability = selected_set['ability']
-            
-        opponent_ability = "noability"
-        # Try to get a competitive set for the opponent to find an ability
+        # Determine opponent competitive config
+        opponent_stats_config = {}
         opponent_sets = get_all_pokemon_sets(opponent_pokemon_name)
         if opponent_sets:
-            # Pick a random ability from the available sets
-            all_opponent_abilities = []
-            for fmt_sets in opponent_sets.values():
-                for s in fmt_sets.values():
-                    if s.get('ability'):
-                        all_opponent_abilities.append(s['ability'])
-            if all_opponent_abilities:
-                opponent_ability = random.choice(all_opponent_abilities)
+            # Pick a random set for the opponent
+            all_sets = []
+            for fmt in opponent_sets:
+                for set_name, s in opponent_sets[fmt].items():
+                    all_sets.append(s)
+            
+            if all_sets:
+                best_set = random.choice(all_sets)
+                opponent_stats_config = {
+                    'evs': best_set.get('evs', {}),
+                    'ivs': best_set.get('ivs', {}),
+                    'nature': best_set.get('nature', 'Hardy'),
+                    'ability': best_set.get('ability', 'noability')
+                }
+                # Use the moves from this set too
+                if best_set.get('moves'):
+                    opponent_moves = [{'name': m} for m in best_set['moves']]
 
         game_instance = Game()
-        start_messages = game_instance.start_battle(
-            player_data, opponent_data, player_moves, opponent_moves,
-            player_ability=player_ability, opponent_ability=opponent_ability
+        
+        # Override Game.start_battle logic to pass detailed configs
+        # Initialize player pokemon with full stats
+        game_instance.player_pokemon = Pokemon(
+            player_data['name'], 
+            [t['type']['name'] for t in player_data['types']],
+            get_best_sprite(player_data, side='back', shiny=selected_set.get('shiny', False) if selected_set else False),
+            player_data['stats'],
+            player_moves,
+            **player_stats_config
         )
+        game_instance.player_pokemon.is_player = True
+        
+        # Initialize opponent pokemon with full stats
+        game_instance.opponent_pokemon = Pokemon(
+            opponent_data['name'],
+            [t['type']['name'] for t in opponent_data['types']],
+            get_best_sprite(opponent_data, side='front', shiny=False),
+            opponent_data['stats'],
+            opponent_moves,
+            **opponent_stats_config
+        )
+        game_instance.opponent_pokemon.is_player = False
+        
+        # Trigger switch-in effects
+        start_messages = []
+        start_messages.extend(game_instance.player_pokemon.on_switch_in(game_instance.opponent_pokemon))
+        start_messages.extend(game_instance.opponent_pokemon.on_switch_in(game_instance.player_pokemon))
         
         is_shiny = selected_set.get('shiny', False) if selected_set else False
         player_sprite = get_best_sprite(player_data, side='back', shiny=is_shiny)

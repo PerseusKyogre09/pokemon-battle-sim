@@ -669,6 +669,11 @@ class Move:
                 damage = ((2 * level / 5 + 2) * actual_base_power * attack_stat / defense_stat) / 50 + 2
                 damage = int(damage)
             
+            print(f"DEBUG: Damage Calc - {attacking_pokemon.name} vs {defending_pokemon.name}")
+            print(f"DEBUG: Stat: {attack_name}={attack_stat}, Def: {defense_name}={defense_stat}")
+            print(f"DEBUG: Base Power: {actual_base_power}, Effectiveness: {effectiveness}")
+            print(f"DEBUG: Raw Damage (pre-STAB/Crit/Random): {damage}")
+
             # Apply effectiveness
             damage = int(damage * effectiveness)
             
