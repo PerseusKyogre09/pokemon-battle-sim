@@ -19,7 +19,6 @@ class DataLoader:
         self._load_abilities()
     
     def _load_moves(self):
-        """Load moves data from datasets/moves.json."""
         try:
             with open('datasets/moves.json', 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
@@ -47,7 +46,6 @@ class DataLoader:
             with open('datasets/moves_desc.json', 'r', encoding='utf-8') as f:
                 content = f.read()
                 
-                # Remove the outer braces and split by move entries
                 content = content.strip()
                 if content.startswith('{') and content.endswith('}'):
                     content = content[1:-1]
@@ -118,7 +116,6 @@ class DataLoader:
             raise
             
     def _load_abilities(self):
-        """Load abilities data from datasets/abilities_logic.json."""
         try:
             with open('datasets/abilities_logic.json', 'r', encoding='utf-8') as f:
                 self.abilities_data = json.load(f)
@@ -140,21 +137,49 @@ class DataLoader:
         
         return move_data
     
-    def get_pokemon_moves(self, pokemon_name: str, limit: int = 4) -> List[str]:
-        pokemon_data = self.learnsets_data.get(pokemon_name.lower(), {})
+    def get_pokemon_moves(self, pokemon_name: str, limit: Optional[int] = None) -> List[str]:
+        name_lower = pokemon_name.lower()
+        normalized = name_lower.replace("-", "")
         
-        if isinstance(pokemon_data, list):
-            available_moves = pokemon_data
-        elif isinstance(pokemon_data, dict):
-            learnset = pokemon_data.get('learnset', {})
-            available_moves = list(learnset.keys()) if isinstance(learnset, dict) else []
-        else:
-            available_moves = []
+        all_move_ids = set()
         
-        # Filter moves that exist in our moves database
-        valid_moves = [move for move in available_moves if move in self.moves_data]
+        data = self.learnsets_data.get(normalized)
+        if data:
+            all_move_ids.update(data)
+            
+        data_hyphen = self.learnsets_data.get(name_lower)
+        if data_hyphen:
+            all_move_ids.update(data_hyphen)
+            
+        if "-" in name_lower:
+            base_name = name_lower.split("-")[0]
+            base_data = self.learnsets_data.get(base_name)
+            if base_data:
+                all_move_ids.update(base_data)
+            
+            base_norm = base_name.replace("-", "")
+            if base_norm != base_name:
+                base_data_norm = self.learnsets_data.get(base_norm)
+                if base_data_norm:
+                    all_move_ids.update(base_data_norm)
         
-        return valid_moves[:limit]
+             for key in self.learnsets_data:
+                 if key in normalized or normalized in key:
+                     all_move_ids.update(self.learnsets_data[key])
+                     if len(all_move_ids) > 10: break
+
+        move_names = []
+        for move_id in all_move_ids:
+            move_data = self.moves_data.get(move_id.lower())
+            if move_data:
+                move_names.append(move_data.get('name', move_id))
+            else:
+                move_names.append(move_id.replace('-', ' ').title())
+        
+        results = sorted(list(set(move_names)))
+        if limit:
+            return results[:limit]
+        return results
     
     def get_type_effectiveness(self, attacking_type: str, defending_type: str) -> float:
         if not attacking_type or not defending_type:
@@ -203,10 +228,8 @@ class DataLoader:
         for target_type in target_types:
             effectiveness *= self.get_type_effectiveness(move_type, target_type)
         
-        # Round to avoid floating point precision issues (e.g., 0.9999 -> 1.0)
         effectiveness = round(effectiveness, 2)
         
-        # Get the appropriate message
         if effectiveness == 0:
             message = "It had no effect..."
         elif effectiveness < 1:
@@ -233,16 +256,13 @@ class DataLoader:
         # Try to find the move by exact key first
         move_key = move_name.lower().replace(' ', '').replace('-', '')
         
-        # Check if the move exists in our data
         if move_key in self.moves_data:
             return self.moves_data[move_key]
             
-        # If not found, try to find by name in the values
         for key, data in self.moves_data.items():
             if data.get('name', '').lower() == move_name.lower():
                 return data
                 
-        # If still not found, try a partial match
         for key, data in self.moves_data.items():
             if move_name.lower() in key.lower() or move_name.lower() in data.get('name', '').lower():
                 return data
@@ -250,7 +270,6 @@ class DataLoader:
         return None
         
     def get_ability(self, ability_name: str) -> Optional[Dict[str, Any]]:
-        """Get ability data from the loaded abilities."""
         if not ability_name:
             return None
             
@@ -258,18 +277,15 @@ class DataLoader:
         return self.abilities_data.get(ability_key)
     
     def get_move_description(self, move_name: str) -> Optional[Dict[str, Any]]:
-        """Get move description data including special mechanics descriptions."""
         if not move_name:
             return None
             
         # Try to find the move by exact key first
         move_key = move_name.lower().replace(' ', '').replace('-', '')
         
-        # Check if the move exists in our description data
         if move_key in self.moves_desc_data:
             return self.moves_desc_data[move_key]
             
-        # If not found, try to find by name in the values
         for key, data in self.moves_desc_data.items():
             if data.get('name', '').lower() == move_name.lower():
                 return data

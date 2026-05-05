@@ -5,15 +5,18 @@ from fastapi.responses import JSONResponse, FileResponse
 import requests
 import os
 import random
+from typing import List, Dict, Any, Optional
+from functools import lru_cache
 from game import Game
 from pokemon import Pokemon
 from data_loader import data_loader
 from moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
+from pokemon_utils import POKEAPI_NAME_MAP, get_mandatory_item
 import json
+import re
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-# Load environment variables
 load_dotenv()
 
 app = FastAPI()
@@ -116,69 +119,12 @@ async def pokemon_cry(pokemon_name: str):
             return FileResponse(fallback_path)
         raise HTTPException(status_code=500, detail=str(e))
 
-POKEAPI_NAME_MAP = {
-    'wishiwashi': 'wishiwashi-solo',
-    'aegislash': 'aegislash-shield',
-    'basculin': 'basculin-red-striped',
-    'darmanitan': 'darmanitan-standard',
-    'darmanitangalar': 'darmanitan-galar-standard',
-    'deoxys': 'deoxys-normal',
-    'enamorus': 'enamorus-incarnate',
-    'eiscue': 'eiscue-ice',
-    'giratina': 'giratina-altered',
-    'gourgeist': 'gourgeist-average',
-    'indeedee': 'indeedee-male',
-    'indeedeef': 'indeedee-female',
-    'keldeo': 'keldeo-ordinary',
-    'landorus': 'landorus-incarnate',
-    'landorustherian': 'landorus-therian',
-    'lycanroc': 'lycanroc-midday',
-    'meloetta': 'meloetta-aria',
-    'meowstic': 'meowstic-male',
-    'meowsticf': 'meowstic-female',
-    'mimikyu': 'mimikyu-disguised',
-    'morpeko': 'morpeko-full-belly',
-    'oricorio': 'oricorio-baile',
-    'pumpkaboo': 'pumpkaboo-average',
-    'shaymin': 'shaymin-land',
-    'thundurus': 'thundurus-incarnate',
-    'thundurustherian': 'thundurus-therian',
-    'tornadus': 'tornadus-incarnate',
-    'tornadustherian': 'tornadus-therian',
-    'toxtricity': 'toxtricity-amped',
-    'urshifu': 'urshifu-single-strike',
-    'urshifurapidstrike': 'urshifu-rapid-strike',
-    'wormadam': 'wormadam-plant',
-    'tapukoko': 'tapu-koko',
-    'tapulele': 'tapu-lele',
-    'tapubulu': 'tapu-bulu',
-    'tapufini': 'tapu-fini',
-    'kommoo': 'kommo-o',
-    'jangmoo': 'jangmo-o',
-    'hakamoo': 'hakamo-o',
-    'hooh': 'ho-oh',
-    'porygonz': 'porygon-z',
-    'typenull': 'type-null',
-    'mimejr': 'mime-jr',
-    'mrmime': 'mr-mime',
-    'mrrime': 'mr-rime',
-    'mr-rime': 'mr-rime',
-}
 def get_best_sprite(data, side='front', shiny=False):
-    """
-    Intelligently fetch the best possible sprite.
-    Follows priority: Gen 5 Animated Pixel > Gen 5 Static Pixel > 3D Animated.
-    Includes form normalization for Showdown compatibility.
-    """
     name = data['name'].lower()
     
-    # Normalization for Showdown sprite filenames
-    # 1. Strip spaces and hyphens
-    # 2. Handle specific form patterns (e.g. "kyogre-primal" -> "kyogre-primal")
     # Showdown often uses lowercased, hyphenated names for forms.
     pokemon_name = name.replace(' ', '').replace('-', '')
     
-    # Specific common overrides for Showdown's naming conventions
     OVERRIDES = {
         'ho-oh': 'hooh',
         'porygon-z': 'porygonz',
@@ -192,63 +138,70 @@ def get_best_sprite(data, side='front', shiny=False):
         'mime-jr.': 'mimejr'
     }
     
-    # Handle forms more explicitly (e.g. Alolan, Galar, Primal, Mega)
     if '-' in name:
         parts = name.split('-')
-        # If it's a known form, Showdown usually uses 'name-form'
         if any(f in name for f in ['alola', 'galar', 'hisui', 'paldea', 'mega', 'primal', 'origin', 'therian', 'crowned', 'eternamax', 'ultra', 'dusk', 'dawn']):
             pokemon_name = name.replace(' ', '') # Keep the hyphen for forms
     
     if pokemon_name in OVERRIDES:
         pokemon_name = OVERRIDES[pokemon_name]
 
-    # Showdown Path Logic
     prefix = ""
     back_suffix = "-back" if side == 'back' else ""
     shiny_suffix = "-shiny" if shiny else ""
 
-    # Priority 1: Pixel Animated (Gen 5 style)
-    # Path: /sprites/gen5ani[-back][-shiny]/name.gif
     url_pixel_ani = f"https://play.pokemonshowdown.com/sprites/gen5ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
     
-    # Priority 2: Pixel Static (Gen 5 style)
-    # Path: /sprites/gen5[-back][-shiny]/name.png
     url_pixel_static = f"https://play.pokemonshowdown.com/sprites/gen5{back_suffix}{shiny_suffix}/{pokemon_name}.png"
     
-    # Priority 3: Modern 3D Animated (Gen 6+ style)
-    # Path: /sprites/ani[-back][-shiny]/name.gif
     url_3d_ani = f"https://play.pokemonshowdown.com/sprites/ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
     
-    poke_id = data.get('id', 0)
-    
-    # Since we can't check existence synchronously without adding latency,
-    # we use the generation as a heuristic.
-    # Gen 1-5 (ID <= 649) almost always have gen5ani.
-    if poke_id > 0 and poke_id <= 649:
-        # Check for specific forms that might only be in static gen5
-        return url_pixel_ani
-    
-    # Gen 6+ (including Mega/Primal forms which are often ID > 10000)
-    # Default to static pixel as requested ("use gen 5 static first instead of the 3d model")
-    return url_pixel_static
+    return url_pixel_static # Always return static gen 5 first as requested
 
-def get_pokemon_data(pokemon_name):
-    normalized_name = pokemon_name.lower().replace(' ', '')
-    api_name = POKEAPI_NAME_MAP.get(normalized_name, normalized_name)
+def to_display_name(name: str) -> str:
+    # Special cases
+    if name.lower() == 'urshifu-single-strike': return 'Urshifu-Single-Strike'
+    if name.lower() == 'urshifu': return 'Urshifu-Single-Strike'
+    if name.lower() == 'giratina-altered': return 'Giratina-Altered'
+    if name.lower() == 'giratina': return 'Giratina-Altered'
     
+    # General rule: capitalize parts
+    parts = re.split(r'[- ]', name)
+    return '-'.join(p.capitalize() for p in parts)
+
+@lru_cache(maxsize=1000)
+def get_pokemon_data(pokemon_name):
+    # 1. Try normalizing to map (e.g. "Giratina Origin" -> "giratinaorigin" -> "giratina-origin")
+    normalized_name = pokemon_name.lower().replace(' ', '').replace('-', '')
+    api_name = POKEAPI_NAME_MAP.get(normalized_name, None)
+    
+    # 2. If not in map, but input has hyphens, it might already be a PokeAPI name (e.g. "stunfisk-galar")
+    if not api_name:
+        if '-' in pokemon_name:
+            api_name = pokemon_name.lower().strip()
+        else:
+            api_name = normalized_name
+
     url = f'https://pokeapi.co/api/v2/pokemon/{api_name}'
     response = requests.get(url)
+    
     if response.status_code == 200:
         return response.json()
         
-    if response.status_code == 404 and '-' not in api_name:
-        for p_name in [f"{api_name[:4]}-{api_name[4:]}", f"{api_name[:5]}-{api_name[5:]}", f"{api_name[:6]}-{api_name[6:]}"]:
-            try_url = f'https://pokeapi.co/api/v2/pokemon/{p_name}'
-            res = requests.get(try_url)
-            if res.status_code == 200:
-                return res.json()
+        patterns = [
+            f"{api_name}-galar", f"{api_name}-alola", f"{api_name}-hisui", 
+            f"{api_name}-origin", f"{api_name}-altered", f"{api_name}-single-strike",
+            f"{api_name}-amped", f"{api_name}-low-key"
+        ]
+        for p_name in patterns:
+            try:
+                res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}')
+                if res.status_code == 200:
+                    return res.json()
+            except:
+                continue
                 
-    raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} not found!')
+    raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} (API: {api_name}) not found!')
 
 def get_pokemon_moves(pokemon_data):
     pokemon_name = pokemon_data['name'].lower()
@@ -258,39 +211,75 @@ def get_pokemon_moves(pokemon_data):
         return [{'name': move_name} for move_name in strategic_moves[:4]]
     return [{'name': 'tackle'}, {'name': 'growl'}]
 
+@lru_cache(maxsize=1)
+def get_comprehensive_pokemon_list() -> List[str]:
+    # Start with Smogon list
+    try:
+        from moveset import get_battle_ready_pokemon_list, BATTLE_ONLY_FORM_SUFFIXES
+        names = set(get_battle_ready_pokemon_list())
+    except:
+        names = set()
+        BATTLE_ONLY_FORM_SUFFIXES = []
+        
+    # Add PokeAPI names
+    try:
+        with open('all_pokemon_names.json', 'r') as f:
+            api_names = json.load(f)
+            for n in api_names:
+                names.add(n)
+    except Exception as e:
+        print(f"Error loading PokeAPI names: {e}")
+        
+    return sorted(list(names))
+
 @app.get("/api/search-pokemon")
-async def search_pokemon(q: str = ""):
-    """Fast search limited to battle-ready Pokemon with movesets."""
-    query = q.lower()
+async def search_pokemon(q: str = "", sets_only: bool = False):
+    query = q.lower().strip()
     if not query or len(query) < 2:
         return {"success": False, "results": []}
-    
+        
     try:
-        # Use battle-ready list for faster, filtered search
-        battle_ready = get_battle_ready_pokemon_list()
-        matches = [p for p in battle_ready if query in p.lower()][:8]
+        # Use comprehensive list
+        all_names = get_comprehensive_pokemon_list()
+        
+        # If sets_only, we can narrow down the search list immediately or filter later
+        # Naming wise, matches from battle_ready already have sets.
+        matches = [p for p in all_names if query in p.lower()][:15]
         
         results = []
         for pokemon_name in matches:
             try:
-                # Get pokemon data for ability
-                pokemon_data = get_pokemon_data(pokemon_name)
+                api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
+                
+                has_sets = bool(moveset)
+                
+                if sets_only and not has_sets:
+                    continue
+                
                 ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
                 
-                # Get strategic moveset
-                moveset = get_strategic_moveset(pokemon_name, debug=False)
-                
                 results.append({
-                    'name': pokemon_name,
+                    'name': api_name,
+                    'display_name': to_display_name(pokemon_name),
                     'ability': ability_name.replace('-', ' ').title(),
+                    'item': get_mandatory_item(pokemon_name) or '',
                     'moveset': moveset[:4] if moveset else ['Tackle'],
-                    'has_sets': bool(moveset)
+                    'has_sets': has_sets
                 })
+                
+                if len(results) >= 10:
+                    break
             except:
-                # Skip Pokemon that fail to load
                 continue
         
-        return {"success": True, "results": results}
+        seen_names = set()
+        final_results = []
+        for r in results:
+            if r['name'] not in seen_names:
+                final_results.append(r)
+                seen_names.add(r['name'])
+        
+        return {"success": True, "results": final_results[:10]}
     except Exception as e:
         print(f"Error searching Pokémon: {e}")
         return {"success": False, "results": []}
@@ -331,40 +320,26 @@ async def get_all_sets(pokemon_name: str):
 
 @app.get("/api/search-pokemon-optimized")
 async def search_pokemon_optimized(q: str = ""):
-    """Ultra-fast search using pre-cached battle-ready list."""
-    query = q.lower()
-    if not query or len(query) < 2:
-        return {"success": False, "results": []}
-    
-    try:
-        battle_ready = get_battle_ready_pokemon_list()
-        matches = [p for p in battle_ready if query in p.lower()][:8]
-        
-        results = []
-        for pokemon_name in matches:
-            try:
-                pokemon_data = get_pokemon_data(pokemon_name)
-                ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
-                moveset = get_strategic_moveset(pokemon_name, debug=False)
-                
-                results.append({
-                    'name': pokemon_name,
-                    'ability': ability_name.replace('-', ' ').title(),
-                    'moveset': moveset[:4] if moveset else ['Tackle'],
-                    'has_sets': bool(moveset)
-                })
-            except:
-                continue
-        
-        return {"success": True, "results": results}
-    except Exception as e:
-        print(f"Error in optimized search: {e}")
-        return {"success": False, "results": []}
+    return await search_pokemon(q)
 
 @app.get("/api/battle-ready-pokemon")
 async def get_battle_ready_list():
     try:
         return {"success": True, "pokemon": get_battle_ready_pokemon_list()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/pokemon/{name}/moves")
+async def get_pokemon_learnset_api(name: str):
+    moves = data_loader.get_pokemon_moves(name)
+    return moves
+
+@app.get("/api/all-moves")
+async def get_all_moves_list():
+    try:
+        from data_loader import data_loader
+        moves = sorted(list(set([m['name'] for m in data_loader.moves_data.values() if 'name' in m])))
+        return {"success": True, "moves": moves}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -393,12 +368,14 @@ async def start_game(request: Request):
                     player_moves.append({'name': move_name})
             
             player_stats_config = {
-                'evs': selected_set.get('evs', {}),
-                'ivs': selected_set.get('ivs', {}),
-                'nature': selected_set.get('nature', 'Hardy'),
-                'ability': selected_set.get('ability', player_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability'))
+                'ability': selected_set.get('ability', player_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability')),
+                'item': selected_set.get('item', get_mandatory_item(player_pokemon_name) or '')
             }
+                player_stats_config['item'] = mandatory
         else:
+            player_stats_config = {
+                'item': get_mandatory_item(player_pokemon_name) or ''
+            }
             player_moves = get_pokemon_moves(player_data)
             
         opponent_moves = get_pokemon_moves(opponent_data)
@@ -407,7 +384,6 @@ async def start_game(request: Request):
         opponent_stats_config = {}
         opponent_sets = get_all_pokemon_sets(opponent_pokemon_name)
         if opponent_sets:
-            # Pick a random set for the opponent
             all_sets = []
             for fmt in opponent_sets:
                 for set_name, s in opponent_sets[fmt].items():
@@ -415,20 +391,21 @@ async def start_game(request: Request):
             
             if all_sets:
                 best_set = random.choice(all_sets)
+                mandatory = get_mandatory_item(opponent_pokemon_name)
                 opponent_stats_config = {
                     'evs': best_set.get('evs', {}),
                     'ivs': best_set.get('ivs', {}),
                     'nature': best_set.get('nature', 'Hardy'),
-                    'ability': best_set.get('ability', 'noability')
+                    'ability': best_set.get('ability', 'noability'),
+                    'item': best_set.get('item', mandatory or '')
                 }
-                # Use the moves from this set too
+                if mandatory:
+                    opponent_stats_config['item'] = mandatory
                 if best_set.get('moves'):
                     opponent_moves = [{'name': m} for m in best_set['moves']]
 
         game_instance = Game()
         
-        # Override Game.start_battle logic to pass detailed configs
-        # Initialize player pokemon with full stats
         game_instance.player_pokemon = Pokemon(
             player_data['name'], 
             [t['type']['name'] for t in player_data['types']],
@@ -439,7 +416,6 @@ async def start_game(request: Request):
         )
         game_instance.player_pokemon.is_player = True
         
-        # Initialize opponent pokemon with full stats
         game_instance.opponent_pokemon = Pokemon(
             opponent_data['name'],
             [t['type']['name'] for t in opponent_data['types']],

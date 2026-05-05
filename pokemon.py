@@ -17,6 +17,7 @@ class Pokemon:
         self.evs = kwargs.get('evs', {s: 0 for s in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']})
         self.ivs = kwargs.get('ivs', {s: 31 for s in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']})
         self.nature = kwargs.get('nature', 'Hardy')
+        self.item = kwargs.get('item', '')
         
         self.status_effects = {}
         self.major_status = None
@@ -272,6 +273,7 @@ class Pokemon:
             'special_attack': self.special_attack, 'special_defense': self.special_defense,
             'speed': self.speed,
             'ability': {'name': self.ability.name, 'description': self.ability.description, 'id': self.ability.id},
+            'item': self.item,
             'moves': {n: m.to_dict() for n, m in self.moves.items()},
             'status_effects': self.get_status_display(),
             'stat_stages': self.stat_stages, 'substitute_hp': self.substitute_hp

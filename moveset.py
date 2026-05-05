@@ -17,6 +17,23 @@ BATTLE_READY_FORMATS = [
     'gen8pu',
     'gen8monotype'
 ]
+ 
+# Forms that cannot be obtained/selected normally in a teambuilder (battle-only)
+BATTLE_ONLY_FORM_SUFFIXES = [
+    '-Mega', '-Mega-X', '-Mega-Y', 
+    '-Primal', 
+    '-Complete', # Zygarde-Complete
+    '-Eternamax', 
+    '-Ultra', # Necrozma-Ultra
+    '-Zen', # Darmanitan-Zen
+    '-Pirouette', # Meloetta-Pirouette
+    '-Blade', # Aegislash-Blade
+    '-School', # Wishiwashi-School
+    '-Gulping', '-Gorging', # Cramorant
+    '-Noice', # Eiscue
+    '-Hangry', # Morpeko
+    '-Busted' # Mimikyu-Busted
+]
 
 def get_battle_ready_pokemon_list() -> List[str]:
     """
@@ -37,8 +54,10 @@ def get_battle_ready_pokemon_list() -> List[str]:
         for fmt in BATTLE_READY_FORMATS:
             if fmt in data and 'stats' in data[fmt]:
                 for name in data[fmt]['stats'].keys():
-                    # Basic filtering to avoid obviously non-fully evolved forms if needed
-                    # though Smogon tiers already do most of this work.
+                    # Filter out battle-only forms
+                    if any(name.endswith(suffix) for suffix in BATTLE_ONLY_FORM_SUFFIXES):
+                        continue
+                        
                     battle_ready_names.add(name)
         
         return sorted(list(battle_ready_names))

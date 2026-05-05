@@ -11,9 +11,9 @@ import {
   StatName,
   getNatureMultiplier
 } from '@/lib/pokemon-utils';
-import { API_BASE_URL, getAllSets, startBattle } from '@/lib/api';
+import { API_BASE_URL, getAllSets, startBattle, searchPokemon, getPokemonMoves } from '@/lib/api';
 
-// --- Types ---
+
 interface TeamMember {
   id: string;
   species: string;
@@ -34,6 +34,7 @@ interface TeamMember {
   allSprites: any;
   availableAbilities: string[];
   availableMoves: string[];
+  legalMoves: string[];
 }
 
 const DEFAULT_STATS: Record<StatName, number> = {
@@ -59,7 +60,8 @@ const DEFAULT_MEMBER: TeamMember = {
   sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/25.gif',
   allSprites: null,
   availableAbilities: ['Static', 'Lightning Rod'],
-  availableMoves: []
+  availableMoves: [],
+  legalMoves: []
 };
 
 const STAT_LABELS: Record<StatName, string> = {
@@ -68,7 +70,7 @@ const STAT_LABELS: Record<StatName, string> = {
 
 const POKEMON_TYPES = Object.keys(TYPE_COLORS);
 
-// --- Component ---
+
 export default function PokemonBuilder() {
   const [team, setTeam] = useState<TeamMember[]>([{ ...DEFAULT_MEMBER }]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -78,21 +80,29 @@ export default function PokemonBuilder() {
   const [allItems, setAllItems] = useState<string[]>([]);
   const [smogonSets, setSmogonSets] = useState<any[]>([]);
   const [allSpecies, setAllSpecies] = useState<any[]>([]);
+  const [allMoves, setAllMoves] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isVerified, setIsVerified] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   const currentMon = team[activeIndex];
+  const totalEVs = Object.values(currentMon.evs).reduce((a, b) => a + b, 0);
   const router = useRouter();
 
   // Load basic data
   useEffect(() => {
-    // In a real app, we'd fetch these once and cache
     const fetchCommonData = async () => {
       try {
-        const [itemsRes, speciesRes] = await Promise.all([
+        const [itemsRes, speciesRes, movesRes] = await Promise.all([
           fetch('https://pokeapi.co/api/v2/item?limit=2000').then(r => r.json()),
-          fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1000').then(r => r.json())
+          fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1000').then(r => r.json()),
+          fetch(`${API_BASE_URL}/all-moves`).then(r => r.json())
         ]);
         setAllItems(itemsRes.results.map((i: any) => i.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())));
         setAllSpecies(speciesRes.results);
+        if (movesRes.success) {
+          setAllMoves(movesRes.moves);
+        }
       } catch (e) {
         console.error("Failed to fetch common data", e);
       }
@@ -100,7 +110,6 @@ export default function PokemonBuilder() {
     fetchCommonData();
   }, []);
 
-  // Fetch Smogon Sets when species changes
   useEffect(() => {
     const loadSets = async () => {
       if (!currentMon.species) return;
@@ -118,7 +127,23 @@ export default function PokemonBuilder() {
     loadSets();
   }, [currentMon.species]);
 
+  useEffect(() => {
+    const refreshMoves = async () => {
+      if (!currentMon.species) return;
+      
+      const moves = await getPokemonMoves(currentMon.species);
+      if (moves.length > 0) {
+        updateCurrentMon({ 
+          legalMoves: moves,
+          availableMoves: Array.from(new Set([...currentMon.availableMoves, ...moves])).sort()
+        });
+      }
+    };
+    refreshMoves();
+  }, [currentMon.species]);
+
   const updateCurrentMon = (updates: Partial<TeamMember>) => {
+    setIsVerified(false);
     setTeam(prev => {
       const newTeam = [...prev];
       newTeam[activeIndex] = { ...newTeam[activeIndex], ...updates };
@@ -126,22 +151,32 @@ export default function PokemonBuilder() {
     });
   };
 
-  const handleSpeciesSearch = (q: string) => {
+  const handleSpeciesSearch = async (q: string) => {
     setSearchQuery(q);
     if (q.length < 2) {
       setSearchResults([]);
       return;
     }
-    const filtered = allSpecies
-      .filter((p: any) => p.name.includes(q.toLowerCase()))
-      .slice(0, 10);
-    setSearchResults(filtered);
+    setIsSearching(true);
+    try {
+      const data = await searchPokemon(q);
+      if (data.success) {
+        setSearchResults(data.results);
+      }
+    } catch (e) {
+      console.error("Search failed", e);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const selectSpecies = async (speciesName: string) => {
+  const selectSpecies = async (speciesData: any) => {
+    const speciesName = speciesData.name;
     try {
       const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${speciesName}`);
       const data = await res.json();
+
+      const backendMoves = await getPokemonMoves(speciesName);
 
       const stats: Record<StatName, number> = {
         hp: data.stats[0].base_stat,
@@ -152,7 +187,6 @@ export default function PokemonBuilder() {
         speed: data.stats[5].base_stat,
       };
 
-      // Priority: Gen 5 Animated > Gen 5 Static > Default Front
       const gen5 = data.sprites.versions?.['generation-v']?.['black-white'];
       const animated = gen5?.animated?.front_default;
       const static_gen5 = gen5?.front_default;
@@ -160,16 +194,23 @@ export default function PokemonBuilder() {
 
       const spriteUrl = animated || static_gen5 || fallback || data.sprites.other['official-artwork'].front_default;
 
+      const displayName = speciesData.display_name || (data.name.charAt(0).toUpperCase() + data.name.slice(1));
+
+      const pokeApiMoves = data.moves.map((m: any) => m.move.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()));
+      const availableMoves = Array.from(new Set([...backendMoves, ...pokeApiMoves])).sort();
+
       updateCurrentMon({
-        species: data.name.charAt(0).toUpperCase() + data.name.slice(1),
+        species: displayName,
         baseStats: stats,
         types: data.types.map((t: any) => t.type.name),
         sprite: spriteUrl,
         allSprites: data.sprites,
         availableAbilities: data.abilities.map((a: any) => a.ability.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())),
-        availableMoves: data.moves.map((m: any) => m.move.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())).sort(),
+        availableMoves: availableMoves,
+        legalMoves: backendMoves,
         ability: data.abilities[0].ability.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-        moves: ['', '', '', ''],
+        item: speciesData.item || '',
+        moves: speciesData.moveset ? speciesData.moveset.map((m: string) => m.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())) : ['', '', '', ''],
         teraType: data.types[0].type.name.charAt(0).toUpperCase() + data.types[0].type.name.slice(1)
       });
       setSearchQuery('');
@@ -180,10 +221,62 @@ export default function PokemonBuilder() {
   };
 
   const isAbilityValid = currentMon.ability === '' || currentMon.availableAbilities.includes(currentMon.ability);
-  const invalidMoves = currentMon.moves.filter(m => m && m.trim() !== '' && !currentMon.availableMoves.includes(m));
+  const invalidMoves = currentMon.moves.filter(m => m && m.trim() !== '' && !currentMon.legalMoves.includes(m));
   const isItemValid = currentMon.item === '' || allItems.includes(currentMon.item);
-  // Lax validation: Only requires species to be selected
-  const isMonValid = currentMon.species !== '';
+
+  const getValidationErrors = () => {
+    const errors: { message: string, fix?: () => void, fixLabel?: string }[] = [];
+    if (!currentMon.species) return [{ message: "No species selected" }];
+
+    if (currentMon.species.toLowerCase().includes('zacian-crowned') && currentMon.item.toLowerCase() !== 'rusted sword') {
+      errors.push({
+        message: "Zacian-Crowned requires Rusted Sword",
+        fix: () => updateCurrentMon({ item: 'Rusted Sword' }),
+        fixLabel: "Equip Rusted Sword"
+      });
+    }
+    if (currentMon.species.toLowerCase().includes('zamazenta-crowned') && currentMon.item.toLowerCase() !== 'rusted shield') {
+      errors.push({
+        message: "Zamazenta-Crowned requires Rusted Shield",
+        fix: () => updateCurrentMon({ item: 'Rusted Shield' }),
+        fixLabel: "Equip Rusted Shield"
+      });
+    }
+    if (currentMon.species.toLowerCase().includes('giratina-origin') && currentMon.item.toLowerCase() !== 'griseous orb') {
+      errors.push({
+        message: "Giratina-Origin requires Griseous Orb",
+        fix: () => updateCurrentMon({ item: 'Griseous Orb' }),
+        fixLabel: "Equip Griseous Orb"
+      });
+    }
+
+    if (invalidMoves.length > 0) {
+      errors.push({
+        message: `Illegal moves: ${invalidMoves.join(', ')}`,
+        fix: () => {
+          const newMoves = currentMon.moves.map(m => currentMon.legalMoves.includes(m) ? m : '');
+          updateCurrentMon({ moves: newMoves });
+        },
+        fixLabel: "Remove Illegal Moves"
+      });
+    }
+
+    if (totalEVs > 510) {
+      errors.push({
+        message: `Total EVs exceed 510 limit (${totalEVs})`,
+        fix: () => {
+          const resetEvs = { hp: 0, attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
+          updateCurrentMon({ evs: resetEvs });
+        },
+        fixLabel: "Reset EVs"
+      });
+    }
+
+    return errors;
+  };
+
+  const validationIssues = getValidationErrors();
+  const isMonValid = currentMon.species !== '' && validationIssues.length === 0;
 
   const applySmogonSet = (set: any) => {
     const newEvs = { hp: 0, attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
@@ -191,7 +284,6 @@ export default function PokemonBuilder() {
       Object.entries(set.evs).forEach(([stat, val]) => {
         const key = stat.toLowerCase() as StatName;
         if (key in newEvs) newEvs[key] = val as number;
-        // Handle Smogon stat names
         if (stat === 'atk') newEvs.attack = val as number;
         if (stat === 'def') newEvs.defense = val as number;
         if (stat === 'spa') newEvs.spAtk = val as number;
@@ -222,19 +314,15 @@ export default function PokemonBuilder() {
     return stats;
   }, [currentMon]);
 
-  const totalEVs = Object.values(currentMon.evs).reduce((a, b) => a + b, 0);
 
   return (
     <div className="min-h-screen bg-[#020617] text-white font-retro overflow-x-hidden relative selection:bg-yellow-500/30">
-      {/* Background FX */}
       <div className="fixed inset-0 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center opacity-10 blur-md pointer-events-none" />
       <div className="fixed inset-0 bg-gradient-to-br from-[#020617] via-slate-900/80 to-[#020617] pointer-events-none" />
 
-      {/* Dynamic Animated Particles or Glows */}
       <div className="fixed top-[-10%] right-[-10%] w-[50%] h-[50%] bg-yellow-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none" />
       <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px] animate-pulse pointer-events-none" />
 
-      {/* Header */}
       <header className="sticky top-0 z-[100] border-b border-white/5 backdrop-blur-xl bg-slate-900/40">
         <div className="container mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
           <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-all active:scale-95 group">
@@ -247,7 +335,6 @@ export default function PokemonBuilder() {
             </h1>
           </Link>
 
-          {/* Team Tabs */}
           <div className="flex items-center space-x-1 bg-black/40 p-1 rounded-xl border border-white/5">
             {team.map((mon, idx) => (
               <button
@@ -280,10 +367,8 @@ export default function PokemonBuilder() {
       <main className="container mx-auto px-4 py-8 relative z-10">
         <div className="max-w-7xl mx-auto">
 
-          {/* Top Section: Species Search & Identity */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
 
-            {/* Search Panel */}
             <div className="lg:col-span-4 space-y-6">
               <div className="glass-panel p-6 rounded-3xl relative z-[100] group">
                 <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500 opacity-50" />
@@ -303,10 +388,10 @@ export default function PokemonBuilder() {
                       {searchResults.map((p) => (
                         <button
                           key={p.name}
-                          onClick={() => selectSpecies(p.name)}
+                          onClick={() => selectSpecies(p)}
                           className="w-full px-4 py-3 text-left hover:bg-yellow-500 hover:text-slate-900 transition-colors text-[10px] uppercase font-bold border-b border-white/5 last:border-0"
                         >
-                          {p.name.replace(/-/g, ' ')}
+                          {p.display_name || p.name.replace(/-/g, ' ')}
                         </button>
                       ))}
                     </div>
@@ -315,10 +400,9 @@ export default function PokemonBuilder() {
               </div>
             </div>
 
-            {/* Central Identity Panel */}
             <div className="lg:col-span-8 glass-panel p-8 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center relative overflow-hidden">
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none p-12 overflow-hidden z-0">
-                <h1 
+                <h1
                   className="font-black uppercase italic whitespace-nowrap leading-none tracking-tighter"
                   style={{ fontSize: `${Math.min(120, 900 / Math.max(currentMon.species.length, 1))}px` }}
                 >
@@ -326,7 +410,6 @@ export default function PokemonBuilder() {
                 </h1>
               </div>
 
-              {/* Sprite Visualizer */}
               <div className="flex flex-col items-center justify-center space-y-6">
                 <div className="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center">
                   <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-full blur-2xl ${currentMon.shiny ? 'bg-yellow-500/5' : ''}`} />
@@ -365,7 +448,6 @@ export default function PokemonBuilder() {
                 </div>
               </div>
 
-              {/* Identity Controls */}
               <div className="space-y-5">
                 <div>
                   <label className="text-gray-500 text-[8px] uppercase tracking-widest block mb-2">Nickname</label>
@@ -431,7 +513,6 @@ export default function PokemonBuilder() {
           {/* Middle Section: Equipment & Moves */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 
-            {/* Equipment: Item & Ability */}
             <div className="glass-panel p-8 rounded-3xl space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -466,7 +547,6 @@ export default function PokemonBuilder() {
               </div>
             </div>
 
-            {/* Moves: 4 Slots */}
             <div className="glass-panel p-8 rounded-3xl">
               <label className="text-yellow-500 font-bold uppercase text-[9px] tracking-[0.2em] block mb-4">Moveset</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -492,13 +572,16 @@ export default function PokemonBuilder() {
                   );
                 })}
                 <datalist id={`moves-${currentMon.id}`}>
-                  {currentMon.availableMoves.map(m => <option key={m} value={m} />)}
+                  {/* Prioritize moves specifically learned by this species, then show all available moves */}
+                  {currentMon.availableMoves.map(m => <option key={`avail-${m}`} value={m} />)}
+                  {allMoves.map(m => (
+                    !currentMon.availableMoves.includes(m) && <option key={`all-${m}`} value={m} />
+                  ))}
                 </datalist>
               </div>
             </div>
           </div>
 
-          {/* Smogon Builds: Quick Importer */}
           {smogonSets.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
@@ -521,7 +604,6 @@ export default function PokemonBuilder() {
             </div>
           )}
 
-          {/* Bottom Section: Stats Laboratory */}
           <div className="glass-panel p-8 rounded-3xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 flex items-center gap-2 opacity-50">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">EV POOL:</span>
@@ -531,7 +613,6 @@ export default function PokemonBuilder() {
             </div>
 
             <div className="mb-10">
-              <label className="text-yellow-500 font-bold uppercase text-[11px] tracking-[0.3em] block mb-2">Stats Laboratory</label>
               <p className="text-[8px] text-gray-500 uppercase tracking-widest italic">Precision Tuning for Competitive Excellence</p>
             </div>
 
@@ -551,12 +632,10 @@ export default function PokemonBuilder() {
 
                 return (
                   <div key={stat} className="grid grid-cols-12 gap-4 items-center group">
-                    {/* Name */}
                     <div className={`col-span-2 text-[10px] font-bold uppercase ${isPlus ? 'text-red-400' : isMinus ? 'text-blue-400' : 'text-white'}`}>
                       {STAT_LABELS[stat]} {isPlus ? '↑' : isMinus ? '↓' : ''}
                     </div>
 
-                    {/* Base */}
                     <div className="col-span-1 text-center">
                       <input
                         type="number"
@@ -572,7 +651,6 @@ export default function PokemonBuilder() {
                       />
                     </div>
 
-                    {/* EV Slider & Input */}
                     <div className="col-span-5 flex items-center gap-4">
                       <div className="flex-1 stat-bar-bg relative">
                         <div
@@ -607,7 +685,6 @@ export default function PokemonBuilder() {
                       />
                     </div>
 
-                    {/* IV Slider & Input */}
                     <div className="col-span-2 flex items-center gap-3">
                       <div className="flex-1 stat-bar-bg relative">
                         <div
@@ -641,7 +718,6 @@ export default function PokemonBuilder() {
                       />
                     </div>
 
-                    {/* Final Stat */}
                     <div className="col-span-2 text-right text-[12px] font-mono font-bold text-yellow-500">
                       {finalStats[stat]}
                     </div>
@@ -650,7 +726,6 @@ export default function PokemonBuilder() {
               })}
             </div>
 
-            {/* Nature Selection */}
             <div className="mt-12 pt-8 border-t border-white/5 flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Nature:</label>
@@ -670,43 +745,108 @@ export default function PokemonBuilder() {
             </div>
           </div>
 
-          {/* Action Footer */}
-          <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center items-center pb-16">
-            <Link
-              href="/"
-              className="px-10 py-4 glass-panel border border-white/10 hover:border-white/20 rounded-2xl text-[11px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-white transition-all active:scale-95"
-            >
-              Discard Project
-            </Link>
-            <button
-              onClick={async () => {
-                setIsSearching(true);
-                try {
-                  const formattedMoves = currentMon.moves.filter(m => m && m.trim() !== '').map(m => m.toLowerCase().replace(/ /g, '-'));
-                  const selectedSet = {
-                    moves: formattedMoves,
-                    ability: currentMon.ability.toLowerCase().replace(/ /g, '-'),
-                    item: currentMon.item.toLowerCase().replace(/ /g, '-'),
-                    nature: currentMon.nature,
-                    evs: currentMon.evs,
-                    ivs: currentMon.ivs
-                  };
+          <div className="mt-12 flex flex-col gap-6 justify-center items-center pb-16">
 
-                  const battleState = await startBattle(currentMon.species.toLowerCase(), selectedSet, 'random');
-                  localStorage.setItem('initialBattleState', JSON.stringify(battleState));
-                  router.push('/battle');
-                } catch (e) {
-                  console.error(e);
-                  alert('Failed to initialize battle sequence.');
-                } finally {
-                  setIsSearching(false);
-                }
-              }}
-              disabled={isSearching || !isMonValid}
-              className={`px-12 py-5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-900 rounded-2xl text-[12px] uppercase font-bold tracking-[0.2em] shadow-[0_10px_30px_rgba(234,179,8,0.3)] hover:shadow-[0_15px_40px_rgba(234,179,8,0.5)] transition-all active:scale-95 group ${isSearching || !isMonValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-            >
-              {isSearching ? 'SYNCING DATA...' : !isMonValid ? 'Illegal Build' : 'Initialize Battle'} <span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
-            </button>
+            {(validationIssues.length > 0 && (isVerified || isValidating)) && (
+              <div className="w-full max-w-2xl glass-panel border border-red-500/30 p-6 rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-4 text-red-400">
+                  <span className="text-[12px] font-bold uppercase tracking-[0.2em]">Build Discrepancies Detected</span>
+                </div>
+                <div className="space-y-3">
+                  {validationIssues.map((issue, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 gap-3">
+                      <p className="text-gray-300 text-[10px] uppercase font-medium tracking-wide">
+                        <span className="text-red-500 mr-2">●</span> {issue.message}
+                      </p>
+                      {issue.fix && (
+                        <button
+                          onClick={issue.fix}
+                          className="px-4 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[8px] uppercase font-bold rounded-lg transition-all"
+                        >
+                          {issue.fixLabel || 'Quick Fix'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isVerified && validationIssues.length === 0 && (
+              <div className="w-full max-w-md bg-green-500/10 border border-green-500/30 p-4 rounded-2xl animate-in zoom-in-95 duration-300 text-center">
+                <p className="text-green-400 text-[10px] uppercase font-bold tracking-[0.3em]">✓ Build Verified & Simulation Ready</p>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Link
+                href="/"
+                className="px-10 py-4 glass-panel border border-white/10 hover:border-white/20 rounded-2xl text-[11px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-white transition-all active:scale-95"
+              >
+                Discard Project
+              </Link>
+
+              <div className="relative group">
+                {!isVerified ? (
+                  <button
+                    onClick={async () => {
+                      setIsValidating(true);
+                      await new Promise(r => setTimeout(r, 800));
+                      setIsValidating(false);
+                      setIsVerified(true);
+                    }}
+                    disabled={isValidating}
+                    className={`px-12 py-5 bg-white/5 hover:bg-white/10 border border-white/20 hover:border-blue-500/50 text-white rounded-2xl text-[12px] uppercase font-bold tracking-[0.2em] transition-all active:scale-95 flex items-center gap-3 ${isValidating ? 'cursor-wait opacity-70' : ''}`}
+                  >
+                    {isValidating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        Scanning Build...
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        Verify
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      if (!isMonValid) {
+                        setIsVerified(false);
+                        return;
+                      }
+                      setIsSearching(true);
+                      try {
+                        const formattedMoves = currentMon.moves.filter(m => m && m.trim() !== '').map(m => m.toLowerCase().replace(/ /g, '-'));
+                        const selectedSet = {
+                          moves: formattedMoves,
+                          ability: currentMon.ability.toLowerCase().replace(/ /g, '-'),
+                          item: currentMon.item.toLowerCase().replace(/ /g, '-'),
+                          nature: currentMon.nature,
+                          evs: currentMon.evs,
+                          ivs: currentMon.ivs
+                        };
+
+                        const battleState = await startBattle(currentMon.species.toLowerCase(), selectedSet, 'random');
+                        localStorage.setItem('initialBattleState', JSON.stringify(battleState));
+                        router.push('/battle');
+                      } catch (e) {
+                        console.error(e);
+                        alert('Failed to initialize battle sequence.');
+                      } finally {
+                        setIsSearching(false);
+                      }
+                    }}
+                    disabled={isSearching || !isMonValid}
+                    className={`px-12 py-5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-900 rounded-2xl text-[12px] uppercase font-bold tracking-[0.2em] shadow-[0_10px_30px_rgba(234,179,8,0.3)] hover:shadow-[0_15px_40px_rgba(234,179,8,0.5)] transition-all active:scale-95 group ${isSearching || !isMonValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                  >
+                    {isSearching ? 'SYNCING DATA...' : 'Initialize Battle'} <span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
         </div>

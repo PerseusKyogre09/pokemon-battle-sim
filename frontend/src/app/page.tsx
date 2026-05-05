@@ -85,7 +85,7 @@ export default function Home() {
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const data = await searchPokemon(val);
+        const data = await searchPokemon(val, true);
         if (data.success && data.results) {
           setSuggestions(data.results);
         } else {
@@ -229,7 +229,7 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-bold text-[10px] mb-0.5">{p.name}</div>
+                        <div className="font-bold text-[10px] mb-0.5">{p.display_name || p.name}</div>
                         <div className="text-gray-400 group-hover:text-gray-700 text-[8px] space-x-2">
                           <span>Ability: {p.ability || 'Unknown'}</span>
                         </div>
