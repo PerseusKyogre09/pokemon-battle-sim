@@ -163,10 +163,10 @@ class DataLoader:
                 if base_data_norm:
                     all_move_ids.update(base_data_norm)
         
-             for key in self.learnsets_data:
-                 if key in normalized or normalized in key:
-                     all_move_ids.update(self.learnsets_data[key])
-                     if len(all_move_ids) > 10: break
+            for key in self.learnsets_data:
+                if key in normalized or normalized in key:
+                    all_move_ids.update(self.learnsets_data[key])
+                    if len(all_move_ids) > 10: break
 
         move_names = []
         for move_id in all_move_ids:

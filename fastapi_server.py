@@ -367,10 +367,12 @@ async def start_game(request: Request):
                 for move_name in selected_set['moves']:
                     player_moves.append({'name': move_name})
             
+            mandatory = get_mandatory_item(player_pokemon_name)
             player_stats_config = {
                 'ability': selected_set.get('ability', player_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability')),
-                'item': selected_set.get('item', get_mandatory_item(player_pokemon_name) or '')
+                'item': selected_set.get('item', mandatory or '')
             }
+            if mandatory:
                 player_stats_config['item'] = mandatory
         else:
             player_stats_config = {
