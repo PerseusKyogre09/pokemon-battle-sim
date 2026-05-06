@@ -187,19 +187,20 @@ def get_pokemon_data(pokemon_name):
     
     if response.status_code == 200:
         return response.json()
-        
-        patterns = [
-            f"{api_name}-galar", f"{api_name}-alola", f"{api_name}-hisui", 
-            f"{api_name}-origin", f"{api_name}-altered", f"{api_name}-single-strike",
-            f"{api_name}-amped", f"{api_name}-low-key"
-        ]
-        for p_name in patterns:
-            try:
-                res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}')
-                if res.status_code == 200:
-                    return res.json()
-            except:
-                continue
+    
+    # Try common form patterns if direct hit fails
+    patterns = [
+        f"{api_name}-galar", f"{api_name}-alola", f"{api_name}-hisui", 
+        f"{api_name}-origin", f"{api_name}-altered", f"{api_name}-single-strike",
+        f"{api_name}-amped", f"{api_name}-low-key"
+    ]
+    for p_name in patterns:
+        try:
+            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}')
+            if res.status_code == 200:
+                return res.json()
+        except:
+            continue
                 
     raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} (API: {api_name}) not found!')
 
@@ -249,14 +250,22 @@ async def search_pokemon(q: str = "", sets_only: bool = False):
         results = []
         for pokemon_name in matches:
             try:
+                normalized = pokemon_name.lower().replace(' ', '').replace('-', '')
                 api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
                 
+                # Check for sets
+                moveset = get_strategic_moveset(pokemon_name, debug=False)
                 has_sets = bool(moveset)
                 
                 if sets_only and not has_sets:
                     continue
                 
-                ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
+                # Try to get some basic data for the search result
+                try:
+                    pokemon_data = get_pokemon_data(pokemon_name)
+                    ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
+                except:
+                    ability_name = 'unknown'
                 
                 results.append({
                     'name': api_name,
@@ -269,7 +278,8 @@ async def search_pokemon(q: str = "", sets_only: bool = False):
                 
                 if len(results) >= 10:
                     break
-            except:
+            except Exception as e:
+                print(f"Error processing {pokemon_name} in search: {e}")
                 continue
         
         seen_names = set()
