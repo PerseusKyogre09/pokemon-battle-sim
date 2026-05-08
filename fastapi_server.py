@@ -243,12 +243,18 @@ def get_comprehensive_pokemon_list() -> List[str]:
         names = set()
         BATTLE_ONLY_FORM_SUFFIXES = []
         
-    # Add PokeAPI names
+    # Add names from our ID map (most comprehensive)
+    if 'POKEMON_ID_MAP' in globals() and POKEMON_ID_MAP:
+        for n in POKEMON_ID_MAP.keys():
+            names.add(n)
+            
+    # Add PokeAPI names fallback
     try:
-        with open('all_pokemon_names.json', 'r') as f:
-            api_names = json.load(f)
-            for n in api_names:
-                names.add(n)
+        if os.path.exists('all_pokemon_names.json'):
+            with open('all_pokemon_names.json', 'r') as f:
+                api_names = json.load(f)
+                for n in api_names:
+                    names.add(n)
     except Exception as e:
         print(f"Error loading PokeAPI names: {e}")
         
@@ -264,53 +270,39 @@ async def search_pokemon(q: str = "", sets_only: bool = False):
         # Use comprehensive list
         all_names = get_comprehensive_pokemon_list()
         
-        # If sets_only, we can narrow down the search list immediately or filter later
-        # Naming wise, matches from battle_ready already have sets.
-        matches = [p for p in all_names if query in p.lower()][:15]
+        # Filter matches
+        matches = [p for p in all_names if query in p.lower()][:20]
         
         results = []
         for pokemon_name in matches:
-            try:
-                normalized = pokemon_name.lower().replace(' ', '').replace('-', '')
-                api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
-                
-                # Check for sets
-                moveset = get_strategic_moveset(pokemon_name, debug=False)
-                has_sets = bool(moveset)
-                
-                if sets_only and not has_sets:
-                    continue
-                
-                # Try to get some basic data for the search result
-                try:
-                    pokemon_data = get_pokemon_data(pokemon_name)
-                    ability_name = pokemon_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'unknown')
-                except:
-                    ability_name = 'unknown'
-                
-                results.append({
-                    'name': api_name,
-                    'display_name': to_display_name(pokemon_name),
-                    'ability': ability_name.replace('-', ' ').title(),
-                    'item': get_mandatory_item(pokemon_name) or '',
-                    'moveset': moveset[:4] if moveset else ['Tackle'],
-                    'has_sets': has_sets
-                })
-                
-                if len(results) >= 10:
-                    break
-            except Exception as e:
-                print(f"Error processing {pokemon_name} in search: {e}")
+            # Check for sets (this is local and fast)
+            moveset = get_strategic_moveset(pokemon_name, debug=False)
+            has_sets = bool(moveset)
+            
+            if sets_only and not has_sets:
                 continue
+            
+            normalized = pokemon_name.lower().replace(' ', '').replace('-', '')
+            api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
+            
+            # Deduplicate by API name to avoid Glastrier/glastrier duplicates
+            if any(r['name'] == api_name for r in results):
+                continue
+                
+            # FAST: Only provide basic info. Detailed info like abilities will be fetched 
+            # when the user actually selects the Pokemon in the UI.
+            results.append({
+                'name': api_name,
+                'display_name': to_display_name(pokemon_name),
+                'item': get_mandatory_item(pokemon_name) or '',
+                'moveset': moveset[:4] if moveset else ['Tackle'],
+                'has_sets': has_sets
+            })
+            
+            if len(results) >= 15:
+                break
         
-        seen_names = set()
-        final_results = []
-        for r in results:
-            if r['name'] not in seen_names:
-                final_results.append(r)
-                seen_names.add(r['name'])
-        
-        return {"success": True, "results": final_results[:10]}
+        return {"success": True, "results": results}
     except Exception as e:
         print(f"Error searching Pokémon: {e}")
         return {"success": False, "results": []}
