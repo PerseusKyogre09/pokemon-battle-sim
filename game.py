@@ -1,5 +1,6 @@
 from pokemon import Pokemon
 from priority_system import PriorityResolver, create_battle_action
+from ai import BattleAI
 import random
 
 class Game:
@@ -10,6 +11,7 @@ class Game:
         self.weather = 'none'
         self.weather_duration = 0
         self.priority_resolver = PriorityResolver()
+        self.ai = BattleAI()
     def start_battle(self, player_data, opponent_data, player_moves, opponent_moves, player_ability="noability", opponent_ability="noability"):
         # ... (keep existing setup code)
         player_sprite = (
@@ -158,8 +160,21 @@ class Game:
         if not player_move or player_move.pp <= 0:
             return turn_info  # Invalid move or no PP left
                 
-        # Get opponent's move (AI always picks first move)
-        opponent_move_name, opponent_move = next(iter(self.opponent_pokemon.moves.items()))
+        # Get opponent's move using AI
+        opponent_move_name, opponent_move = self.ai.select_move(self.opponent_pokemon, self.player_pokemon, self.weather)
+        
+        # Fallback if AI somehow fails or has no PP
+        if not opponent_move:
+            # Try to find any move with PP
+            for m_name, m in self.opponent_pokemon.moves.items():
+                if m.pp > 0:
+                    opponent_move_name, opponent_move = m_name, m
+                    break
+            
+            # If still no move, opponent struggles (handled below)
+            if not opponent_move:
+                opponent_move_name, opponent_move = next(iter(self.opponent_pokemon.moves.items()))
+
         turn_info['opponent_move'] = opponent_move_name
         
         # Check if opponent has PP left
@@ -225,8 +240,13 @@ class Game:
                 turn_info['battle_events'].append({
                     'type': event_type, 
                     'ability_name': attacker.ability.name if event_type == 'ability' else None,
-                    'message': msg, 'target': 'player' if is_player_attacking else 'opponent',
-                    'pokemon_hp': attacker.current_hp, 'status_effects': attacker.get_status_display(),
+                    'pokemon_name': attacker.name,
+                    'message': msg, 
+                    'target': 'player' if is_player_attacking else 'opponent',
+                    'is_player': is_player_attacking,
+                    'pokemon_hp': attacker.current_hp, 
+                    'status_effects': attacker.get_status_display(),
+                    'substitute_hp': attacker.substitute_hp,
                     'timestamp': len(turn_info['battle_events'])
                 })
                 return False
@@ -240,9 +260,28 @@ class Game:
             
             if is_blocked:
                 # 1. Announce the move usage FIRST
-                turn_info['battle_events'].append({'type': 'move', 'pokemon': attacker.name, 'move': move_name, 'target': 'player' if is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
+                turn_info['battle_events'].append({
+                    'type': 'move', 
+                    'attacker_name': attacker.name, 
+                    'move': move_name, 
+                    'is_player': is_player_attacking,
+                    'attacker_hp': attacker.current_hp,
+                    'defender_hp': defender.current_hp,
+                    'attacker_status': attacker.get_status_display(),
+                    'defender_status': defender.get_status_display(),
+                    'attacker_substitute_hp': attacker.substitute_hp,
+                    'defender_substitute_hp': defender.substitute_hp,
+                    'timestamp': len(turn_info['battle_events'])
+                })
                 # 2. Announce the protection SECOND
-                turn_info['battle_events'].append({'type': 'status', 'message': f"{defender.name} protected itself!", 'target': 'player' if not is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
+                turn_info['battle_events'].append({
+                    'type': 'status', 
+                    'message': f"{defender.name} protected itself!", 
+                    'target': 'player' if not is_player_attacking else 'opponent', 
+                    'pokemon_hp': defender.current_hp,
+                    'status_effects': defender.get_status_display(),
+                    'timestamp': len(turn_info['battle_events'])
+                })
                 
                 if move.flags.get('contact'):
                     if active_prot[0] == 'spikyshield':

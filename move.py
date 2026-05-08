@@ -381,7 +381,8 @@ class Move:
                 msg = effective_target.apply_volatile_status(self.data['volatileStatus'])
                 if msg:
                     if self.data['volatileStatus'] == 'protect':
-                        return None
+                        # Protect is handled specially in the game loop for announcements
+                        pass
                     else:
                         messages.append(msg)
                     
