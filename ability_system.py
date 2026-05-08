@@ -37,7 +37,7 @@ ABILITIES_CONFIG = load_abilities_config()
 
 class Ability:
     def __init__(self, name: str):
-        self.id = name.lower().replace(" ", "").replace("-", "")
+        self.id = name.lower().replace(" ", "").replace("-", "").replace("'", "").replace("(", "").replace(")", "")
         self.config = ABILITIES_CONFIG.get(self.id, {})
         self.name = self.config.get("name", name)
         self.description = self.config.get("desc", "No effect.")
@@ -45,6 +45,13 @@ class Ability:
             print(f"DEBUG: Ability {name} (ID: {self.id}) not found in config!")
         else:
             print(f"DEBUG: Loaded Ability {self.name} (ID: {self.id})")
+            
+        # State for specific abilities
+        self.state = {}
+        if self.id == 'slowstart':
+            self.state['counter'] = 5
+        elif self.id == 'truant':
+            self.state['skip'] = False
         
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
@@ -81,14 +88,17 @@ class Ability:
         if not logic_str:
             return True
             
+        curr_hp = getattr(pokemon, 'current_hp', getattr(pokemon, 'max_hp', 100))
+        max_hp = getattr(pokemon, 'max_hp', 100)
+            
         # Pattern: pokemon.hp <= pokemon.maxhp / 3
         if "hp <= pokemon.maxhp / 3" in logic_str or "hp <= attacker.maxhp / 3" in logic_str:
-            if pokemon.current_hp <= pokemon.max_hp / 3:
+            if curr_hp <= max_hp / 3:
                 return True
             return False
             
         if "hp <= pokemon.maxhp / 2" in logic_str:
-            if pokemon.current_hp <= pokemon.max_hp / 2:
+            if curr_hp <= max_hp / 2:
                 return True
             return False
 
@@ -127,6 +137,12 @@ class Ability:
                 return True
             return False
 
+        # Pattern: this.effectState.counter
+        if "this.effectState.counter" in logic_str:
+            if self.state.get('counter', 0) > 0:
+                return True
+            return False
+
         # 6. Specific moves
         match = re.search(r"move\.id === '([^']+)'", logic_str)
         if match:
@@ -137,6 +153,35 @@ class Ability:
 
         # If no obvious condition, assume it applies
         return True
+
+    def _extract_popups(self, logic_str: str, pokemon) -> List[Dict[str, Any]]:
+        """Detect and extract battle log/popup events from Showdown-style logic strings."""
+        if not logic_str: return []
+        results = []
+        is_p = hasattr(pokemon, "is_player") and pokemon.is_player
+        
+        # Pattern mappings for common Showdown log calls
+        patterns = [
+            (r"this\.add\('-ability',\s*[^,]+,\s*'([^']+)'\)", "{user}'s {ability} activated!"),
+            (r"this\.add\('cant',\s*[^,]+,\s*'ability:\s*([^']+)'\)", "{user} is loafing around!"),
+            (r"this\.add\('-activate',\s*[^,]+,\s*'ability:\s*([^']+)'\)", "{user}'s {ability} activated!"),
+            (r"this\.add\('-immune',\s*[^,]+,\s*'ability:\s*([^']+)'\)", "{user} is immune thanks to its {ability}!"),
+            (r"this\.add\('-fail',\s*[^,]+,\s*'ability:\s*([^']+)'\)", "{user}'s {ability} failed!"),
+            (r"this\.add\('-block',\s*[^,]+,\s*'ability:\s*([^']+)'\)", "{user}'s {ability} blocked the effect!"),
+        ]
+        
+        for pattern, template in patterns:
+            matches = re.findall(pattern, logic_str)
+            for ability_name in matches:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": template.format(user=pokemon.name, ability=ability_name),
+                    "is_player": is_p
+                })
+        
+        return results
 
     def modify_stat(self, pokemon, stat_name: str, value: int) -> int:
         """Applies stat multipliers based on the ability."""
@@ -164,13 +209,14 @@ class Ability:
         hook = stat_map.get(stat_name)
         if hook and hook in self.config:
             logic = self.config[hook]
-            if self._check_condition(logic, pokemon, None):
+            
+            # Special case for Slow Start
+            if self.id == 'slowstart' and self.state.get('counter', 0) > 0:
+                multiplier = 0.5
+                value = int(value * multiplier)
+            elif self._check_condition(logic, pokemon, None):
                 multiplier = self._parse_chain_modify(logic)
                 value = int(value * multiplier)
-        
-        # 3. Hardcoded special cases - Only for things that cannot be parsed
-        # Guts Attack boost is handled by generic onModifyAtk in JSON
-        # Huge Power is handled by generic onModifyAtk in JSON
         
         return value
 
@@ -222,8 +268,8 @@ class Ability:
             "pressure": ("pressure", 0, "{user}'s Pressure is bearing down on {target}!", None),
             "electricsurge": ("terrain", 0, "{user}'s Electric Surge set the Electric Terrain!", "electricterrain"),
             "grassysurge": ("terrain", 0, "{user}'s Grassy Surge set the Grassy Terrain!", "grassyterrain"),
-            "mistsurge": ("terrain", 0, "{user}'s Misty Surge set the Misty Terrain!", "mistyterrain"),
-            "psychicsurge": ("terrain", 0, "{user}'s Psychic Surge set the Psychic Terrain!", "psychicterrain")
+            "mistsurge": ("terrain", 0, "{user}'s Misty Surge set the Misty Terrain!", "mistsurge"),
+            "psychicsurge": ("terrain", 0, "{user}'s Psychic Surge set the Psychic Terrain!", "psychicsurge")
         }
         
         if self.id in MECHANICS:
@@ -245,11 +291,37 @@ class Ability:
                     if "terrain" in stat: res["set_terrain"] = weather
                     else: res["set_weather"] = weather
                 results.append(res)
+        
+        # Special switch-in popups for bad abilities
+        if self.id == 'slowstart' and self.state.get('counter', 0) > 0:
+            results.append({
+                "type": "ability",
+                "ability_name": self.name,
+                "pokemon_name": pokemon.name,
+                "message": f"{pokemon.name} can't get it going!",
+                "is_player": is_p
+            })
+        elif self.id == 'defeatist':
+            is_active = pokemon.current_hp <= pokemon.max_hp / 2
+            if is_active and not self.state.get('activated'):
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name}'s Defeatist activated! Its Attack and Sp. Atk were halved!",
+                    "is_player": is_p
+                })
+                self.state['activated'] = True
+            elif not is_active:
+                self.state['activated'] = False
 
         # Process dynamic hooks (onStart, onSwitchIn)
         for hook in ["onStart", "onSwitchIn"]:
             logic = self.config.get(hook)
             if not logic: continue
+            
+            # Extract generic popups from JSON logic (e.g. Turboblaze)
+            results.extend(self._extract_popups(logic, pokemon))
             
             # Weather/Terrain
             if "setWeather" in logic or "setTerrain" in logic:
@@ -341,6 +413,18 @@ class Ability:
                     "ability_name": self.name,
                     "pokemon_name": pokemon.name,
                     "message": f"{pokemon.name}'s {self.name} activated!",
+                    "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
+                })
+        
+        # Slow Start counter
+        if self.id == 'slowstart' and self.state.get('counter', 0) > 0:
+            self.state['counter'] -= 1
+            if self.state['counter'] == 0:
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name} finally got its act together!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         
@@ -737,6 +821,50 @@ class Ability:
             summary['type'] = 'Special Effect'
         
         return summary
+
+    def get_priority_modification(self) -> float:
+        """Returns priority modification (e.g. Stall)."""
+        return self.config.get('onFractionalPriority', 0.0)
+
+    def can_use_move(self, pokemon) -> Tuple[bool, str]:
+        """Checks if the ability allows the move (e.g. Truant)."""
+        if self.id == 'truant':
+            if self.state.get('skip'):
+                self.state['skip'] = False
+                return False, f"{pokemon.name} is loafing around!"
+            self.state['skip'] = True
+        return True, ""
+
+    def on_damage(self, pokemon, damage: int) -> List[Dict[str, Any]]:
+        """Trigger effects when taking damage (e.g. Defeatist)."""
+        results = []
+        is_p = hasattr(pokemon, "is_player") and pokemon.is_player
+        
+        if self.id == 'defeatist':
+            # Check if we just dropped below 50%
+            old_hp = pokemon.current_hp + damage
+            is_active = pokemon.current_hp <= pokemon.max_hp / 2
+            
+            if old_hp > pokemon.max_hp / 2 and is_active:
+                if not self.state.get('activated'):
+                    results.append({
+                        "type": "ability",
+                        "ability_name": self.name,
+                        "pokemon_name": pokemon.name,
+                        "message": f"{pokemon.name}'s {self.name} activated! Its Attack and Sp. Atk were halved!",
+                        "is_player": is_p
+                    })
+                    self.state['activated'] = True
+            elif not is_active:
+                self.state['activated'] = False
+                
+        return results
+
+    def can_use_item(self) -> bool:
+        """Checks if the ability allows using held items (e.g. Klutz)."""
+        if self.id == 'klutz':
+            return False
+        return True
 
 def create_ability(name: str) -> Ability:
     """Helper to create an ability instance."""

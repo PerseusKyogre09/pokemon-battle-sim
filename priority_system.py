@@ -40,13 +40,14 @@ class BattleAction:
     pokemon: Any  # Pokemon object
     move: Any     # Move object
     target: Any   # Target Pokemon object
-    effective_priority: int
+    effective_priority: float
     is_priority_counter: bool = False
     counter_target_move: Optional[Any] = None
     
     def __post_init__(self):
         """Validate priority after initialization"""
-        self.effective_priority = PriorityLevels.validate_priority(self.effective_priority)
+        # We don't clamp to int here to preserve fractional priority for sorting
+        pass
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert BattleAction to dictionary for serialization"""
@@ -187,11 +188,19 @@ class PriorityResolver:
         """
         base_priority = getattr(move, 'priority', 0)
         
-        # Apply any priority modifiers from abilities, items, etc. (future extensibility)
+        # Apply any priority modifiers from abilities, items, etc.
         effective_priority = base_priority
         
-        # Validate and clamp priority
-        effective_priority = PriorityLevels.validate_priority(effective_priority)
+        # Check for ability-based priority modification (e.g. Stall)
+        if hasattr(pokemon, 'ability') and hasattr(pokemon.ability, 'get_priority_modification'):
+            # Stall has -0.1 priority, which makes it go last in its priority bracket
+            # We add this to the base priority for sorting
+            effective_priority += pokemon.ability.get_priority_modification()
+        
+        # Validate and clamp priority (preserve float for sorting)
+        clamped = PriorityLevels.validate_priority(int(effective_priority))
+        # Add back the fractional part
+        effective_priority = clamped + (effective_priority - int(effective_priority))
         
         if self.debug_enabled:
             print(f"DEBUG: {pokemon.name}'s {move.name} effective priority: {effective_priority}")

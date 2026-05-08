@@ -51,6 +51,9 @@ Thumbs.db
 *.log
 logs/
 
+# Test folder
+test/
+
 # Runtime data
 pids
 *.pid

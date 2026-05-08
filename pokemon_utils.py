@@ -199,7 +199,21 @@ POKEAPI_NAME_MAP = {
     'lycanrocmidnight': 'lycanroc-midnight',
     'lycanrocdusk': 'lycanroc-dusk',
     'lycanroc': 'lycanroc-midday',
-    'zygarde': 'zygarde-50'
+    'zygarde': 'zygarde-50',
+    'necrozmaduskmane': 'necrozma-dusk',
+    'necrozmadawnwings': 'necrozma-dawn',
+    'calyrexice': 'calyrex-ice',
+    'calyrexshadow': 'calyrex-shadow',
+    'deoxysspeed': 'deoxys-speed',
+    'darmanitangalarzen': 'darmanitan-galar-zen',
+    'darmanitanzen': 'darmanitan-zen',
+    'cramorantgulping': 'cramorant-gulping',
+    'cramorantgorging': 'cramorant-gorging',
+    'toxtricitylowkey': 'toxtricity-low-key',
+    'eiscuenoice': 'eiscue-noice',
+    'morpekohangry': 'morpeko-hangry',
+    'basculinwhitestriped': 'basculin-white-striped',
+    'basculinbluestriped': 'basculin-blue-striped'
 }
 
 # Mapping of Pokemon forms to their mandatory items

@@ -41,6 +41,7 @@ class Move:
         self.self_switch = self.data.get('selfSwitch')
         self.volatile_status = self.data.get('volatileStatus')
         self.stalling_move = self.data.get('stallingMove', False)
+        self.target = self.data.get('target', 'normal')
         self.flags = self.data.get('flags', {})
 
     def _parse_chain_modify(self, logic_str: str) -> float:
@@ -356,26 +357,31 @@ class Move:
         return messages
 
     def _apply_status_effects(self, user, target) -> List[str]:
-        if not self.is_status_move or not self.data or not target:
+        if not self.is_status_move or not self.data:
+            return []
+            
+        # Determine actual target for status effects
+        effective_target = user if self.target == 'self' else target
+        if not effective_target:
             return []
             
         messages = []
-        if target.substitute_hp > 0 and target != user:
+        if effective_target.substitute_hp > 0 and effective_target != user:
             bypasses = self.flags.get('sound') or (hasattr(user, 'ability') and user.ability.id == 'infiltrator')
             if not bypasses:
-                return [f"{target.name} is behind a substitute!"]
+                return [f"{effective_target.name} is behind a substitute!"]
 
         if 'status' in self.data:
-            msg = target.apply_status_effect(self.data['status'])
+            msg = effective_target.apply_status_effect(self.data['status'])
             if msg:
                 messages.append(msg)
         
         if 'volatileStatus' in self.data:
-            if hasattr(target, 'apply_volatile_status'):
-                msg = target.apply_volatile_status(self.data['volatileStatus'])
+            if hasattr(effective_target, 'apply_volatile_status'):
+                msg = effective_target.apply_volatile_status(self.data['volatileStatus'])
                 if msg:
                     if self.data['volatileStatus'] == 'protect':
-                        return [f"{target.name} protected itself!"]
+                        return None
                     else:
                         messages.append(msg)
                     
@@ -537,7 +543,7 @@ class Move:
         if not self.stat_modifications:
             return []
             
-        modification_target = user if self.targets_self else target
+        modification_target = user if self.target == 'self' else target
         if not modification_target:
             return []
             

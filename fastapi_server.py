@@ -43,6 +43,15 @@ if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
 
 game_instance = None
 
+# Load name-to-ID mapping
+POKEMON_ID_MAP = {}
+try:
+    with open('pokemon_ids.json', 'r') as f:
+        POKEMON_ID_MAP = json.load(f)
+    print(f"✓ Loaded {len(POKEMON_ID_MAP)} Pokémon ID mappings")
+except Exception as e:
+    print(f"⚠️ Warning: Could not load pokemon_ids.json: {e}")
+
 music_path = os.path.join(os.path.dirname(__file__), 'music')
 if os.path.exists(music_path):
     app.mount("/api/music/local", StaticFiles(directory=music_path), name="music")
@@ -89,7 +98,15 @@ async def get_signed_url(filename: str, request: Request):
 @app.get("/api/pokemon/cry/{pokemon_name}")
 async def pokemon_cry(pokemon_name: str):
     try:
-        url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}'
+        # Try to get ID first
+        normalized = pokemon_name.lower().replace(' ', '').replace('-', '')
+        api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
+        pokemon_id = POKEMON_ID_MAP.get(api_name) or POKEMON_ID_MAP.get(normalized)
+        
+        # Fallback to name if ID not found
+        identifier = str(pokemon_id) if pokemon_id else api_name
+        
+        url = f'https://pokeapi.co/api/v2/pokemon/{identifier}'
         response = requests.get(url)
         if response.status_code == 200:
             pokemon_data = response.json()
@@ -182,7 +199,11 @@ def get_pokemon_data(pokemon_name):
         else:
             api_name = normalized_name
 
-    url = f'https://pokeapi.co/api/v2/pokemon/{api_name}'
+    # 3. Check for ID in our map (ID is more reliable)
+    pokemon_id = POKEMON_ID_MAP.get(api_name) or POKEMON_ID_MAP.get(normalized_name)
+    identifier = str(pokemon_id) if pokemon_id else api_name
+
+    url = f'https://pokeapi.co/api/v2/pokemon/{identifier}'
     response = requests.get(url)
     
     if response.status_code == 200:

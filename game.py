@@ -220,8 +220,12 @@ class Game:
             can_use, msg = attacker.can_use_move()
             if not can_use:
                 attacker.consecutive_stalling_moves = 0
+                is_ability_msg = 'ability:' in msg.lower() or 'loafing' in msg.lower() or (attacker.ability and attacker.ability.id == 'truant')
+                event_type = 'ability' if is_ability_msg else 'status'
                 turn_info['battle_events'].append({
-                    'type': 'status', 'message': msg, 'target': 'player' if is_player_attacking else 'opponent',
+                    'type': event_type, 
+                    'ability_name': attacker.ability.name if event_type == 'ability' else None,
+                    'message': msg, 'target': 'player' if is_player_attacking else 'opponent',
                     'pokemon_hp': attacker.current_hp, 'status_effects': attacker.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
@@ -235,7 +239,11 @@ class Game:
                 if move.category in ['physical', 'special'] or PROT[p_used] == 'all': is_blocked = True
             
             if is_blocked:
+                # 1. Announce the move usage FIRST
+                turn_info['battle_events'].append({'type': 'move', 'pokemon': attacker.name, 'move': move_name, 'target': 'player' if is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
+                # 2. Announce the protection SECOND
                 turn_info['battle_events'].append({'type': 'status', 'message': f"{defender.name} protected itself!", 'target': 'player' if not is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
+                
                 if move.flags.get('contact'):
                     if active_prot[0] == 'spikyshield':
                         attacker.take_damage(defender.max_hp // 8)
@@ -243,8 +251,8 @@ class Game:
                     elif active_prot[0] == 'kingsshield':
                         m = attacker.modify_stat_stage('attack', -1)
                         if m: turn_info['battle_events'].append({'type': 'status', 'message': m, 'target': 'player' if is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
+                
                 move.pp -= 1
-                turn_info['battle_events'].append({'type': 'status', 'message': f"{attacker.name} used {move_name}!", 'target': 'player' if is_player_attacking else 'opponent', 'timestamp': len(turn_info['battle_events'])})
                 return False
             
             if action and action.is_priority_counter and action.effective_priority != -999:
@@ -276,6 +284,18 @@ class Game:
                 'attacker_substitute_hp': attacker.substitute_hp, 'defender_substitute_hp': defender.substitute_hp,
                 'timestamp': len(turn_info['battle_events']), 'status_message': stat_msg
             })
+            
+            # Check for on_damage ability triggers (e.g. Defeatist)
+            damage_events = defender.on_damage(actual_dmg)
+            for event in damage_events:
+                turn_info['battle_events'].append({
+                    'type': 'ability',
+                    'ability_name': event.get('ability_name'),
+                    'pokemon_name': event.get('pokemon_name'),
+                    'message': event.get('message'),
+                    'target': 'opponent' if is_player_attacking else 'player',
+                    'timestamp': len(turn_info['battle_events'])
+                })
             
             if sub_dmg > 0:
                 turn_info['battle_events'].append({'type': 'status', 'message': f"The substitute took damage for {defender.name}!", 'target': 'player' if not is_player_attacking else 'opponent', 'pokemon_hp': defender.current_hp, 'substitute_hp': defender.substitute_hp, 'timestamp': len(turn_info['battle_events'])})

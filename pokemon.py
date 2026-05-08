@@ -25,6 +25,7 @@ class Pokemon:
         self.status_change_events = []
         self.is_flinched = False
         self.substitute_hp = 0
+        self.consecutive_stalling_moves = 0
         
         if isinstance(stats, list):
             keys = ['hp', 'attack', 'defense', 'special_attack', 'special_defense', 'speed']
@@ -52,6 +53,16 @@ class Pokemon:
         if not self.ability: return False
         clean = lambda s: s.lower().replace(" ", "").replace("-", "")
         return clean(ability_name) == clean(self.ability.name)
+
+    def on_switch_in(self, opponent) -> List[Dict[str, Any]]:
+        if hasattr(self, 'ability'):
+            return self.ability.on_switch_in(self, opponent)
+        return []
+
+    def on_damage(self, damage: int) -> List[Dict[str, Any]]:
+        if hasattr(self, 'ability'):
+            return self.ability.on_damage(self, damage)
+        return []
 
     def apply_volatile_status(self, status: str) -> str:
         status = status.lower()
@@ -195,6 +206,12 @@ class Pokemon:
         for e in self.status_effects.values():
             prevents, msg = e.affects_move_usage(self)
             if prevents: return False, msg
+        
+        # Check ability constraints (e.g. Truant)
+        if hasattr(self, 'ability') and hasattr(self.ability, 'can_use_move'):
+            can_use, msg = self.ability.can_use_move(self)
+            if not can_use: return False, msg
+            
         return True, ""
     
     def _add_status_change_event(self, etype, stype, sname):
