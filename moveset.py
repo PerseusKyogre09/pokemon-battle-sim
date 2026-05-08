@@ -293,10 +293,10 @@ def fetch_sets_direct(pokemon_name: str, format_name: str, debug: bool = True) -
                     pokemon_key = key
                     break
             
-            # If still not found, try partial match
+            # If still not found, try partial match (must start with the name to avoid Alola moves on Kanto)
             if pokemon_key is None:
                 for key in stats_data.keys():
-                    if pokemon_name.lower() in key.lower():
+                    if key.lower().startswith(pokemon_name.lower()):
                         pokemon_key = key
                         break
         

@@ -83,6 +83,8 @@ class Game:
             
         turn_info = {
             'player_move': move_name,
+            'initial_player_hp': self.player_pokemon.current_hp,
+            'initial_opponent_hp': self.opponent_pokemon.current_hp,
             'player_damage': 0,
             'opponent_damage': 0,
             'battle_events': []
@@ -96,6 +98,10 @@ class Game:
                     'message': msg,
                     'target': 'player',
                     'pokemon_hp': self.player_pokemon.current_hp,
+                    'player_hp': self.player_pokemon.current_hp,
+                    'opponent_hp': self.opponent_pokemon.current_hp,
+                    'player_max_hp': self.player_pokemon.max_hp,
+                    'opponent_max_hp': self.opponent_pokemon.max_hp,
                     'status_effects': self.player_pokemon.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
@@ -108,6 +114,10 @@ class Game:
                     'message': msg,
                     'target': 'opponent',
                     'pokemon_hp': self.opponent_pokemon.current_hp,
+                    'player_hp': self.player_pokemon.current_hp,
+                    'opponent_hp': self.opponent_pokemon.current_hp,
+                    'player_max_hp': self.player_pokemon.max_hp,
+                    'opponent_max_hp': self.opponent_pokemon.max_hp,
                     'status_effects': self.opponent_pokemon.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
@@ -245,6 +255,10 @@ class Game:
                     'target': 'player' if is_player_attacking else 'opponent',
                     'is_player': is_player_attacking,
                     'pokemon_hp': attacker.current_hp, 
+                    'player_hp': self.player_pokemon.current_hp,
+                    'opponent_hp': self.opponent_pokemon.current_hp,
+                    'player_max_hp': self.player_pokemon.max_hp,
+                    'opponent_max_hp': self.opponent_pokemon.max_hp,
                     'status_effects': attacker.get_status_display(),
                     'substitute_hp': attacker.substitute_hp,
                     'timestamp': len(turn_info['battle_events'])
@@ -279,6 +293,10 @@ class Game:
                     'message': f"{defender.name} protected itself!", 
                     'target': 'player' if not is_player_attacking else 'opponent', 
                     'pokemon_hp': defender.current_hp,
+                    'player_hp': self.player_pokemon.current_hp,
+                    'opponent_hp': self.opponent_pokemon.current_hp,
+                    'player_max_hp': self.player_pokemon.max_hp,
+                    'opponent_max_hp': self.opponent_pokemon.max_hp,
                     'status_effects': defender.get_status_display(),
                     'timestamp': len(turn_info['battle_events'])
                 })
@@ -301,6 +319,12 @@ class Game:
             dmg, sub_dmg, eff_msg, stat_msg, weather_to_set = move.use_move(attacker, defender, self.weather)
             if hasattr(defender, 'ability'): dmg = defender.ability.modify_damage_taken(defender, attacker, move, dmg)
             
+            # Item damage modifiers
+            if attacker.item_obj:
+                dmg = attacker.item_obj.modify_damage_dealt(attacker, defender, move, dmg)
+            if defender.item_obj:
+                dmg = defender.item_obj.modify_damage_taken(defender, attacker, move, dmg)
+            
             if weather_to_set:
                 self.weather = weather_to_set
                 self.weather_duration = 5
@@ -311,7 +335,7 @@ class Game:
                 })
             
             prev_hp = defender.current_hp
-            defender.take_damage(dmg)
+            defender.take_damage(dmg, from_move=True)
             actual_dmg = prev_hp - defender.current_hp
             
             turn_info['battle_events'].append({
@@ -336,6 +360,24 @@ class Game:
                     'timestamp': len(turn_info['battle_events'])
                 })
             
+            # Check for on_damage item triggers (e.g. Focus Sash, Sitrus Berry)
+            if defender.item_obj:
+                item_damage_events = defender.item_obj.on_damage(defender, actual_dmg)
+                for event in item_damage_events:
+                    turn_info['battle_events'].append({
+                        'type': 'item',
+                        'item_name': event.get('item_name'),
+                        'pokemon_name': event.get('pokemon_name'),
+                        'message': event.get('message'),
+                        'target': 'opponent' if is_player_attacking else 'player',
+                        'pokemon_hp': defender.current_hp,
+                        'player_hp': self.player_pokemon.current_hp,
+                        'opponent_hp': self.opponent_pokemon.current_hp,
+                        'player_max_hp': self.player_pokemon.max_hp,
+                        'opponent_max_hp': self.opponent_pokemon.max_hp,
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
             if sub_dmg > 0:
                 turn_info['battle_events'].append({'type': 'status', 'message': f"The substitute took damage for {defender.name}!", 'target': 'player' if not is_player_attacking else 'opponent', 'pokemon_hp': defender.current_hp, 'substitute_hp': defender.substitute_hp, 'timestamp': len(turn_info['battle_events'])})
                 if defender.substitute_hp <= 0 and 'substitute' in defender.volatile_statuses:
@@ -347,9 +389,37 @@ class Game:
             if is_player_attacking: turn_info['player_damage'] = actual_dmg
             else: turn_info['opponent_damage'] = actual_dmg
             
-            if eff_msg: turn_info['battle_events'].append({'type': 'effectiveness', 'message': eff_msg, 'is_player': is_player_attacking, 'timestamp': len(turn_info['battle_events'])})
+            if eff_msg: turn_info['battle_events'].append({
+                'type': 'effectiveness', 
+                'message': eff_msg, 
+                'is_player': is_player_attacking, 
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'player_max_hp': self.player_pokemon.max_hp,
+                'opponent_max_hp': self.opponent_pokemon.max_hp,
+                'timestamp': len(turn_info['battle_events'])
+            })
             
             move.pp -= 1
+            
+            # Post-move item effects (e.g. Life Orb recoil)
+            if attacker.item_obj:
+                item_results = attacker.item_obj.on_after_move(attacker, {'damage_dealt': actual_dmg})
+                for res in item_results:
+                    turn_info['battle_events'].append({
+                        'type': 'item',
+                        'item_name': res.get('item_name'),
+                        'pokemon_name': res.get('pokemon_name'),
+                        'message': res.get('message'),
+                        'target': 'player' if is_player_attacking else 'opponent',
+                        'pokemon_hp': attacker.current_hp,
+                        'player_hp': self.player_pokemon.current_hp,
+                        'opponent_hp': self.opponent_pokemon.current_hp,
+                        'player_max_hp': self.player_pokemon.max_hp,
+                        'opponent_max_hp': self.opponent_pokemon.max_hp,
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+
             return defender.current_hp <= 0
         
         try:
@@ -394,6 +464,10 @@ class Game:
                         'message': msg,
                         'target': 'player',
                         'pokemon_hp': self.player_pokemon.current_hp,
+                        'player_hp': self.player_pokemon.current_hp,
+                        'opponent_hp': self.opponent_pokemon.current_hp,
+                        'player_max_hp': self.player_pokemon.max_hp,
+                        'opponent_max_hp': self.opponent_pokemon.max_hp,
                         'status_effects': self.player_pokemon.get_status_display(),
                         'timestamp': len(turn_info['battle_events'])
                     })
@@ -406,7 +480,35 @@ class Game:
                         'message': msg,
                         'target': 'opponent',
                         'pokemon_hp': self.opponent_pokemon.current_hp,
-                        'status_effects': self.opponent_pokemon.get_status_display(),
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
+            # Item turn-end effects (e.g. Leftovers)
+            if self.player_pokemon.item_obj:
+                player_item_msgs = self.player_pokemon.item_obj.on_residual(self.player_pokemon)
+                for msg in player_item_msgs:
+                    turn_info['battle_events'].append({
+                        'type': 'item',
+                        'item_name': msg.get('item_name'),
+                        'message': msg.get('message'),
+                        'target': 'player',
+                        'pokemon_hp': self.player_pokemon.current_hp,
+                        'player_hp': self.player_pokemon.current_hp,
+                        'opponent_hp': self.opponent_pokemon.current_hp,
+                        'player_max_hp': self.player_pokemon.max_hp,
+                        'opponent_max_hp': self.opponent_pokemon.max_hp,
+                        'timestamp': len(turn_info['battle_events'])
+                    })
+            
+            if self.opponent_pokemon.item_obj:
+                opponent_item_msgs = self.opponent_pokemon.item_obj.on_residual(self.opponent_pokemon)
+                for msg in opponent_item_msgs:
+                    turn_info['battle_events'].append({
+                        'type': 'item',
+                        'item_name': msg.get('item_name'),
+                        'message': msg.get('message'),
+                        'target': 'opponent',
+                        'pokemon_hp': self.opponent_pokemon.current_hp,
                         'timestamp': len(turn_info['battle_events'])
                     })
             
@@ -453,7 +555,12 @@ class Game:
                                 turn_info['battle_events'].append({
                                     'type': 'status', 'message': f"{p.name} is buffeted by the {self.weather}!", 
                                     'target': 'player' if p == self.player_pokemon else 'opponent',
-                                    'pokemon_hp': p.current_hp, 'timestamp': len(turn_info['battle_events'])
+                                    'pokemon_hp': p.current_hp, 
+                                    'player_hp': self.player_pokemon.current_hp,
+                                    'opponent_hp': self.opponent_pokemon.current_hp,
+                                    'player_max_hp': self.player_pokemon.max_hp,
+                                    'opponent_max_hp': self.opponent_pokemon.max_hp,
+                                    'timestamp': len(turn_info['battle_events'])
                                 })
                                 if p.current_hp <= 0:
                                     self.battle_over = True
@@ -474,6 +581,10 @@ class Game:
                 'status_name': event['status_name'],
                 'pokemon': 'player',
                 'pokemon_name': event['pokemon_name'],
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'player_max_hp': self.player_pokemon.max_hp,
+                'opponent_max_hp': self.opponent_pokemon.max_hp,
                 'timestamp': len(turn_info['battle_events'])
             })
         
@@ -486,6 +597,10 @@ class Game:
                 'status_name': event['status_name'],
                 'pokemon': 'opponent',
                 'pokemon_name': event['pokemon_name'],
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'player_max_hp': self.player_pokemon.max_hp,
+                'opponent_max_hp': self.opponent_pokemon.max_hp,
                 'timestamp': len(turn_info['battle_events'])
             })
 
@@ -498,6 +613,10 @@ class Game:
                 'pokemon_name': event.get('pokemon_name'),
                 'message': event.get('message'),
                 'target': 'player',
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'player_max_hp': self.player_pokemon.max_hp,
+                'opponent_max_hp': self.opponent_pokemon.max_hp,
                 'timestamp': len(turn_info['battle_events'])
             })
             
@@ -509,6 +628,10 @@ class Game:
                 'pokemon_name': event.get('pokemon_name'),
                 'message': event.get('message'),
                 'target': 'opponent',
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'player_max_hp': self.player_pokemon.max_hp,
+                'opponent_max_hp': self.opponent_pokemon.max_hp,
                 'timestamp': len(turn_info['battle_events'])
             })
 

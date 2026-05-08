@@ -9,6 +9,7 @@ class DataLoader:
         self.learnsets_data = {}
         self.typechart_data = {}
         self.abilities_data = {}
+        self.items_data = {}
         self._load_all_data()
     
     def _load_all_data(self):
@@ -17,6 +18,7 @@ class DataLoader:
         self._load_learnsets()
         self._load_typechart()
         self._load_abilities()
+        self._load_items()
     
     def _load_moves(self):
         try:
@@ -127,6 +129,26 @@ class DataLoader:
         except Exception as e:
             print(f"Error loading abilities data: {e}")
             raise
+            
+    def _load_items(self):
+        try:
+            with open('datasets/items_logic.json', 'r', encoding='utf-8') as f:
+                self.items_data = json.load(f)
+            
+            print(f"=== LOADED {len(self.items_data)} ITEMS FROM items_logic.json ===")
+            
+        except FileNotFoundError:
+            print("Warning: items_logic.json file not found")
+        except Exception as e:
+            print(f"Error loading items data: {e}")
+            raise
+    
+    def get_item(self, item_name: str) -> Optional[Dict[str, Any]]:
+        if not item_name:
+            return None
+            
+        item_key = item_name.lower().replace(' ', '').replace('-', '')
+        return self.items_data.get(item_key)
     
     def get_move(self, move_name):
         if not move_name:
@@ -163,10 +185,17 @@ class DataLoader:
                 if base_data_norm:
                     all_move_ids.update(base_data_norm)
         
+        # 3. Fuzzy matching as a last resort, but more strictly
+        if not all_move_ids:
             for key in self.learnsets_data:
-                if key in normalized or normalized in key:
+                # Only match if one is a subset of the other and they are clearly related
+                # e.g., "ninetales" in "ninetalesalola"
+                if key == normalized or key == name_lower:
                     all_move_ids.update(self.learnsets_data[key])
-                    if len(all_move_ids) > 10: break
+                elif normalized in key and (key.startswith(normalized) or key.endswith(normalized)):
+                    all_move_ids.update(self.learnsets_data[key])
+                    # If we found a good match, we can stop early if we have enough moves
+                    if len(all_move_ids) > 20: break
 
         move_names = []
         for move_id in all_move_ids:

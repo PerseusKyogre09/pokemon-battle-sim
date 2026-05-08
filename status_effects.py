@@ -35,6 +35,20 @@ class StatusEffect:
         if hasattr(pokemon, 'status_effects') and self.status_type in pokemon.status_effects:
             return False
             
+        # Check for ability-based immunities
+        if hasattr(pokemon, 'ability'):
+            ability_id = pokemon.ability.id
+            if self.status_type == StatusType.PARALYSIS.value and ability_id == 'limber':
+                return False
+            if self.status_type in [StatusType.POISON.value, StatusType.TOXIC.value] and ability_id == 'immunity':
+                return False
+            if self.status_type == StatusType.SLEEP.value and ability_id in ['insomnia', 'vitalspirit']:
+                return False
+            if self.status_type == StatusType.BURN.value and ability_id == 'waterveil':
+                return False
+            if self.status_type == StatusType.FREEZE.value and ability_id == 'magmaarmor':
+                return False
+            
         return True
     
     def apply(self, pokemon) -> str:
@@ -49,6 +63,20 @@ class StatusEffect:
             message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
             return message_template.format(pokemon=pokemon.name.capitalize())
         
+        # Check for ability-based immunities
+        if hasattr(pokemon, 'ability'):
+            ability_id = pokemon.ability.id
+            if self.status_type == StatusType.PARALYSIS.value and ability_id == 'limber':
+                return f"{pokemon.name}'s Limber prevents paralysis!"
+            if self.status_type in [StatusType.POISON.value, StatusType.TOXIC.value] and ability_id == 'immunity':
+                return f"{pokemon.name}'s Immunity prevents poisoning!"
+            if self.status_type == StatusType.SLEEP.value and ability_id in ['insomnia', 'vitalspirit']:
+                return f"{pokemon.name}'s {pokemon.ability.name} prevents sleep!"
+            if self.status_type == StatusType.BURN.value and ability_id == 'waterveil':
+                return f"{pokemon.name}'s Water Veil prevents burns!"
+            if self.status_type == StatusType.FREEZE.value and ability_id == 'magmaarmor':
+                return f"{pokemon.name}'s Magma Armor prevents freezing!"
+
         if not self.can_apply(pokemon):
             # Generic failure case
             return ""
@@ -276,48 +304,8 @@ class BurnStatusEffect(StatusEffect):
         
         return stat_value
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing burn
-        if hasattr(pokemon, 'status_effects') and StatusType.BURN.value in pokemon.status_effects:
-            return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects') and StatusType.BURN.value in pokemon.status_effects:
-            # Pokemon already has burn
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already burned!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply burn status
-        pokemon.status_effects[StatusType.BURN.value] = self
-        pokemon.major_status = StatusType.BURN.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.BURN.value, 'Burn')
-            
-        # Return application message
-        return "{pokemon} was burned!".format(pokemon=pokemon.name.capitalize())
+        return messages
 
 
 class ParalysisStatusEffect(StatusEffect):
@@ -336,52 +324,14 @@ class ParalysisStatusEffect(StatusEffect):
     
     def modify_stat(self, pokemon, stat_name: str, stat_value: int) -> int:
         if stat_name == 'speed':
+            # Quick Feet ignores the Speed drop from Paralysis
+            if hasattr(pokemon, 'ability') and pokemon.ability.id == 'quickfeet':
+                return stat_value
             return int(stat_value * 0.5)
         
         return stat_value
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing paralysis
-        if hasattr(pokemon, 'status_effects') and StatusType.PARALYSIS.value in pokemon.status_effects:
-            return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects') and StatusType.PARALYSIS.value in pokemon.status_effects:
-            # Pokemon already has paralysis
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already paralyzed!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply paralysis status
-        pokemon.status_effects[StatusType.PARALYSIS.value] = self
-        pokemon.major_status = StatusType.PARALYSIS.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.PARALYSIS.value, 'Paralysis')
-            
-        # Return application message
-        return "{pokemon} is paralyzed! It may be unable to move!".format(pokemon=pokemon.name.capitalize())
     
     def process_turn_start(self, pokemon) -> List[str]:
         return []
@@ -411,48 +361,7 @@ class FreezeStatusEffect(StatusEffect):
     def process_turn_end(self, pokemon) -> List[str]:
         return []
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing freeze
-        if hasattr(pokemon, 'status_effects') and StatusType.FREEZE.value in pokemon.status_effects:
-            return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects') and StatusType.FREEZE.value in pokemon.status_effects:
-            # Pokemon already has freeze
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already frozen!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply freeze status
-        pokemon.status_effects[StatusType.FREEZE.value] = self
-        pokemon.major_status = StatusType.FREEZE.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.FREEZE.value, 'Freeze')
-            
-        # Return application message
-        return "{pokemon} was frozen solid!".format(pokemon=pokemon.name.capitalize())
     
     def _recover_status(self, pokemon) -> str:
         # Remove freeze status from Pokemon
@@ -500,48 +409,7 @@ class SleepStatusEffect(StatusEffect):
     def process_turn_end(self, pokemon) -> List[str]:
         return []
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing sleep
-        if hasattr(pokemon, 'status_effects') and StatusType.SLEEP.value in pokemon.status_effects:
-            return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects') and StatusType.SLEEP.value in pokemon.status_effects:
-            # Pokemon already has sleep
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already asleep!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply sleep status
-        pokemon.status_effects[StatusType.SLEEP.value] = self
-        pokemon.major_status = StatusType.SLEEP.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.SLEEP.value, 'Sleep')
-            
-        # Return application message
-        return "{pokemon} fell asleep!".format(pokemon=pokemon.name.capitalize())
     
     def _recover_status(self, pokemon) -> str:
         # Remove sleep status from Pokemon
@@ -570,9 +438,16 @@ class PoisonStatusEffect(StatusEffect):
         damage = int(pokemon.max_hp * (1/8))
         
         if damage > 0:
-            pokemon.current_hp = max(0, pokemon.current_hp - damage)
-            damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
+            if hasattr(pokemon, 'ability') and pokemon.ability.id == 'poisonheal':
+                if pokemon.current_hp < pokemon.max_hp:
+                    pokemon.heal(damage)
+                    messages.append(f"{pokemon.name}'s Poison Heal restored its HP!")
+                else:
+                    messages.append(f"{pokemon.name}'s Poison Heal keeps it healthy!")
+            else:
+                pokemon.current_hp = max(0, pokemon.current_hp - damage)
+                damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
+                messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
         return messages
     
@@ -585,48 +460,7 @@ class PoisonStatusEffect(StatusEffect):
     def modify_stat(self, pokemon, stat_name: str, stat_value: int) -> int:
         return stat_value
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing poison
-        if hasattr(pokemon, 'status_effects') and StatusType.POISON.value in pokemon.status_effects:
-            return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects') and StatusType.POISON.value in pokemon.status_effects:
-            # Pokemon already has poison
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already poisoned!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply poison status
-        pokemon.status_effects[StatusType.POISON.value] = self
-        pokemon.major_status = StatusType.POISON.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.POISON.value, 'Poison')
-            
-        # Return application message
-        return "{pokemon} was poisoned!".format(pokemon=pokemon.name.capitalize())
 
 
 class ToxicStatusEffect(StatusEffect):
@@ -642,12 +476,20 @@ class ToxicStatusEffect(StatusEffect):
         self.counter += 1
         
         # Calculate toxic damage (counter/16 of max HP)
-        damage = int(pokemon.max_hp * (self.counter / 16))
-        
-        if damage > 0:
-            pokemon.current_hp = max(0, pokemon.current_hp - damage)
-            damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
+        # Poison Heal ignores toxic escalation and always heals 1/8
+        if hasattr(pokemon, 'ability') and pokemon.ability.id == 'poisonheal':
+            damage = int(pokemon.max_hp * (1/8))
+            if pokemon.current_hp < pokemon.max_hp:
+                pokemon.heal(damage)
+                messages.append(f"{pokemon.name}'s Poison Heal restored its HP!")
+            else:
+                messages.append(f"{pokemon.name}'s Poison Heal keeps it healthy!")
+        else:
+            damage = int(pokemon.max_hp * (self.counter / 16))
+            if damage > 0:
+                pokemon.current_hp = max(0, pokemon.current_hp - damage)
+                damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
+                messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
         
         return messages
     
@@ -660,53 +502,7 @@ class ToxicStatusEffect(StatusEffect):
     def modify_stat(self, pokemon, stat_name: str, stat_value: int) -> int:
         return stat_value
     
-    def can_apply(self, pokemon) -> bool:
-        # Check for existing major status
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            return False
-            
-        # Check for existing poison or toxic
-        if hasattr(pokemon, 'status_effects'):
-            if StatusType.POISON.value in pokemon.status_effects or StatusType.TOXIC.value in pokemon.status_effects:
-                return False
-            
-        return True
     
-    def apply(self, pokemon) -> str:
-        # Check for specific failure reasons and return appropriate messages
-        if hasattr(pokemon, 'status_effects'):
-            if StatusType.TOXIC.value in pokemon.status_effects:
-                # Pokemon already has toxic
-                message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} is already badly poisoned!")
-                return message_template.format(pokemon=pokemon.name.capitalize())
-            elif StatusType.POISON.value in pokemon.status_effects:
-                # Pokemon already has regular poison
-                return "{pokemon} is already poisoned!".format(pokemon=pokemon.name.capitalize())
-        
-        if hasattr(pokemon, 'major_status') and pokemon.major_status:
-            # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
-        
-        if not self.can_apply(pokemon):
-            return ""
-            
-        # Initialize status tracking if needed
-        if not hasattr(pokemon, 'status_effects'):
-            pokemon.status_effects = {}
-        if not hasattr(pokemon, 'major_status'):
-            pokemon.major_status = None
-            
-        # Apply toxic status
-        pokemon.status_effects[StatusType.TOXIC.value] = self
-        pokemon.major_status = StatusType.TOXIC.value
-        
-        # Generate status change event
-        if hasattr(pokemon, '_add_status_change_event'):
-            pokemon._add_status_change_event('status_applied', StatusType.TOXIC.value, 'Badly Poisoned')
-            
-        # Return application message
-        return "{pokemon} was badly poisoned!".format(pokemon=pokemon.name.capitalize())
 
 
 def create_status_effect(status_type: str, **kwargs) -> Optional[StatusEffect]:

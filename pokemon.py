@@ -2,6 +2,7 @@ from move import Move
 from data_loader import data_loader
 from status_effects import StatusEffect, BurnStatusEffect, ParalysisStatusEffect, FreezeStatusEffect, SleepStatusEffect, PoisonStatusEffect, StatusType
 from ability_system import create_ability
+from item_system import create_item
 from typing import Dict, List, Any
 import random
 
@@ -18,6 +19,7 @@ class Pokemon:
         self.ivs = kwargs.get('ivs', {s: 31 for s in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']})
         self.nature = kwargs.get('nature', 'Hardy')
         self.item = kwargs.get('item', '')
+        self.item_obj = create_item(self.item)
         
         self.status_effects = {}
         self.major_status = None
@@ -85,15 +87,25 @@ class Pokemon:
         if '\'' in name: return '\''.join(p.capitalize() for p in name.split('\''))
         return name.capitalize() if name.islower() or name.isupper() else name
 
-    def take_damage(self, damage):
-        if damage >= self.current_hp and 'endure' in self.volatile_statuses:
-            self.current_hp = 1
+    def take_damage(self, damage, from_move=False):
+        if damage >= self.current_hp:
+            if 'endure' in self.volatile_statuses:
+                self.current_hp = 1
+            elif from_move and self.current_hp == self.max_hp and hasattr(self, 'ability') and self.ability.id == 'sturdy':
+                self.current_hp = 1
+            else:
+                self.current_hp = 0
         else:
-            self.current_hp = max(0, self.current_hp - damage)
+            self.current_hp -= damage
+            
         if self.current_hp <= 0: self.reset_stats()
         
     def heal(self, amount):
         self.current_hp = min(self.max_hp, self.current_hp + amount)
+
+    @property
+    def is_at_full_hp(self):
+        return self.current_hp >= self.max_hp
 
     def get_stat_stage_multiplier(self, stage):
         stage = max(-6, min(6, stage))
@@ -137,6 +149,8 @@ class Pokemon:
             val = effect.modify_stat(self, stat_name, val)
         if hasattr(self, 'ability'):
             val = self.ability.modify_stat(self, stat_name, val)
+        if self.item_obj:
+            val = self.item_obj.modify_stat(self, stat_name, val)
         return val
         
     def apply_status_effect(self, status_type: str, **kwargs) -> str:

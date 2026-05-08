@@ -43,6 +43,9 @@ class Move:
         self.stalling_move = self.data.get('stallingMove', False)
         self.target = self.data.get('target', 'normal')
         self.flags = self.data.get('flags', {})
+        self.ohko = self.data.get('ohko', False)
+        self.defensive_category = self.data.get('defensiveCategory')
+        self.use_target_offensive = self.data.get('useTargetOffensive', False)
 
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
@@ -280,14 +283,52 @@ class Move:
         
         return self.priority
 
-    def _check_accuracy(self) -> bool:
+    def _check_accuracy(self, attacker, defender) -> bool:
         if self.accuracy is True:
             return True
             
-        if isinstance(self.accuracy, (int, float)):
-            return random.randint(1, 100) <= self.accuracy
+        if not isinstance(self.accuracy, (int, float)):
+            return True
             
-        return True
+        # Base accuracy from the move
+        base_accuracy = self.accuracy
+        
+        # Accuracy/Evasion stage multipliers
+        acc_stage = attacker.stat_stages.get('accuracy', 0)
+        eva_stage = defender.stat_stages.get('evasion', 0)
+        
+        # Formula for acc/eva stage multiplier: (3 + stage) / 3 if stage > 0, 3 / (3 - stage) if stage < 0
+        def get_multiplier(stage):
+            if stage > 0:
+                return (3 + stage) / 3
+            elif stage < 0:
+                return 3 / (3 - stage)
+            return 1.0
+            
+        # Effective accuracy = base_accuracy * (acc_multiplier / eva_multiplier)
+        # Simplified: combine stages
+        combined_stage = max(-6, min(6, acc_stage - eva_stage))
+        stage_multiplier = get_multiplier(combined_stage)
+        
+        effective_accuracy = base_accuracy * stage_multiplier
+        
+        # Ability modifiers
+        if hasattr(attacker, 'ability'):
+            # Victory Star (simplified: +10% to all moves)
+            if attacker.ability.id == 'victorystar':
+                effective_accuracy *= 1.1
+            # Compound Eyes (+30%)
+            elif attacker.ability.id == 'compoundeyes':
+                effective_accuracy *= 1.3
+        
+        if hasattr(defender, 'ability'):
+            # Tangled Feet: 1.5x evasion (0.66x accuracy) when confused
+            if defender.ability.id == 'tangledfeet' and 'confusion' in defender.volatile_statuses:
+                effective_accuracy *= 0.66
+            # Sand Veil / Snow Cloak in weather
+            # (Need weather access here, but for now we'll skip or use a simple check)
+            
+        return random.randint(1, 100) <= effective_accuracy
 
     def _apply_effect_block(self, target, effect_block: Dict[str, Any], chance_override: Optional[int] = None, user=None) -> List[str]:
         if not effect_block or not target:
@@ -551,7 +592,7 @@ class Move:
         return self._apply_boosts(modification_target, self.stat_modifications)
 
     def use_move(self, attacking_pokemon=None, defending_pokemon=None, weather='none') -> Tuple[int, int, str, Optional[str], Optional[str]]:
-        if not self._check_accuracy():
+        if not self._check_accuracy(attacking_pokemon, defending_pokemon):
             return 0, 0, f"{attacking_pokemon.name}'s {self.name} missed!", None, None
             
         if self.stalling_move:
@@ -625,9 +666,12 @@ class Move:
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:
-            # Check for ability immunities (e.g. Levitate)
-            if hasattr(defending_pokemon, 'ability') and defending_pokemon.ability.is_immune(self.type, self.category):
-                return 0, 0, f"It had no effect on {defending_pokemon.name}!", None, weather_to_set
+            # Check for ability immunities (e.g. Levitate, Sturdy for OHKO)
+            if hasattr(defending_pokemon, 'ability'):
+                if defending_pokemon.ability.is_immune(self.type, self.category):
+                    return 0, 0, f"It had no effect on {defending_pokemon.name}!", None, weather_to_set
+                if self.ohko and defending_pokemon.ability.id == 'sturdy':
+                    return 0, 0, f"{defending_pokemon.name} is immune to OHKO moves due to its Sturdy!", None, weather_to_set
 
             # Get the move type in lowercase for comparison
             move_type = self.type.lower()
@@ -651,21 +695,33 @@ class Move:
             
             # Determine attack and defense stats based on move category
             defending_types_lower = [t.lower() for t in defending_pokemon.types]
-            if self.category == 'physical':
+            
+            # Determine which offensive stat to use
+            if self.use_target_offensive:
+                # Foul Play: Use target's attack stat
+                attack_stat = getattr(defending_pokemon, 'attack', 1)
+                attack_name = "Target's Attack"
+            elif self.category == 'physical':
                 attack_stat = getattr(attacking_pokemon, 'attack', 1)
+                attack_name = 'Attack'
+            else: # 'special'
+                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+                attack_name = 'Special Attack'
+                
+            # Determine which defensive stat to use
+            effective_defensive_category = self.defensive_category.lower() if self.defensive_category else self.category
+            
+            if effective_defensive_category == 'physical':
                 defense_stat = getattr(defending_pokemon, 'defense', 1)
                 # Gen 9 Snow (replaces Hail): +50% Defense for Ice types
                 if weather == 'hail' and 'ice' in defending_types_lower:
                     defense_stat = int(defense_stat * 1.5)
-                attack_name = 'Attack'
                 defense_name = 'Defense'
-            else:  # 'special'
-                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+            else: # 'special'
                 defense_stat = getattr(defending_pokemon, 'special_defense', 1)
                 # Sandstorm: +50% Special Defense for Rock types
                 if weather == 'sandstorm' and 'rock' in defending_types_lower:
                     defense_stat = int(defense_stat * 1.5)
-                attack_name = 'Special Attack'
                 defense_name = 'Special Defense'
             level = 100
             move_name_lower = self.name.lower()
@@ -678,6 +734,9 @@ class Move:
                     damage = level
                 else:
                     damage = 40 # Fallback for unknown fixed damage strings
+            elif self.ohko:
+                damage = defending_pokemon.current_hp
+                effectiveness_message = "It's a one-hit KO!"
             else:
                 # Check for special move logic in JSON generically
                 actual_base_power = base_damage
@@ -847,7 +906,7 @@ class Move:
         
         for hit_num in range(1, hit_count + 1):
             # Check accuracy for each hit
-            if not self._check_accuracy():
+            if not self._check_accuracy(attacking_pokemon, defending_pokemon):
                 print(f"DEBUG: Hit {hit_num} missed!")
                 continue
             
@@ -961,7 +1020,7 @@ class Move:
         
         for hit_num in range(1, hit_count + 1):
             # Check accuracy for each hit
-            if not self._check_accuracy():
+            if not self._check_accuracy(attacking_pokemon, defending_pokemon):
                 hits.append({
                     'hit_number': hit_num,
                     'damage': 0,

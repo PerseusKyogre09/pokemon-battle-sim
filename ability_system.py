@@ -855,9 +855,19 @@ class Ability:
                         "is_player": is_p
                     })
                     self.state['activated'] = True
-            elif not is_active:
-                self.state['activated'] = False
-                
+        elif self.id == 'sturdy':
+            # If the pokemon survived with 1 HP and the damage was essentially its entire HP
+            # We check if it's currently at 1 and the damage dealt was prev_hp - 1
+            if pokemon.current_hp == 1 and damage >= 1:
+                # This is a bit of a heuristic but works since Sturdy only triggers at max HP
+                results.append({
+                    "type": "ability",
+                    "ability_name": self.name,
+                    "pokemon_name": pokemon.name,
+                    "message": f"{pokemon.name} endured the hit with Sturdy!",
+                    "is_player": is_p
+                })
+        
         return results
 
     def can_use_item(self) -> bool:
