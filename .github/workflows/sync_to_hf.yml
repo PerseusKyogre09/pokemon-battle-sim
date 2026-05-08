@@ -30,7 +30,8 @@ jobs:
           # Add only the necessary backend files
           git add fastapi_server.py game.py ai.py data_loader.py moveset.py pokemon.py \
                   ability_system.py pokemon_utils.py priority_system.py status_effects.py move.py \
-                  fetcher.py requirements.txt Dockerfile README.md datasets/ moves/ gen8_stats_sets.json
+                  fetcher.py requirements.txt Dockerfile README.md datasets/ moves/ gen8_stats_sets.json \
+                  pokemon_ids.json all_pokemon_names.json
           
           git commit -m "Automated clean sync from GitHub"
           
