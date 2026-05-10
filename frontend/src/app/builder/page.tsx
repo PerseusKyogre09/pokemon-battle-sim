@@ -151,6 +151,24 @@ export default function PokemonBuilder() {
     });
   };
 
+  const addMember = () => {
+    if (team.length >= 6) return;
+    const newId = Date.now().toString();
+    const newMember = { ...DEFAULT_MEMBER, id: newId };
+    setTeam(prev => [...prev, newMember]);
+    setActiveIndex(team.length);
+    setIsVerified(false);
+  };
+
+  const removeMember = (idx: number) => {
+    if (team.length <= 1) return;
+    setTeam(prev => prev.filter((_, i) => i !== idx));
+    if (activeIndex >= idx && activeIndex > 0) {
+      setActiveIndex(prev => prev - 1);
+    }
+    setIsVerified(false);
+  };
+
   const handleSpeciesSearch = async (q: string) => {
     setSearchQuery(q);
     if (q.length < 2) {
@@ -275,6 +293,7 @@ export default function PokemonBuilder() {
     return errors;
   };
 
+  const isTeamValid = team.every(mon => mon.species !== '');
   const validationIssues = getValidationErrors();
   const isMonValid = currentMon.species !== '' && validationIssues.length === 0;
 
@@ -337,25 +356,36 @@ export default function PokemonBuilder() {
 
           <div className="flex items-center space-x-1 bg-black/40 p-1 rounded-xl border border-white/5">
             {team.map((mon, idx) => (
-              <button
-                key={mon.id}
-                onClick={() => setActiveIndex(idx)}
-                className={`px-4 py-2 rounded-lg text-[10px] uppercase tracking-tighter transition-all flex items-center gap-2 ${activeIndex === idx
-                  ? 'bg-yellow-500 text-slate-900 font-bold shadow-lg shadow-yellow-500/20'
-                  : 'hover:bg-white/5 text-gray-400'
-                  }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${activeIndex === idx ? 'bg-slate-900' : 'bg-gray-600'}`} />
-                {mon.species || 'Empty'}
-              </button>
+              <div key={mon.id} className="relative group/tab">
+                <button
+                  onClick={() => setActiveIndex(idx)}
+                  className={`px-4 py-2 rounded-lg text-[10px] uppercase tracking-tighter transition-all flex items-center gap-2 ${activeIndex === idx
+                    ? 'bg-yellow-500 text-slate-900 font-bold shadow-lg shadow-yellow-500/20'
+                    : 'hover:bg-white/5 text-gray-400'
+                    }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${activeIndex === idx ? 'bg-slate-900' : 'bg-gray-600'}`} />
+                  {mon.species || 'Empty'}
+                </button>
+                {team.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeMember(idx); }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover/tab:opacity-100 hover:bg-red-600 transition-all shadow-lg z-10"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             ))}
-            <button
-              disabled
-              className="w-10 h-10 flex items-center justify-center text-gray-600 cursor-not-allowed hover:text-gray-400 transition-colors"
-              title="Team management disabled in preview"
-            >
-              +
-            </button>
+            {team.length < 6 && (
+              <button
+                onClick={addMember}
+                className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-yellow-500 hover:bg-white/5 rounded-lg transition-all text-xl"
+                title="Add Team Member"
+              >
+                +
+              </button>
+            )}
           </div>
 
           <div className="hidden lg:block text-gray-500 text-[9px] uppercase tracking-[0.4em] font-light">
@@ -819,17 +849,19 @@ export default function PokemonBuilder() {
                       }
                       setIsSearching(true);
                       try {
-                        const formattedMoves = currentMon.moves.filter(m => m && m.trim() !== '').map(m => m.toLowerCase().replace(/ /g, '-'));
-                        const selectedSet = {
-                          moves: formattedMoves,
-                          ability: currentMon.ability.toLowerCase().replace(/ /g, '-'),
-                          item: currentMon.item.toLowerCase().replace(/ /g, '-'),
-                          nature: currentMon.nature,
-                          evs: currentMon.evs,
-                          ivs: currentMon.ivs
-                        };
+                        const formattedTeam = team.map(mon => ({
+                          name: mon.species.toLowerCase(),
+                          ability: mon.ability.toLowerCase().replace(/ /g, '-'),
+                          item: mon.item.toLowerCase().replace(/ /g, '-'),
+                          moves: mon.moves.filter(m => m && m.trim() !== '').map(m => m.toLowerCase().replace(/ /g, '-')),
+                          nature: mon.nature,
+                          evs: mon.evs,
+                          ivs: mon.ivs,
+                          shiny: mon.shiny
+                        }));
 
-                        const battleState = await startBattle(currentMon.species.toLowerCase(), selectedSet, 'random');
+                        // Force 6v6 mode as requested by user, even if team has < 6 members
+                        const battleState = await startBattle('', null, 'random', formattedTeam, '6v6');
                         localStorage.setItem('initialBattleState', JSON.stringify(battleState));
                         router.push('/battle');
                       } catch (e) {
@@ -839,8 +871,8 @@ export default function PokemonBuilder() {
                         setIsSearching(false);
                       }
                     }}
-                    disabled={isSearching || !isMonValid}
-                    className={`px-12 py-5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-900 rounded-2xl text-[12px] uppercase font-bold tracking-[0.2em] shadow-[0_10px_30px_rgba(234,179,8,0.3)] hover:shadow-[0_15px_40px_rgba(234,179,8,0.5)] transition-all active:scale-95 group ${isSearching || !isMonValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                    disabled={isSearching || !isTeamValid}
+                    className={`px-12 py-5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-900 rounded-2xl text-[12px] uppercase font-bold tracking-[0.2em] shadow-[0_10px_30px_rgba(234,179,8,0.3)] hover:shadow-[0_15px_40px_rgba(234,179,8,0.5)] transition-all active:scale-95 group ${isSearching || !isTeamValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                   >
                     {isSearching ? 'SYNCING DATA...' : 'Initialize Battle'} <span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
                   </button>

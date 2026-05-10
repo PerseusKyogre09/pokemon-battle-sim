@@ -104,6 +104,7 @@ class Pokemon:
         if self.current_hp <= 0: self.reset_stats()
         
     def heal(self, amount):
+        if self.current_hp <= 0: return # Cannot heal the dead
         self.current_hp = min(self.max_hp, self.current_hp + amount)
 
     @property

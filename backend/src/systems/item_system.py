@@ -102,7 +102,7 @@ class Item:
         is_p = hasattr(pokemon, "is_player") and pokemon.is_player
         
         # Leftovers / Black Sludge
-        if self.id == 'leftovers':
+        if self.id == 'leftovers' and pokemon.current_hp > 0:
             heal_amt = pokemon.max_hp // 16
             if pokemon.current_hp < pokemon.max_hp:
                 pokemon.heal(heal_amt)
@@ -113,7 +113,7 @@ class Item:
                     "message": f"{pokemon.name} restored a little HP using its {self.name}!",
                     "is_player": is_p
                 })
-        elif self.id == 'blacksludge':
+        elif self.id == 'blacksludge' and pokemon.current_hp > 0:
             if 'poison' in pokemon.types:
                 heal_amt = pokemon.max_hp // 16
                 if pokemon.current_hp < pokemon.max_hp:
@@ -167,12 +167,14 @@ class Item:
                 "is_player": is_p
             })
             pokemon.item = None # Consume it
+            pokemon.item_obj = None
             
-        # Berries (Healing)
-        elif self.id == 'sitrusberry' and pokemon.current_hp <= pokemon.max_hp // 2:
+        # Berries (Healing) - Must be alive to eat a berry
+        elif self.id == 'sitrusberry' and 0 < pokemon.current_hp <= pokemon.max_hp // 2:
             pokemon.heal(pokemon.max_hp // 4)
             results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name} ate its {self.name} and restored HP!", "is_player": is_p})
             pokemon.item = None
+            pokemon.item_obj = None
             
         return results
 
