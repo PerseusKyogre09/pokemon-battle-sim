@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-LOGIC_PATH = os.path.join(os.path.dirname(__file__), "datasets/items_logic.json")
+LOGIC_PATH = os.path.join(os.path.dirname(__file__), "../../data/datasets/items_logic.json")
 
 def load_items_config():
     config = {}

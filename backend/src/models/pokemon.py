@@ -1,8 +1,8 @@
-from move import Move
-from data_loader import data_loader
-from status_effects import StatusEffect, BurnStatusEffect, ParalysisStatusEffect, FreezeStatusEffect, SleepStatusEffect, PoisonStatusEffect, StatusType
-from ability_system import create_ability
-from item_system import create_item
+from .move import Move
+from ..utils.data_loader import data_loader
+from ..systems.status_effects import StatusEffect, BurnStatusEffect, ParalysisStatusEffect, FreezeStatusEffect, SleepStatusEffect, PoisonStatusEffect, StatusType
+from ..systems.ability_system import create_ability
+from ..systems.item_system import create_item
 from typing import Dict, List, Any
 import random
 
@@ -170,7 +170,7 @@ class Pokemon:
             elif st == StatusType.POISON.value: eff = PoisonStatusEffect(**kwargs)
             elif st == StatusType.TOXIC.value:
                 try:
-                    from status_effects import ToxicStatusEffect
+                    from ..systems.status_effects import ToxicStatusEffect
                     eff = ToxicStatusEffect(**kwargs)
                 except ImportError: eff = StatusEffect(st, **kwargs)
             else: eff = StatusEffect(st, **kwargs)

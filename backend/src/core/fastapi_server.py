@@ -7,11 +7,11 @@ import os
 import random
 from typing import List, Dict, Any, Optional
 from functools import lru_cache
-from game import Game
-from pokemon import Pokemon
-from data_loader import data_loader
-from moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
-from pokemon_utils import POKEAPI_NAME_MAP, get_mandatory_item
+from .game import Game
+from ..models.pokemon import Pokemon
+from ..utils.data_loader import data_loader
+from ..models.moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
+from ..utils.pokemon_utils import POKEAPI_NAME_MAP, get_mandatory_item
 import json
 import re
 from dotenv import load_dotenv
@@ -43,14 +43,19 @@ if supabase_url and supabase_key and "PASTE_YOUR" not in supabase_key:
 
 game_instance = None
 
+# Resolve data path robustly
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
 # Load name-to-ID mapping
 POKEMON_ID_MAP = {}
 try:
-    with open('pokemon_ids.json', 'r') as f:
+    id_map_path = os.path.join(DATA_DIR, 'pokemon_ids.json')
+    with open(id_map_path, 'r') as f:
         POKEMON_ID_MAP = json.load(f)
     print(f"✓ Loaded {len(POKEMON_ID_MAP)} Pokémon ID mappings")
 except Exception as e:
-    print(f"⚠️ Warning: Could not load pokemon_ids.json: {e}")
+    print(f"⚠️ Warning: Could not load pokemon_ids.json at {id_map_path}: {e}")
 
 music_path = os.path.join(os.path.dirname(__file__), 'music')
 if os.path.exists(music_path):
@@ -262,8 +267,9 @@ def get_comprehensive_pokemon_list() -> List[str]:
             
     # Add PokeAPI names fallback
     try:
-        if os.path.exists('all_pokemon_names.json'):
-            with open('all_pokemon_names.json', 'r') as f:
+        names_path = os.path.join(DATA_DIR, 'all_pokemon_names.json')
+        if os.path.exists(names_path):
+            with open(names_path, 'r') as f:
                 api_names = json.load(f)
                 for n in api_names:
                     names.add(n)
@@ -372,7 +378,7 @@ async def get_pokemon_learnset_api(name: str):
 @app.get("/api/all-moves")
 async def get_all_moves_list():
     try:
-        from data_loader import data_loader
+        from ..utils.data_loader import data_loader
         moves = sorted(list(set([m['name'] for m in data_loader.moves_data.values() if 'name' in m])))
         return {"success": True, "moves": moves}
     except Exception as e:

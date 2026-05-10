@@ -3,8 +3,8 @@ import json
 import os
 import re
 
-LOGIC_PATH = os.path.join(os.path.dirname(__file__), "datasets/abilities_logic.json")
-METADATA_PATH = os.path.join(os.path.dirname(__file__), "datasets/abilities.json")
+LOGIC_PATH = os.path.join(os.path.dirname(__file__), "../../data/datasets/abilities_logic.json")
+METADATA_PATH = os.path.join(os.path.dirname(__file__), "../../data/datasets/abilities.json")
 
 def load_abilities_config():
     config = {}

@@ -1,4 +1,4 @@
-from data_loader import data_loader
+from .data_loader import data_loader
 import random
 from typing import List, Dict, Any, Tuple, Optional
 

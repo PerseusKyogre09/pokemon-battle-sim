@@ -1,4 +1,4 @@
-from data_loader import data_loader
+from ..utils.data_loader import data_loader
 from typing import Optional, Tuple, Dict, Any, Union, List
 import random
 import re
@@ -215,7 +215,7 @@ class Move:
         if not target_move:
             return False
         
-        from priority_system import SuckerPunchHandler
+        from ..systems.priority_system import SuckerPunchHandler
         
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
@@ -237,7 +237,7 @@ class Move:
         if not self.is_priority_counter:
             return ""
         
-        from priority_system import SuckerPunchHandler
+        from ..systems.priority_system import SuckerPunchHandler
         
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
@@ -255,7 +255,7 @@ class Move:
         if not target_move:
             return False, self.get_priority_counter_failure_message()
         
-        from priority_system import SuckerPunchHandler
+        from ..systems.priority_system import SuckerPunchHandler
         
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()
@@ -272,7 +272,7 @@ class Move:
         if not self.is_priority_counter or not target_move:
             return self.priority
         
-        from priority_system import SuckerPunchHandler
+        from ..systems.priority_system import SuckerPunchHandler
         
         if self.name.lower() == 'sucker punch':
             handler = SuckerPunchHandler()

@@ -1,5 +1,5 @@
 import random
-from data_loader import data_loader
+from ..utils.data_loader import data_loader
 
 class BattleAI:
     def __init__(self):

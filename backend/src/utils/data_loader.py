@@ -1,6 +1,12 @@
 import re
 import json
 from typing import Dict, Any, List, Optional
+import os
+
+# Resolve data paths robustly
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(CURRENT_DIR)), 'data')
+DATASETS_DIR = os.path.join(DATA_DIR, 'datasets')
 
 class DataLoader:
     def __init__(self):
@@ -22,7 +28,8 @@ class DataLoader:
     
     def _load_moves(self):
         try:
-            with open('datasets/moves.json', 'r', encoding='utf-8') as f:
+            moves_path = os.path.join(DATASETS_DIR, 'moves.json')
+            with open(moves_path, 'r', encoding='utf-8') as f:
                 moves_data = json.load(f)
             
             for move_key, move_data in moves_data.items():
@@ -45,7 +52,8 @@ class DataLoader:
     
     def _load_moves_descriptions(self):
         try:
-            with open('datasets/moves_desc.json', 'r', encoding='utf-8') as f:
+            desc_path = os.path.join(DATASETS_DIR, 'moves_desc.json')
+            with open(desc_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 
                 content = content.strip()
@@ -90,7 +98,8 @@ class DataLoader:
     
     def _load_learnsets(self):
         try:
-            with open('datasets/learnsets.json', 'r', encoding='utf-8') as f:
+            learnsets_path = os.path.join(DATASETS_DIR, 'learnsets.json')
+            with open(learnsets_path, 'r', encoding='utf-8') as f:
                 learnsets_data = json.load(f)
             
             for pokemon_name, data in learnsets_data.items():
@@ -106,7 +115,8 @@ class DataLoader:
     
     def _load_typechart(self):
         try:
-            with open('datasets/typechart.json', 'r', encoding='utf-8') as f:
+            typechart_path = os.path.join(DATASETS_DIR, 'typechart.json')
+            with open(typechart_path, 'r', encoding='utf-8') as f:
                 self.typechart_data = json.load(f)
             
         except FileNotFoundError:
@@ -119,7 +129,8 @@ class DataLoader:
             
     def _load_abilities(self):
         try:
-            with open('datasets/abilities_logic.json', 'r', encoding='utf-8') as f:
+            abilities_path = os.path.join(DATASETS_DIR, 'abilities_logic.json')
+            with open(abilities_path, 'r', encoding='utf-8') as f:
                 self.abilities_data = json.load(f)
             
             print(f"=== LOADED {len(self.abilities_data)} ABILITIES FROM abilities_logic.json ===")
@@ -132,7 +143,8 @@ class DataLoader:
             
     def _load_items(self):
         try:
-            with open('datasets/items_logic.json', 'r', encoding='utf-8') as f:
+            items_path = os.path.join(DATASETS_DIR, 'items_logic.json')
+            with open(items_path, 'r', encoding='utf-8') as f:
                 self.items_data = json.load(f)
             
             print(f"=== LOADED {len(self.items_data)} ITEMS FROM items_logic.json ===")

@@ -1,6 +1,6 @@
-from pokemon import Pokemon
-from priority_system import PriorityResolver, create_battle_action
-from ai import BattleAI
+from ..models.pokemon import Pokemon
+from ..systems.priority_system import PriorityResolver, create_battle_action
+from .ai import BattleAI
 from typing import List, Dict, Any, Optional, Tuple
 import random
 
@@ -30,7 +30,7 @@ class BattleSide:
         if pokemon.is_fainted(): return []
         
         if self.stealth_rock:
-            from data_loader import data_loader
+            from ..utils.data_loader import data_loader
             effectiveness = data_loader.get_type_effectiveness('rock', pokemon.types[0])
             if len(pokemon.types) > 1:
                 effectiveness *= data_loader.get_type_effectiveness('rock', pokemon.types[1])
@@ -361,7 +361,7 @@ class Game:
         
         player_action = None
         if switch_index is not None:
-            from move import Move
+            from ..models.move import Move
             switch_move = Move("Switch")
             switch_move.priority = 6
             player_action = create_battle_action(self.player_pokemon, switch_move, self.opponent_pokemon, self.priority_resolver)
