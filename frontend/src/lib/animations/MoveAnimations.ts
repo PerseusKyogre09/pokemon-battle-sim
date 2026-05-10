@@ -232,6 +232,16 @@ export const MoveTemplates = {
           .to(overlay, { backgroundColor: 'rgba(101, 67, 33, 0)', duration: 0.3 }, "+=0.8");
       }
     });
+  },
+
+  statusDamage: (target: HTMLElement, type: 'Burn' | 'Poison') => {
+    return new Promise<void>((resolve) => {
+      const color = type === 'Burn' ? "#EE8130" : "#A33EA1";
+      const tl = gsap.timeline({ onComplete: () => resolve() });
+      tl.add(ActionAtoms.flash(target, color));
+      tl.add(ActionAtoms.shake(target, 10), 0);
+      if (type === 'Burn') tl.add(ActionAtoms.burstParticles(target, 'Fire', 8), 0);
+    });
   }
 };
 
