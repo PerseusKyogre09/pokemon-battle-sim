@@ -1,10 +1,3 @@
-"""
-Priority System Module
-
-This module provides comprehensive priority resolution for Pokemon battle moves,
-including support for priority counters like Sucker Punch and extensible priority mechanics.
-"""
-
 from typing import List, Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 import random
@@ -12,7 +5,6 @@ import random
 
 # Priority level constants based on official Pokemon mechanics
 class PriorityLevels:
-    """Standard Pokemon priority levels"""
     HELPING_HAND = 5        # Helping Hand (not implemented yet)
     PROTECT = 4             # Protect, Detect, Baneful Bunker
     FAKE_OUT = 3            # Fake Out, Quick Guard (not implemented yet)
@@ -24,19 +16,16 @@ class PriorityLevels:
     AVALANCHE = -4          # Avalanche, Revenge
     ROAR = -6               # Roar, Whirlwind (not implemented yet)
     
-    # Valid priority range
     MIN_PRIORITY = -6
     MAX_PRIORITY = 5
     
     @classmethod
     def validate_priority(cls, priority: int) -> int:
-        """Validate and clamp priority value to valid range"""
         return max(cls.MIN_PRIORITY, min(cls.MAX_PRIORITY, priority))
 
 
 @dataclass
 class BattleAction:
-    """Represents a move action with priority information for battle processing"""
     pokemon: Any  # Pokemon object
     move: Any     # Move object
     target: Any   # Target Pokemon object
@@ -45,12 +34,9 @@ class BattleAction:
     counter_target_move: Optional[Any] = None
     
     def __post_init__(self):
-        """Validate priority after initialization"""
-        # We don't clamp to int here to preserve fractional priority for sorting
         pass
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert BattleAction to dictionary for serialization"""
         return {
             'pokemon_name': getattr(self.pokemon, 'name', 'Unknown'),
             'move_name': getattr(self.move, 'name', 'Unknown'),
@@ -81,33 +67,16 @@ class BattleAction:
         return True
     
     def get_speed_for_tiebreaker(self) -> int:
-        """Get Pokemon speed for priority tiebreaking"""
         return getattr(self.pokemon, 'speed', 0)
 
 
 class PriorityResolver:
-    """
-    Core priority resolution engine for Pokemon battles.
-    
-    Handles priority calculation, priority counter mechanics, and turn order determination.
-    """
     
     def __init__(self):
-        """Initialize the priority resolver"""
         self.debug_enabled = True
         self.sucker_punch_handler = SuckerPunchHandler()
     
     def resolve_turn_order(self, player_action: BattleAction, opponent_action: BattleAction) -> List[BattleAction]:
-        """
-        Resolve the turn order for two battle actions based on priority and speed.
-        
-        Args:
-            player_action: The player's battle action
-            opponent_action: The opponent's battle action
-            
-        Returns:
-            List[BattleAction]: Actions ordered by execution priority (first to last)
-        """
         if self.debug_enabled:
             print(f"DEBUG: Resolving turn order - Player: {player_action.move.name} (priority {player_action.effective_priority}), "
                   f"Opponent: {opponent_action.move.name} (priority {opponent_action.effective_priority})")
@@ -126,15 +95,6 @@ class PriorityResolver:
         return sorted_actions
     
     def check_priority_counters(self, actions: List[BattleAction]) -> List[BattleAction]:
-        """
-        Check and apply priority counter mechanics to battle actions.
-        
-        Args:
-            actions: List of battle actions to check for priority counters
-            
-        Returns:
-            List[BattleAction]: Actions with priority counter effects applied
-        """
         if len(actions) != 2:
             return actions
         
@@ -176,16 +136,6 @@ class PriorityResolver:
         return updated_actions
     
     def calculate_effective_priority(self, pokemon: Any, move: Any) -> int:
-        """
-        Calculate the effective priority for a Pokemon's move.
-        
-        Args:
-            pokemon: The Pokemon using the move
-            move: The move being used
-            
-        Returns:
-            int: The effective priority value
-        """
         base_priority = getattr(move, 'priority', 0)
         
         # Apply any priority modifiers from abilities, items, etc.
@@ -208,12 +158,6 @@ class PriorityResolver:
         return effective_priority
     
     def _get_sort_key(self, action: BattleAction) -> Tuple[int, int, float]:
-        """
-        Get sorting key for battle actions.
-        
-        Returns tuple of (priority, speed, random_tiebreaker) for sorting.
-        Higher values sort first when reverse=True.
-        """
         return (
             action.effective_priority,
             getattr(action.pokemon, 'speed', 0),
@@ -221,29 +165,10 @@ class PriorityResolver:
         )
     
     def _is_priority_counter_move(self, move: Any) -> bool:
-        """
-        Check if a move is a priority counter move.
-        
-        Args:
-            move: The move to check
-            
-        Returns:
-            bool: True if the move is a priority counter
-        """
         # Use SuckerPunchHandler to check for Sucker Punch
         return self.sucker_punch_handler.is_sucker_punch(move)
     
     def _can_priority_counter_succeed(self, counter_move: Any, target_move: Any) -> bool:
-        """
-        Check if a priority counter move can succeed against the target move.
-        
-        Args:
-            counter_move: The priority counter move
-            target_move: The target move being countered
-            
-        Returns:
-            bool: True if the counter can succeed
-        """
         if self.sucker_punch_handler.is_sucker_punch(counter_move):
             return self.sucker_punch_handler.check_success_condition(target_move)
         
@@ -253,15 +178,6 @@ class PriorityResolver:
 
     
     def _get_counter_priority(self, counter_move: Any) -> int:
-        """
-        Get the priority value for a successful priority counter.
-        
-        Args:
-            counter_move: The priority counter move
-            
-        Returns:
-            int: The priority value when the counter succeeds
-        """
         if self.sucker_punch_handler.is_sucker_punch(counter_move):
             return self.sucker_punch_handler.priority_when_successful
         
@@ -269,33 +185,12 @@ class PriorityResolver:
         return PriorityLevels.NORMAL
     
     def get_priority_counter_failure_message(self, counter_move: Any) -> str:
-        """
-        Get the failure message for a priority counter move.
-        
-        Args:
-            counter_move: The priority counter move that failed
-            
-        Returns:
-            str: The failure message
-        """
         if self.sucker_punch_handler.is_sucker_punch(counter_move):
             return self.sucker_punch_handler.get_failure_message()
         
         return "The move failed!"
     
     def get_priority_counter_success_message(self, counter_move: Any, attacker_name: str, target_name: str, target_move_name: str) -> str:
-        """
-        Get the success message for a priority counter move.
-        
-        Args:
-            counter_move: The priority counter move that succeeded
-            attacker_name: Name of the Pokemon using the counter move
-            target_name: Name of the target Pokemon
-            target_move_name: Name of the move being countered
-            
-        Returns:
-            str: The success message
-        """
         if self.sucker_punch_handler.is_sucker_punch(counter_move):
             return self.sucker_punch_handler.get_success_message(attacker_name, target_name, target_move_name)
         
@@ -307,13 +202,6 @@ class PriorityResolver:
 
 
 class PriorityCounterConditions:
-    """
-    Configuration for priority counter conditions.
-    
-    This class defines the conditions under which priority counter moves
-    succeed or fail, making it easy to extend with new priority counters.
-    """
-    
     SUCKER_PUNCH = {
         'name': 'sucker_punch',
         'counters': ['physical', 'special'],  # Move categories that can be countered
@@ -322,26 +210,8 @@ class PriorityCounterConditions:
         'failure_message': "But it failed!"
     }
     
-    # Future priority counters can be added here
-    # FAKE_OUT = {
-    #     'name': 'fake_out',
-    #     'counters': ['physical', 'special', 'status'],
-    #     'fails_against': [],
-    #     'priority_when_successful': PriorityLevels.FAKE_OUT,
-    #     'failure_message': "But it failed!"
-    # }
-    
     @classmethod
     def get_counter_config(cls, move_name: str) -> Optional[Dict[str, Any]]:
-        """
-        Get the configuration for a priority counter move.
-        
-        Args:
-            move_name: The name of the move
-            
-        Returns:
-            Optional[Dict]: The counter configuration, or None if not a counter
-        """
         move_name_normalized = move_name.lower().replace(' ', '_').replace('-', '_')
         
         # Check all defined counter configurations
@@ -355,12 +225,6 @@ class PriorityCounterConditions:
 
 
 class SuckerPunchHandler:
-    """
-    Specialized handler for Sucker Punch priority counter logic.
-    
-    This class manages the specific logic for Sucker Punch, including success condition
-    checking, failure condition handling, and appropriate messaging.
-    """
     
     def __init__(self):
         """Initialize the Sucker Punch handler"""
@@ -370,18 +234,6 @@ class SuckerPunchHandler:
         self.success_message_template = "{attacker} intercepted {target}'s {target_move}!"
     
     def check_success_condition(self, target_move: Any) -> bool:
-        """
-        Check if Sucker Punch can successfully counter the target move.
-        
-        Sucker Punch succeeds when the target uses an attacking move (physical or special).
-        It fails when the target uses a status move or switches.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            bool: True if Sucker Punch can succeed, False otherwise
-        """
         if not target_move:
             return False
         
@@ -392,17 +244,6 @@ class SuckerPunchHandler:
         return target_category in ['physical', 'special']
     
     def check_failure_condition(self, target_move: Any) -> bool:
-        """
-        Check if Sucker Punch should fail against the target move.
-        
-        Sucker Punch fails when the target uses a status move or switches.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            bool: True if Sucker Punch should fail, False otherwise
-        """
         if not target_move:
             return True  # Fail if no target move (e.g., switching)
         
@@ -413,17 +254,6 @@ class SuckerPunchHandler:
         return target_category == 'status'
     
     def get_success_message(self, attacker_name: str, target_name: str, target_move_name: str) -> str:
-        """
-        Get the success message when Sucker Punch successfully counters a move.
-        
-        Args:
-            attacker_name: Name of the Pokemon using Sucker Punch
-            target_name: Name of the target Pokemon
-            target_move_name: Name of the move being countered
-            
-        Returns:
-            str: The success message for the battle log
-        """
         # Capitalize Pokémon names and provide more detailed success messages based on the target move
         attacker_name = attacker_name.capitalize()
         target_name = target_name.capitalize()
@@ -436,24 +266,9 @@ class SuckerPunchHandler:
             return f"{attacker_name} read {target_name}'s attack and countered with Sucker Punch!"
     
     def get_failure_message(self) -> str:
-        """
-        Get the failure message when Sucker Punch fails.
-        
-        Returns:
-            str: The failure message for the battle log
-        """
         return self.failure_message
     
     def get_effective_priority(self, target_move: Any) -> int:
-        """
-        Get the effective priority for Sucker Punch based on the target move.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            int: The effective priority value (high priority if successful, very low if failed)
-        """
         if self.check_success_condition(target_move):
             return self.priority_when_successful
         else:
@@ -461,16 +276,6 @@ class SuckerPunchHandler:
             return -999
     
     def validate_target_move_category(self, target_move: Any) -> Tuple[bool, str]:
-        """
-        Validate the target move's category for Sucker Punch success/failure.
-        
-        Args:
-            target_move: The move that the target Pokemon is using
-            
-        Returns:
-            Tuple[bool, str]: (success, message) where success indicates if Sucker Punch
-                             succeeds and message provides appropriate feedback
-        """
         if not target_move:
             return False, self.get_failure_message()
         
@@ -481,15 +286,6 @@ class SuckerPunchHandler:
             return False, self.get_failure_message()
     
     def is_sucker_punch(self, move: Any) -> bool:
-        """
-        Check if the given move is Sucker Punch.
-        
-        Args:
-            move: The move to check
-            
-        Returns:
-            bool: True if the move is Sucker Punch, False otherwise
-        """
         if not move:
             return False
         
@@ -498,12 +294,6 @@ class SuckerPunchHandler:
 
 
 class ActionQueue:
-    """
-    Manages a queue of battle actions with priority-aware ordering and execution.
-    
-    This class handles the conversion of Pokemon moves to battle actions,
-    priority-based sorting, and sequential execution of actions.
-    """
     
     def __init__(self, priority_resolver: PriorityResolver):
         """

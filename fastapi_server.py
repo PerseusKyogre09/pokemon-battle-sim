@@ -189,13 +189,15 @@ def to_display_name(name: str) -> str:
 @lru_cache(maxsize=1000)
 def get_pokemon_data(pokemon_name):
     # 1. Try normalizing to map (e.g. "Giratina Origin" -> "giratinaorigin" -> "giratina-origin")
-    normalized_name = pokemon_name.lower().replace(' ', '').replace('-', '')
+    normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())
     api_name = POKEAPI_NAME_MAP.get(normalized_name, None)
     
     # 2. If not in map, but input has hyphens, it might already be a PokeAPI name (e.g. "stunfisk-galar")
     if not api_name:
-        if '-' in pokemon_name:
-            api_name = pokemon_name.lower().strip()
+        # Strip special chars like % and then check if it looks like a PokeAPI name
+        cleaned_name = pokemon_name.lower().replace('%', '').strip()
+        if '-' in cleaned_name:
+            api_name = cleaned_name
         else:
             api_name = normalized_name
 
@@ -222,7 +224,17 @@ def get_pokemon_data(pokemon_name):
                 return res.json()
         except:
             continue
-                
+            
+    # Final fallback: try stripping everything after the first hyphen (e.g. silvally-fairy -> silvally)
+    if '-' in api_name:
+        base_name = api_name.split('-')[0]
+        try:
+            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{base_name}')
+            if res.status_code == 200:
+                return res.json()
+        except:
+            pass
+                 
     raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} (API: {api_name}) not found!')
 
 def get_pokemon_moves(pokemon_data):
@@ -371,133 +383,192 @@ async def start_game(request: Request):
     global game_instance
     try:
         data = await request.json()
-        player_pokemon_name = data.get('pokemon', 'pikachu').lower()
-        selected_set = data.get('selected_set')
+        
+        # Support both single pokemon and team array
+        player_team_raw = data.get('team')
+        if isinstance(player_team_raw, list):
+            # Use the provided team
+            pass
+        elif player_team_raw == 'random':
+            player_team_raw = []
+            for _ in range(6):
+                name = get_random_battle_ready_pokemon()
+                player_team_raw.append({'name': name})
+        elif not player_team_raw:
+            # Fallback to single pokemon
+            p_name = data.get('pokemon', 'pikachu').lower()
+            p_set = data.get('selected_set', {})
+            player_team_raw = [{
+                'name': p_name,
+                'ability': p_set.get('ability'),
+                'item': p_set.get('item'),
+                'moves': p_set.get('moves', []),
+                'shiny': p_set.get('shiny', False)
+            }]
+            
         opponent_choice = data.get('opponent', 'charizard').lower()
-        
+        opponent_team_raw = []
+        battle_mode = data.get('mode', '1v1')
         if opponent_choice == 'random':
-            opponent_pokemon_name = get_random_battle_ready_pokemon().lower()
+            team_size = 6 if battle_mode == '6v6' else 1
+            for _ in range(team_size):
+                name = get_random_battle_ready_pokemon()
+                while any(p['name'].lower() == name.lower() for p in opponent_team_raw):
+                    name = get_random_battle_ready_pokemon()
+                opponent_team_raw.append({'name': name})
+        elif battle_mode == '6v6':
+            opponent_team_raw = [{'name': opponent_choice}]
+            while len(opponent_team_raw) < 6:
+                name = get_random_battle_ready_pokemon()
+                if name.lower() not in [p['name'].lower() for p in opponent_team_raw]:
+                    opponent_team_raw.append({'name': name})
         else:
-            opponent_pokemon_name = opponent_choice
-            
-        player_data = get_pokemon_data(player_pokemon_name)
-        opponent_data = get_pokemon_data(opponent_pokemon_name)
-        
-        player_moves = []
-        player_stats_config = {}
-        if selected_set:
-            if 'moves' in selected_set:
-                for move_name in selected_set['moves']:
-                    player_moves.append({'name': move_name})
-            
-            mandatory = get_mandatory_item(player_pokemon_name)
-            player_stats_config = {
-                'ability': selected_set.get('ability', player_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability')),
-                'item': selected_set.get('item', mandatory or '')
+            opponent_team_raw = [{'name': opponent_choice}]
+
+        player_team_processed = []
+        for p in player_team_raw:
+            p_data = get_pokemon_data(p['name'])
+            moves = [{'name': m} for m in p.get('moves', [])]
+            if not moves:
+                moves = get_pokemon_moves(p_data)
+                
+            mandatory = get_mandatory_item(p['name'])
+            config = {
+                'name': p_data['name'],
+                'types': [t['type']['name'] for t in p_data['types']],
+                'sprite_url': get_best_sprite(p_data, side='back', shiny=p.get('shiny', False)),
+                'stats': p_data['stats'],
+                'moves': moves,
+                'ability': p.get('ability') or p_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability'),
+                'item': p.get('item') or mandatory or ''
             }
-            if mandatory:
-                player_stats_config['item'] = mandatory
-        else:
-            player_stats_config = {
-                'item': get_mandatory_item(player_pokemon_name) or ''
+            player_team_processed.append(config)
+            
+        opponent_team_processed = []
+        for o in opponent_team_raw:
+            o_data = get_pokemon_data(o['name'])
+            o_name = o['name'].lower()
+            
+            o_moves = []
+            o_config = {}
+            o_sets = get_all_pokemon_sets(o_name)
+            if o_sets:
+                all_sets = []
+                for fmt in o_sets:
+                    for set_name, s in o_sets[fmt].items():
+                        all_sets.append(s)
+                
+                if all_sets:
+                    best_set = random.choice(all_sets)
+                    mandatory = get_mandatory_item(o_name)
+                    o_config = {
+                        'evs': best_set.get('evs', {}),
+                        'ivs': best_set.get('ivs', {}),
+                        'nature': best_set.get('nature', 'Hardy'),
+                        'ability': best_set.get('ability', 'noability'),
+                        'item': best_set.get('item', mandatory or '')
+                    }
+                    if best_set.get('moves'):
+                        o_moves = [{'name': m} for m in best_set['moves']]
+            
+            if not o_moves:
+                o_moves = get_pokemon_moves(o_data)
+                
+            config = {
+                'name': o_data['name'],
+                'types': [t['type']['name'] for t in o_data['types']],
+                'sprite_url': get_best_sprite(o_data, side='front', shiny=False),
+                'stats': o_data['stats'],
+                'moves': o_moves,
+                **o_config
             }
-            player_moves = get_pokemon_moves(player_data)
-            
-        opponent_moves = get_pokemon_moves(opponent_data)
-        
-        # Determine opponent competitive config
-        opponent_stats_config = {}
-        opponent_sets = get_all_pokemon_sets(opponent_pokemon_name)
-        if opponent_sets:
-            all_sets = []
-            for fmt in opponent_sets:
-                for set_name, s in opponent_sets[fmt].items():
-                    all_sets.append(s)
-            
-            if all_sets:
-                best_set = random.choice(all_sets)
-                mandatory = get_mandatory_item(opponent_pokemon_name)
-                opponent_stats_config = {
-                    'evs': best_set.get('evs', {}),
-                    'ivs': best_set.get('ivs', {}),
-                    'nature': best_set.get('nature', 'Hardy'),
-                    'ability': best_set.get('ability', 'noability'),
-                    'item': best_set.get('item', mandatory or '')
-                }
-                if mandatory:
-                    opponent_stats_config['item'] = mandatory
-                if best_set.get('moves'):
-                    opponent_moves = [{'name': m} for m in best_set['moves']]
+            opponent_team_processed.append(config)
 
         game_instance = Game()
+        initial_events = game_instance.start_battle(player_team_processed, opponent_team_processed)
         
-        game_instance.player_pokemon = Pokemon(
-            player_data['name'], 
-            [t['type']['name'] for t in player_data['types']],
-            get_best_sprite(player_data, side='back', shiny=selected_set.get('shiny', False) if selected_set else False),
-            player_data['stats'],
-            player_moves,
-            **player_stats_config
-        )
-        game_instance.player_pokemon.is_player = True
-        
-        game_instance.opponent_pokemon = Pokemon(
-            opponent_data['name'],
-            [t['type']['name'] for t in opponent_data['types']],
-            get_best_sprite(opponent_data, side='front', shiny=False),
-            opponent_data['stats'],
-            opponent_moves,
-            **opponent_stats_config
-        )
-        game_instance.opponent_pokemon.is_player = False
-        
-        # Trigger switch-in effects
-        start_messages = []
-        p_msgs = game_instance.player_pokemon.on_switch_in(game_instance.opponent_pokemon)
-        o_msgs = game_instance.opponent_pokemon.on_switch_in(game_instance.player_pokemon)
-        
-        all_msgs = p_msgs + o_msgs
-        for msg in all_msgs:
-            if 'set_weather' in msg:
-                game_instance.weather = msg['set_weather']
-                game_instance.weather_duration = 5
-            start_messages.append(msg)
-        
-        is_shiny = selected_set.get('shiny', False) if selected_set else False
-        player_sprite = get_best_sprite(player_data, side='back', shiny=is_shiny)
-        opponent_sprite = get_best_sprite(opponent_data, side='front', shiny=False)
-        
-        base_url = get_public_base_url(request)
-        
-        battle_data = {
-            'start_events': start_messages,
-            'weather': game_instance.weather,
-            'player_pokemon': {
-                **game_instance.player_pokemon.to_dict(),
-                'sprite': player_sprite,
-                'cry_url': f"{base_url}/api/pokemon/cry/{player_pokemon_name}"
+        # Prepare response
+        return {
+            "success": True,
+            "weather": game_instance.weather,
+            "player_pokemon": {
+                "name": game_instance.player_pokemon.name,
+                "current_hp": game_instance.player_pokemon.current_hp,
+                "max_hp": game_instance.player_pokemon.max_hp,
+                "sprite": game_instance.player_pokemon.sprite_url,
+                "types": game_instance.player_pokemon.types,
+                "level": game_instance.player_pokemon.level,
+                "status_effects": game_instance.player_pokemon.get_status_display(),
+                "substitute_hp": game_instance.player_pokemon.substitute_hp
             },
-            'opponent_pokemon': {
-                **game_instance.opponent_pokemon.to_dict(),
-                'sprite': opponent_sprite,
-                'cry_url': f"{base_url}/api/pokemon/cry/{opponent_pokemon_name}"
+            "opponent_pokemon": {
+                "name": game_instance.opponent_pokemon.name,
+                "current_hp": game_instance.opponent_pokemon.current_hp,
+                "max_hp": game_instance.opponent_pokemon.max_hp,
+                "sprite": game_instance.opponent_pokemon.sprite_url,
+                "types": game_instance.opponent_pokemon.types,
+                "level": game_instance.opponent_pokemon.level,
+                "status_effects": game_instance.opponent_pokemon.get_status_display(),
+                "substitute_hp": game_instance.opponent_pokemon.substitute_hp
             },
-            'player_moves': [{
-                'name': move.name,
-                'power': move.power,
-                'type': move.type,
-                'pp': move.pp,
-                'max_pp': move.max_pp
-            } for name, move in game_instance.player_pokemon.moves.items()]
+            "player_moves": [m.to_dict() for m in game_instance.player_pokemon.moves.values()],
+            "player_team": [p.to_dict() for p in game_instance.player_team],
+            "opponent_team": [p.to_dict() for p in game_instance.opponent_team],
+            "initial_events": initial_events
         }
-        return battle_data
     except Exception as e:
-        print(f"Error starting battle: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/health")
-async def health():
-    return {"status": "ok"}
+@app.get("/api/random-team")
+async def get_random_team():
+    try:
+        team = []
+        for _ in range(6):
+            name = get_random_battle_ready_pokemon()
+            p_data = get_pokemon_data(name)
+            
+            p_sets = get_all_pokemon_sets(name)
+            best_set = None
+            if p_sets:
+                all_sets = []
+                for fmt in p_sets:
+                    for set_name, s in p_sets[fmt].items():
+                        all_sets.append(s)
+                if all_sets:
+                    best_set = random.choice(all_sets)
+            
+            config = {
+                'name': p_data['name'],
+                'types': [t['type']['name'] for t in p_data['types']],
+                'sprite_url': get_best_sprite(p_data, side='front', shiny=False),
+                'ability': best_set.get('ability', 'Unknown') if best_set else 'Unknown',
+                'item': best_set.get('item', 'None') if best_set else 'None'
+            }
+            team.append(config)
+        return {"success": True, "team": team}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/team")
+async def get_team():
+    global game_instance
+    if not game_instance:
+        return {"player_team": []}
+    return {
+        "player_team": [
+            {
+                "index": i,
+                "name": p.name,
+                "hp": p.current_hp,
+                "max_hp": p.max_hp,
+                "is_fainted": p.is_fainted(),
+                "sprite": p.sprite_url,
+                "status": p.get_status_display()
+            } for i, p in enumerate(game_instance.player_team)
+        ]
+    }
 
 @app.post("/api/move")
 async def move(request: Request):
@@ -507,18 +578,38 @@ async def move(request: Request):
 
     data = await request.json()
     move_name = data.get('move')
-    turn_info = game_instance.process_turn(move_name)
+    switch_index = data.get('switch_index')
+    
+    turn_info = game_instance.process_turn(move_name=move_name, switch_index=switch_index)
     
     if 'action_order' in turn_info:
         del turn_info['action_order']
     
     response_data = {
-        "player_hp": game_instance.player_pokemon.current_hp,
-        "opponent_hp": game_instance.opponent_pokemon.current_hp,
-        "player_max_hp": game_instance.player_pokemon.max_hp,
-        "opponent_max_hp": game_instance.opponent_pokemon.max_hp,
-        "player_status_effects": game_instance.player_pokemon.get_status_display(),
-        "opponent_status_effects": game_instance.opponent_pokemon.get_status_display(),
+        "success": True,
+        "player_pokemon": {
+            "name": game_instance.player_pokemon.name,
+            "current_hp": game_instance.player_pokemon.current_hp,
+            "max_hp": game_instance.player_pokemon.max_hp,
+            "sprite": game_instance.player_pokemon.sprite_url,
+            "types": game_instance.player_pokemon.types,
+            "level": game_instance.player_pokemon.level,
+            "status_effects": game_instance.player_pokemon.get_status_display(),
+            "substitute_hp": game_instance.player_pokemon.substitute_hp
+        },
+        "opponent_pokemon": {
+            "name": game_instance.opponent_pokemon.name,
+            "current_hp": game_instance.opponent_pokemon.current_hp,
+            "max_hp": game_instance.opponent_pokemon.max_hp,
+            "sprite": game_instance.opponent_pokemon.sprite_url,
+            "types": game_instance.opponent_pokemon.types,
+            "level": game_instance.opponent_pokemon.level,
+            "status_effects": game_instance.opponent_pokemon.get_status_display(),
+            "substitute_hp": game_instance.opponent_pokemon.substitute_hp
+        },
+        "player_moves": [m.to_dict() for m in game_instance.player_pokemon.moves.values()],
+        "player_team": [p.to_dict() for p in game_instance.player_team],
+        "opponent_team": [p.to_dict() for p in game_instance.opponent_team],
         "turn_info": turn_info,
         "is_game_over": game_instance.battle_over,
         "battle_result": game_instance.get_battle_result() if game_instance.battle_over else None

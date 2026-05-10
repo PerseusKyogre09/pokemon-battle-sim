@@ -44,6 +44,7 @@ export default function BattlePage() {
   const [abilityPopup, setAbilityPopup] = useState<{ name: string, pokemon: string, isPlayer: boolean, exiting?: boolean } | null>(null);
   const [audioReady, setAudioReady] = useState(false);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
+  const [showSwitchMenu, setShowSwitchMenu] = useState(false);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -238,12 +239,12 @@ export default function BattlePage() {
     router.push('/');
   };
 
-  const handleMove = async (moveName: string) => {
+  const handleMove = async (moveName?: string, switchIndex?: number) => {
     if (isProcessing || gameOver || battleStage !== 'active') return;
     setIsProcessing(true);
     
     try {
-      const result: TurnResult = await executeMove(moveName);
+      const result: TurnResult | any = moveName ? await executeMove(moveName) : await executeMove(undefined, switchIndex);
       
       if (!result || !result.turn_info) {
         console.error('Invalid turn result:', result);
@@ -251,13 +252,17 @@ export default function BattlePage() {
         return;
       }
       
+      setShowSwitchMenu(false);
+
       for (const eventObj of (result.turn_info.battle_events as any[])) {
         const isPlayer = eventObj.is_player;
         
         if (eventObj.type === 'move') {
           setEvents(prev => [...prev, `${eventObj.attacker_name} used ${eventObj.move}!`]);
           
-          if (isPlayer) {
+          const isAttackerPlayer = eventObj.attacker_name === battleState?.player_pokemon.name;
+          
+          if (isAttackerPlayer) {
             setPlayerAnim(prev => ({ ...prev, attacking: true }));
             setTimeout(() => setPlayerAnim(prev => ({ ...prev, attacking: false })), 300);
           } else {
@@ -269,7 +274,7 @@ export default function BattlePage() {
           
           if (eventObj.damage > 0 || eventObj.substitute_damage > 0) {
             hitSoundRef.current?.play();
-            if (isPlayer) {
+            if (isAttackerPlayer) {
               setOpponentAnim(prev => ({ ...prev, shaking: true }));
               setTimeout(() => setOpponentAnim(prev => ({ ...prev, shaking: false })), 400);
             } else {
@@ -281,9 +286,73 @@ export default function BattlePage() {
           if (eventObj.status_message) {
             setEvents(prev => [...prev, eventObj.status_message]);
           }
-        } else if (eventObj.type === 'effectiveness') {
-          setEvents(prev => [...prev, eventObj.message]);
+        } else if (eventObj.type === 'recall') {
+          if (eventObj.message) setEvents(prev => [...prev, eventObj.message]);
+          if (eventObj.is_player_switch) {
+            setPlayerAnim(prev => ({ ...prev, visible: false }));
+          } else if (eventObj.is_opponent_switch) {
+            setOpponentAnim(prev => ({ ...prev, visible: false }));
+          }
+          await new Promise(resolve => setTimeout(resolve, 700));
         } else if (eventObj.type === 'status') {
+          if (eventObj.message) setEvents(prev => [...prev, eventObj.message]);
+          if (eventObj.is_player_switch) {
+            setPlayerAnim(prev => ({ ...prev, visible: false }));
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Pokeball Animation Sequence
+            setPokeballState({ player: true, opponent: false });
+            pokeballSoundRef.current?.play().catch(() => {});
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            // Sync new Pokémon with PRE-DAMAGE HP from the event, not final result
+            if (eventObj.new_pokemon_name && result.player_team) {
+              const newMon = result.player_team.find((p: any) => p.name === eventObj.new_pokemon_name);
+              if (newMon) {
+                setBattleState(prev => prev ? {
+                  ...prev,
+                  player_pokemon: { 
+                    ...newMon, 
+                    current_hp: eventObj.player_hp ?? newMon.current_hp 
+                  }
+                } : null);
+              }
+            }
+            
+            setPokeballState({ player: false, opponent: false });
+            setShowFlash(true);
+            setTimeout(() => setShowFlash(false), 200);
+            setPlayerAnim(prev => ({ ...prev, visible: true, fainted: false }));
+            await new Promise(resolve => setTimeout(resolve, 400));
+          } else if (eventObj.is_opponent_switch) {
+            setOpponentAnim(prev => ({ ...prev, visible: false }));
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Pokeball Animation Sequence
+            setPokeballState({ player: false, opponent: true });
+            pokeballSoundRef.current?.play().catch(() => {});
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            if (eventObj.new_pokemon_name && result.opponent_team) {
+              const newMon = result.opponent_team.find((p: any) => p.name === eventObj.new_pokemon_name);
+              if (newMon) {
+                setBattleState(prev => prev ? {
+                  ...prev,
+                  opponent_pokemon: { 
+                    ...newMon, 
+                    current_hp: eventObj.opponent_hp ?? newMon.current_hp 
+                  }
+                } : null);
+              }
+            }
+            
+            setPokeballState({ player: false, opponent: false });
+            setShowFlash(true);
+            setTimeout(() => setShowFlash(false), 200);
+            setOpponentAnim(prev => ({ ...prev, visible: true, fainted: false }));
+            await new Promise(resolve => setTimeout(resolve, 400));
+          }
+        } else if (eventObj.type === 'effectiveness') {
           setEvents(prev => [...prev, eventObj.message]);
         } else if (eventObj.type === 'faint') {
           setEvents(prev => [...prev, `${eventObj.pokemon_name} fainted!`]);
@@ -293,18 +362,13 @@ export default function BattlePage() {
             setOpponentAnim(prev => ({ ...prev, fainted: true }));
           }
         } else if (eventObj.type === 'ability') {
-          // 1. Show the Banner first
           showAbilityPopup({ 
             name: eventObj.ability_name, 
             pokemon: eventObj.pokemon_name, 
-            isPlayer: eventObj.target === 'player'
+            isPlayer: eventObj.is_player === true
           });
-          
-          // 2. Short wait before the message appears in the log
           await new Promise(resolve => setTimeout(resolve, 600));
           setEvents(prev => [...prev, eventObj.message]);
-          
-          // Let the popup stay up through the related follow-up lines.
           await new Promise(resolve => setTimeout(resolve, 1800));
         } else if (eventObj.message) {
           setEvents(prev => [...prev, eventObj.message]);
@@ -314,47 +378,43 @@ export default function BattlePage() {
           setWeather(eventObj.set_weather);
         }
 
-        if (eventObj.type === 'move') {
-          setBattleState(prev => prev ? {
-            ...prev,
-            player_pokemon: {
-              ...prev.player_pokemon,
-              current_hp: isPlayer ? eventObj.attacker_hp : eventObj.defender_hp,
-              status_effects: isPlayer ? eventObj.attacker_status : eventObj.defender_status,
-              substitute_hp: isPlayer ? eventObj.attacker_substitute_hp : eventObj.defender_substitute_hp
-            },
-            opponent_pokemon: {
-              ...prev.opponent_pokemon,
-              current_hp: isPlayer ? eventObj.defender_hp : eventObj.attacker_hp,
-              status_effects: isPlayer ? eventObj.defender_status : eventObj.attacker_status,
-              substitute_hp: isPlayer ? eventObj.defender_substitute_hp : eventObj.attacker_substitute_hp
-            }
-          } : null);
-        } else if (eventObj.type === 'status') {
-          const isTargetPlayer = eventObj.target === 'player';
-          setBattleState(prev => prev ? {
-            ...prev,
-            player_pokemon: isTargetPlayer ? {
-              ...prev.player_pokemon,
-              current_hp: eventObj.pokemon_hp ?? prev.player_pokemon.current_hp,
-              status_effects: eventObj.status_effects ?? prev.player_pokemon.status_effects,
-              substitute_hp: eventObj.substitute_hp !== undefined ? eventObj.substitute_hp : prev.player_pokemon.substitute_hp
-            } : prev.player_pokemon,
-            opponent_pokemon: !isTargetPlayer ? {
-              ...prev.opponent_pokemon,
-              current_hp: eventObj.pokemon_hp ?? prev.opponent_pokemon.current_hp,
-              status_effects: eventObj.status_effects ?? prev.opponent_pokemon.status_effects,
-              substitute_hp: eventObj.substitute_hp !== undefined ? eventObj.substitute_hp : prev.opponent_pokemon.substitute_hp
-            } : prev.opponent_pokemon
-          } : null);
+        // Mid-turn HP sync (skip during switch events to avoid clobbering new pokemon data)
+        const isSwitchEvent = eventObj.is_player_switch || eventObj.is_opponent_switch || eventObj.type === 'recall';
+        if (!isSwitchEvent && (eventObj.type === 'move' || eventObj.type === 'status' || eventObj.type === 'ability' || eventObj.type === 'item')) {
+          if (eventObj.player_hp !== undefined && eventObj.opponent_hp !== undefined) {
+             setBattleState(prev => prev ? {
+               ...prev,
+               player_pokemon: { ...prev.player_pokemon, current_hp: eventObj.player_hp },
+               opponent_pokemon: { ...prev.opponent_pokemon, current_hp: eventObj.opponent_hp }
+             } : null);
+          }
         }
         
         await new Promise(resolve => setTimeout(resolve, 800));
       }
 
+      // FINAL SYNC with server state
+      if (result.player_pokemon) {
+        setBattleState(prev => ({
+          ...prev,
+          player_pokemon: result.player_pokemon,
+          opponent_pokemon: result.opponent_pokemon,
+          player_moves: result.player_moves,
+          player_team: result.player_team,
+          opponent_team: result.opponent_team
+        } as any));
+        
+        // Reset faint animations if new pokemon came in
+        if (result.player_pokemon.current_hp > 0) setPlayerAnim(prev => ({ ...prev, fainted: false }));
+        if (result.opponent_pokemon.current_hp > 0) setOpponentAnim(prev => ({ ...prev, fainted: false }));
+      }
+
       if (result.is_game_over) {
         setGameOver(result.battle_result);
         setBattleStage('gameover');
+      } else if (result.player_pokemon && result.player_pokemon.current_hp <= 0) {
+        // If player pokemon is fainted but game not over, MUST switch
+        setTimeout(() => setShowSwitchMenu(true), 500);
       }
     } catch (err) {
       console.error(err);
@@ -407,7 +467,7 @@ export default function BattlePage() {
             
             {/* Turn Counter Overlay */}
             <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 border-2 border-white/10 text-[10px] 2xl:text-[14px] text-yellow-500 z-20 rounded-md">
-              TURN {events.filter(e => e.includes('used')).length + 1}
+              TURN {events.filter(e => e && e.includes('used')).length + 1}
             </div>
 
             {/* Ability Activation Popup (Gen 5 Style) */}
@@ -559,19 +619,67 @@ export default function BattlePage() {
                   {gameOver}
                 </p>
                 <button 
+                  id="btn-return-home"
                   onClick={handleQuit}
                   className="px-8 md:px-20 py-2 md:py-5 bg-red-900/40 border-2 md:border-4 border-red-800 text-white text-[8px] md:text-sm uppercase hover:bg-red-800 transition-all tracking-[0.2em] md:tracking-[0.3em] font-bold"
                 >
                   RETURN HOME
                 </button>
               </div>
+            ) : showSwitchMenu ? (
+              /* SWITCH MENU */
+              <div className="flex h-full animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-[70%] grid grid-cols-2 gap-4 p-4 md:p-6 items-center border-r-4 border-[#0f172a] overflow-y-auto custom-scrollbar">
+                  {battleState.player_team?.map((p, i) => (
+                    <button
+                      key={i}
+                      id={`btn-switch-${i}`}
+                      onClick={() => handleMove(undefined, i)}
+                      disabled={isProcessing || p.current_hp <= 0 || p.name === battleState.player_pokemon.name}
+                      className={`relative flex items-center gap-3 p-2 rounded-lg border-2 transition-all text-left
+                        ${p.name === battleState.player_pokemon.name ? 'border-yellow-500 bg-yellow-500/10 cursor-not-allowed' : 'border-slate-700 hover:border-white hover:bg-white/5'}
+                        ${p.current_hp <= 0 ? 'opacity-40 grayscale cursor-not-allowed' : ''}
+                      `}
+                    >
+                      <div className="w-10 h-10 md:w-16 md:h-16 shrink-0">
+                        <img src={p.sprite} alt={p.name} className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <span className="text-[9px] md:text-[14px] uppercase truncate font-bold">{p.name}</span>
+                        <div className="w-full h-1.5 md:h-2 bg-gray-800 rounded-full overflow-hidden border border-white/5">
+                          <div 
+                            className={`h-full transition-all duration-500 ${p.current_hp / p.max_hp > 0.5 ? 'bg-green-500' : p.current_hp / p.max_hp > 0.2 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${(p.current_hp / p.max_hp) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="w-[30%] flex flex-col">
+                  <div className="flex-1 p-4 md:p-8 flex flex-col justify-center text-center">
+                    <p className="text-[10px] md:text-sm text-gray-400 uppercase tracking-widest">Select a Pokemon to switch in</p>
+                  </div>
+                  <button 
+                    id="btn-switch-cancel"
+                    onClick={() => setShowSwitchMenu(false)}
+                    disabled={battleState.player_pokemon.current_hp <= 0}
+                    className={`h-12 md:h-20 border-t-4 border-[#0f172a] text-[10px] md:text-[14px] uppercase transition-all tracking-[0.2em]
+                      ${battleState.player_pokemon.current_hp <= 0 ? 'opacity-30 cursor-not-allowed text-gray-500' : 'text-red-400 hover:bg-red-400/10'}
+                    `}
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="flex h-full">
                 {/* Left: Move Grid */}
                 <div className="w-[60%] md:w-[70%] grid grid-cols-2 gap-x-2 md:gap-x-8 gap-y-4 md:gap-y-8 p-4 md:p-10 items-center border-r-4 border-[#0f172a]">
-                  {battleState.player_moves.map(move => (
+                  {battleState.player_moves.map((move, i) => (
                     <button
                       key={move.name}
+                      id={`btn-move-${i}`}
                       onClick={() => handleMove(move.name)}
                       onMouseEnter={() => setHoveredMove(move)}
                       onMouseLeave={() => setHoveredMove(null)}
@@ -601,13 +709,23 @@ export default function BattlePage() {
                     </div>
                   </div>
                   
-                  <button 
-                    onClick={() => setShowForfeitModal(true)}
-                    className="h-12 md:h-20 border-t-4 border-[#0f172a] text-[10px] md:text-[14px] 2xl:text-[18px] uppercase text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-white/5 tracking-[0.2em]"
-                  >
-                    <span className="opacity-0 group-hover:opacity-100 w-0 h-0 border-l-[10px] border-l-white border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent" />
-                    RUN
-                  </button>
+                  <div className="flex border-t-4 border-[#0f172a]">
+                    <button 
+                      id="btn-pokemon"
+                      onClick={() => setShowSwitchMenu(true)}
+                      disabled={isProcessing || battleStage !== 'active'}
+                      className="flex-1 h-12 md:h-20 text-[10px] md:text-[14px] uppercase text-blue-400 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-blue-400/10 tracking-[0.2em] border-r-4 border-[#0f172a]"
+                    >
+                      POKEMON
+                    </button>
+                    <button 
+                      id="btn-run"
+                      onClick={() => setShowForfeitModal(true)}
+                      className="flex-1 h-12 md:h-20 text-[10px] md:text-[14px] uppercase text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-white/5 tracking-[0.2em]"
+                    >
+                      RUN
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

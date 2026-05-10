@@ -1,75 +1,233 @@
 from pokemon import Pokemon
 from priority_system import PriorityResolver, create_battle_action
 from ai import BattleAI
+from typing import List, Dict, Any, Optional, Tuple
 import random
+
+class BattleSide:
+    def __init__(self, owner_name):
+        self.owner_name = owner_name
+        self.spikes = 0
+        self.stealth_rock = False
+        self.sticky_web = False
+        self.toxic_spikes = 0
+        self.reflect = 0
+        self.light_screen = 0
+        self.aurora_veil = 0
+        self.tailwind = 0
+        self.safeguard = 0
+        self.wish = None # {amount: int, turns: int}
+        
+    def process_turn_end(self):
+        if self.reflect > 0: self.reflect -= 1
+        if self.light_screen > 0: self.light_screen -= 1
+        if self.aurora_veil > 0: self.aurora_veil -= 1
+        if self.tailwind > 0: self.tailwind -= 1
+        if self.safeguard > 0: self.safeguard -= 1
+    
+    def apply_entry_hazards(self, pokemon) -> List[str]:
+        messages = []
+        if pokemon.is_fainted(): return []
+        
+        if self.stealth_rock:
+            from data_loader import data_loader
+            effectiveness = data_loader.get_type_effectiveness('rock', pokemon.types[0])
+            if len(pokemon.types) > 1:
+                effectiveness *= data_loader.get_type_effectiveness('rock', pokemon.types[1])
+            
+            damage = int(pokemon.max_hp * (0.125 * effectiveness))
+            if damage > 0:
+                pokemon.take_damage(damage)
+                messages.append(f"Pointed stones dug into {pokemon.name}!")
+        
+        # Spikes
+        if self.spikes > 0 and 'flying' not in pokemon.types and not pokemon.has_ability('levitate'):
+            spike_damage = [0, 0.125, 0.1666, 0.25][self.spikes]
+            damage = int(pokemon.max_hp * spike_damage)
+            if damage > 0:
+                pokemon.take_damage(damage)
+                messages.append(f"{pokemon.name} was hurt by the spikes!")
+                
+        # Toxic Spikes
+        if self.toxic_spikes > 0 and 'poison' not in pokemon.types and 'steel' not in pokemon.types and 'flying' not in pokemon.types and not pokemon.has_ability('levitate'):
+            if 'poison' in pokemon.types:
+                self.toxic_spikes = 0
+                messages.append(f"The poison spikes disappeared from around your feet!")
+            else:
+                status = 'poison' if self.toxic_spikes == 1 else 'toxic'
+                msg = pokemon.apply_status(status)
+                if msg: messages.append(msg)
+                
+        # Sticky Web
+        if self.sticky_web and 'flying' not in pokemon.types and not pokemon.has_ability('levitate'):
+            msg = pokemon.modify_stat_stage('speed', -1)
+            if msg: messages.append(f"{pokemon.name} was caught in a sticky web! {msg}")
+            
+        return messages
 
 class Game:
     def __init__(self):
-        self.player_pokemon = None
-        self.opponent_pokemon = None
+        self.player_team: List[Pokemon] = []
+        self.opponent_team: List[Pokemon] = []
+        self.player_side = BattleSide("Player")
+        self.opponent_side = BattleSide("Opponent")
+        self.player_pokemon = None # Active
+        self.opponent_pokemon = None # Active
         self.battle_over = False
         self.weather = 'none'
         self.weather_duration = 0
         self.priority_resolver = PriorityResolver()
         self.ai = BattleAI()
-    def start_battle(self, player_data, opponent_data, player_moves, opponent_moves, player_ability="noability", opponent_ability="noability"):
-        # ... (keep existing setup code)
-        player_sprite = (
-            player_data['sprites'].get('versions', {})
-            .get('generation-v', {})
-            .get('black-white', {})
-            .get('animated', {})
-            .get('back_default') or 
-            player_data['sprites'].get('back_default')
-        )
+    def start_battle(self, player_team_data: List[Dict], opponent_team_data: List[Dict]):
+        self.player_team = []
+        self.opponent_team = []
         
-        opponent_sprite = (
-            opponent_data['sprites'].get('versions', {})
-            .get('generation-v', {})
-            .get('black-white', {})
-            .get('animated', {})
-            .get('front_default') or 
-            opponent_data['sprites'].get('front_default')
-        )
+        for p_data in player_team_data:
+            pokemon = self._create_pokemon_from_data(p_data, is_player=True)
+            self.player_team.append(pokemon)
+            
+        for o_data in opponent_team_data:
+            pokemon = self._create_pokemon_from_data(o_data, is_player=False)
+            self.opponent_team.append(pokemon)
+            
+        # Set actives
+        if self.player_team: self.player_pokemon = self.player_team[0]
+        if self.opponent_team: self.opponent_pokemon = self.opponent_team[0]
         
-        player_types = [t['type']['name'] for t in player_data['types']]
-        opponent_types = [t['type']['name'] for t in opponent_data['types']]
-        
-        self.player_pokemon = Pokemon(
-            player_data['name'], 
-            player_types,
-            player_sprite, 
-            player_data['stats'], 
-            player_moves,
-            ability=player_ability
-        )
-        self.player_pokemon.is_player = True
-        
-        self.opponent_pokemon = Pokemon(
-            opponent_data['name'], 
-            opponent_types,
-            opponent_sprite, 
-            opponent_data['stats'], 
-            opponent_moves,
-            ability=opponent_ability
-        )
-        self.opponent_pokemon.is_player = False
-        
-        # Trigger switch-in effects (abilities like Intimidate)
+        # Initial switch-in effects
         messages = []
-        p_messages = self.player_pokemon.on_switch_in(self.opponent_pokemon)
-        o_messages = self.opponent_pokemon.on_switch_in(self.player_pokemon)
-        
-        all_msgs = p_messages + o_messages
-        for msg in all_msgs:
-            if 'set_weather' in msg:
-                self.weather = msg['set_weather']
-                self.weather_duration = 5
-            messages.append(msg)
+        if self.player_pokemon:
+            messages.extend(self._on_pokemon_switch_in(self.player_pokemon, self.opponent_pokemon, self.player_side))
+        if self.opponent_pokemon:
+            messages.extend(self._on_pokemon_switch_in(self.opponent_pokemon, self.player_pokemon, self.opponent_side))
             
         return messages
 
-    def process_turn(self, move_name):
+    def _create_pokemon_from_data(self, data, is_player):
+        pokemon = Pokemon(
+            data['name'],
+            data.get('types', ['normal']),
+            data.get('sprite_url'),
+            data.get('stats', {}),
+            data.get('moves', []),
+            level=data.get('level', 100),
+            ability=data.get('ability', 'noability'),
+            item=data.get('item', ''),
+            evs=data.get('evs', {}),
+            ivs=data.get('ivs', {}),
+            nature=data.get('nature', 'Hardy')
+        )
+        pokemon.is_player = is_player
+        return pokemon
+
+    def _on_pokemon_switch_in(self, pokemon, opponent, side) -> List[Dict]:
+        events = []
+        hazard_msgs = side.apply_entry_hazards(pokemon)
+        for msg in hazard_msgs:
+            events.append({
+                'type': 'status',
+                'message': msg,
+                'target': 'player' if pokemon.is_player else 'opponent',
+                'pokemon_hp': pokemon.current_hp
+            })
+            
+        if pokemon.is_fainted():
+            events.append({
+                'type': 'faint',
+                'pokemon_name': pokemon.name,
+                'is_player': pokemon.is_player
+            })
+            return events
+            
+        ability_msgs = pokemon.on_switch_in(opponent)
+        for msg in ability_msgs:
+            if 'set_weather' in msg:
+                self.weather = msg['set_weather']
+                self.weather_duration = 5
+            is_p = pokemon.is_player
+            normalized_msg = {
+                **msg,
+                'target': 'player' if is_p else 'opponent',
+                'is_player': is_p,
+                'player_hp': self.player_pokemon.current_hp,
+                'opponent_hp': self.opponent_pokemon.current_hp,
+                'timestamp': len(events)
+            }
+            events.append(normalized_msg)
+            
+        return events
+
+    def check_battle_over(self) -> Tuple[bool, Optional[str]]:
+        """Returns (is_over, winner_name)."""
+        player_lost = all(p.is_fainted() for p in self.player_team)
+        opponent_lost = all(p.is_fainted() for p in self.opponent_team)
+        
+        if player_lost:
+            return True, "Opponent"
+        if opponent_lost:
+            return True, "Player"
+        return False, None
+
+    def switch_pokemon(self, is_player: bool, index: int) -> List[Dict]:
+        team = self.player_team if is_player else self.opponent_team
+        side = self.player_side if is_player else self.opponent_side
+        
+        if index < 0 or index >= len(team):
+            return []
+            
+        new_pokemon = team[index]
+        if new_pokemon.is_fainted() or new_pokemon == (self.player_pokemon if is_player else self.opponent_pokemon):
+            return []
+            
+        # Switch out current
+        old_pokemon = self.player_pokemon if is_player else self.opponent_pokemon
+        if old_pokemon:
+            old_pokemon.volatile_statuses = set() # Reset volatiles on switch out
+            
+        if is_player:
+            self.player_pokemon = new_pokemon
+        else:
+            self.opponent_pokemon = new_pokemon
+            
+        events = []
+        # 1. Recall event
+        if old_pokemon and not old_pokemon.is_fainted():
+            events.append({
+                'type': 'recall',
+                'message': f"Come back, {old_pokemon.name}!",
+                'is_player_switch': is_player,
+                'is_opponent_switch': not is_player,
+                'recalled_pokemon_name': old_pokemon.name
+            })
+        elif old_pokemon and old_pokemon.is_fainted():
+            # If fainted, we still want a 'recall' event for the frontend animation to 'exit' the fainted mon
+            # but without the "Come back" message if we want to avoid redundancy
+            events.append({
+                'type': 'recall',
+                'message': None, # No message for fainted mon
+                'is_player_switch': is_player,
+                'is_opponent_switch': not is_player,
+                'recalled_pokemon_name': old_pokemon.name
+            })
+        # 2. Send-out event - include current HP BEFORE opponent's move hits
+        events.append({
+            'type': 'status',
+            'message': f"Go! {new_pokemon.name}!",
+            'is_player_switch': is_player,
+            'is_opponent_switch': not is_player,
+            'new_pokemon_name': new_pokemon.name,
+            'player_hp': self.player_pokemon.current_hp,
+            'opponent_hp': self.opponent_pokemon.current_hp,
+        })
+        
+        # Apply switch-in effects
+        opponent = self.opponent_pokemon if is_player else self.player_pokemon
+        switch_in_events = self._on_pokemon_switch_in(new_pokemon, opponent, side)
+        events.extend(switch_in_events)
+        
+        return events
+
+    def process_turn(self, move_name=None, switch_index=None):
         # Reset turn-based volatile statuses
         STALLING_STATUSES = ['protect', 'spikyshield', 'banefulbunker', 'kingsshield', 'obstruct', 'silktrap', 'burningbulwark', 'endure']
         if self.player_pokemon:
@@ -123,57 +281,61 @@ class Game:
                 })
         
         if self.player_pokemon.current_hp <= 0:
-            # Trigger fainted abilities (e.g. Aftermath)
-            faint_events = self.player_pokemon.on_faint(self.opponent_pokemon)
-            for event in faint_events:
-                turn_info['battle_events'].append({
-                    'type': 'ability',
-                    'ability_name': event.get('ability_name'),
-                    'pokemon_name': event.get('pokemon_name'),
-                    'message': event.get('message'),
-                    'target': 'player',
-                    'timestamp': len(turn_info['battle_events'])
-                })
+            if switch_index is not None:
+                switch_events = self.switch_pokemon(True, switch_index)
+                turn_info['battle_events'].extend(switch_events)
+                return turn_info
             
-            self.battle_over = True
-            turn_info['battle_events'].append({
-                'type': 'faint',
-                'pokemon_name': self.player_pokemon.name,
-                'is_player': True,
-                'timestamp': len(turn_info['battle_events'])
-            })
-            return turn_info
-        elif self.opponent_pokemon.current_hp <= 0:
-            # Trigger fainted abilities
-            faint_events = self.opponent_pokemon.on_faint(self.player_pokemon)
-            for event in faint_events:
+            is_over, winner = self.check_battle_over()
+            if is_over:
+                self.battle_over = True
+                turn_info['winner'] = winner
+                if not any(e.get('type') == 'faint' and e.get('pokemon_name') == self.player_pokemon.name for e in turn_info['battle_events']):
+                    turn_info['battle_events'].append({
+                        'type': 'faint', 'pokemon_name': self.player_pokemon.name, 'is_player': True, 'timestamp': len(turn_info['battle_events'])
+                    })
+                return turn_info
+            
+            if not any(e.get('type') == 'faint' and e.get('pokemon_name') == self.player_pokemon.name for e in turn_info['battle_events']):
+                faint_events = self.player_pokemon.on_faint(self.opponent_pokemon)
+                for event in faint_events:
+                    turn_info['battle_events'].append({
+                        'type': 'ability', 'ability_name': event.get('ability_name'), 'pokemon_name': event.get('pokemon_name'),
+                        'message': event.get('message'), 'target': 'player', 'timestamp': len(turn_info['battle_events'])
+                    })
                 turn_info['battle_events'].append({
-                    'type': 'ability',
-                    'ability_name': event.get('ability_name'),
-                    'pokemon_name': event.get('pokemon_name'),
-                    'message': event.get('message'),
-                    'target': 'opponent',
-                    'timestamp': len(turn_info['battle_events'])
+                    'type': 'faint', 'pokemon_name': self.player_pokemon.name, 'is_player': True, 'timestamp': len(turn_info['battle_events'])
                 })
-
-            self.battle_over = True
-            turn_info['battle_events'].append({
-                'type': 'faint',
-                'pokemon_name': self.opponent_pokemon.name,
-                'is_player': False,
-                'timestamp': len(turn_info['battle_events'])
-            })
             return turn_info
         
-        # Get player's selected move
-        player_move = self.player_pokemon.moves.get(move_name)
-        if not player_move or player_move.pp <= 0:
-            return turn_info  # Invalid move or no PP left
+        if self.opponent_pokemon.current_hp <= 0:
+            is_over, winner = self.check_battle_over()
+            if is_over:
+                self.battle_over = True
+                turn_info['winner'] = winner
+                turn_info['battle_events'].append({
+                    'type': 'faint',
+                    'pokemon_name': self.opponent_pokemon.name,
+                    'is_player': False,
+                    'timestamp': len(turn_info['battle_events'])
+                })
+                return turn_info
+            else:
+                # AI automatically switches
+                new_idx = self.ai.select_switch(self.opponent_team, self.player_pokemon)
+                if new_idx is not None:
+                    switch_events = self.switch_pokemon(False, new_idx)
+                    turn_info['battle_events'].extend(switch_events)
+                else:
+                    pass
+        
+        if switch_index is None:
+            player_move = self.player_pokemon.moves.get(move_name)
+            if not player_move or player_move.pp <= 0:
+                return turn_info  # Invalid move or no PP left
                 
-        # Get opponent's move using AI
         opponent_move_name, opponent_move = self.ai.select_move(self.opponent_pokemon, self.player_pokemon, self.weather)
         
-        # Fallback if AI somehow fails or has no PP
         if not opponent_move:
             # Try to find any move with PP
             for m_name, m in self.opponent_pokemon.moves.items():
@@ -187,7 +349,6 @@ class Game:
 
         turn_info['opponent_move'] = opponent_move_name
         
-        # Check if opponent has PP left
         if opponent_move and opponent_move.pp <= 0:
             # If opponent has no PP, they struggle
             opponent_move = None
@@ -198,22 +359,27 @@ class Game:
                 'timestamp': len(turn_info['battle_events'])
             })
         
-        # Create battle actions for priority resolution
-        player_action = create_battle_action(
-            self.player_pokemon, 
-            player_move, 
-            self.opponent_pokemon, 
-            self.priority_resolver
-        )
+        player_action = None
+        if switch_index is not None:
+            from move import Move
+            switch_move = Move("Switch")
+            switch_move.priority = 6
+            player_action = create_battle_action(self.player_pokemon, switch_move, self.opponent_pokemon, self.priority_resolver)
+            player_action.is_switch = True
+            player_action.switch_index = switch_index
+        elif move_name:
+            player_move = self.player_pokemon.moves.get(move_name)
+            if player_move and player_move.pp > 0:
+                player_action = create_battle_action(self.player_pokemon, player_move, self.opponent_pokemon, self.priority_resolver)
+                player_action.is_switch = False
+
+        if not player_action:
+            return turn_info # Should not happen with valid input
+            
+        opponent_move_name, opponent_move = self.ai.select_move(self.opponent_pokemon, self.player_pokemon, self.weather)
+        opponent_action = create_battle_action(self.opponent_pokemon, opponent_move, self.player_pokemon, self.priority_resolver) if opponent_move else None
+        if opponent_action: opponent_action.is_switch = False
         
-        opponent_action = create_battle_action(
-            self.opponent_pokemon, 
-            opponent_move, 
-            self.player_pokemon, 
-            self.priority_resolver
-        ) if opponent_move else None
-        
-        # Resolve turn order using comprehensive priority system
         if opponent_action:
             action_order = self.priority_resolver.resolve_turn_order(player_action, opponent_action)
             player_first = action_order[0].pokemon == self.player_pokemon
@@ -237,6 +403,8 @@ class Game:
         
         def execute_move(attacker, defender, move, move_name, is_player_attacking, action=None):
             if not move: return False
+            if not defender or defender.current_hp <= 0:
+                return False
             if not getattr(move, 'stalling_move', False): attacker.consecutive_stalling_moves = 0
             attacker.last_move_name = move_name
             
@@ -342,6 +510,7 @@ class Game:
                 'type': 'move', 'attacker_name': attacker.name, 'defender_name': defender.name, 'move': move_name,
                 'damage': actual_dmg, 'substitute_damage': sub_dmg, 'is_player': is_player_attacking,
                 'attacker_hp': attacker.current_hp, 'defender_hp': defender.current_hp,
+                'player_hp': self.player_pokemon.current_hp, 'opponent_hp': self.opponent_pokemon.current_hp,
                 'attacker_max_hp': attacker.max_hp, 'defender_max_hp': defender.max_hp,
                 'attacker_status': attacker.get_status_display(), 'defender_status': defender.get_status_display(),
                 'attacker_substitute_hp': attacker.substitute_hp, 'defender_substitute_hp': defender.substitute_hp,
@@ -423,22 +592,43 @@ class Game:
             return defender.current_hp <= 0
         
         try:
-            fainted_mon = None
             for action in action_order:
-                if self.battle_over or action.pokemon.is_fainted(): continue
+                if self.battle_over: continue
+                # CRITICAL: Do NOT skip Switch actions if the Pokemon is fainted.
+                # A fainted Pokemon MUST be able to switch out to send in a replacement.
+                if action.pokemon.is_fainted() and not getattr(action, 'is_switch', False):
+                    continue
                 is_p = action.pokemon == self.player_pokemon
+                
+                # Handle Switch Actions
+                if getattr(action, 'is_switch', False):
+                    switch_evs = self.switch_pokemon(is_p, action.switch_index)
+                    turn_info['battle_events'].extend(switch_evs)
+                    # CRITICAL: Update action targets for remaining actions so they hit the new pokemon
+                    new_active = self.player_pokemon if is_p else self.opponent_pokemon
+                    for remaining_action in action_order:
+                        if remaining_action != action and remaining_action.target == action.pokemon:
+                            remaining_action.target = new_active
+                    continue
+
+                # Handle Move Actions
                 mv = action.move
                 mv_name = move_name if is_p else opponent_move_name
                 
                 if mv and execute_move(action.pokemon, action.target, mv, mv_name, is_p, action):
-                    fainted_mon = (action.target, action.target == self.player_pokemon)
+                    # Target fainted
+                    target = action.target
+                    is_target_player = (target == self.player_pokemon)
                     attacker = action.pokemon
-                    for event in attacker.on_victory(action.target):
+                    
+                    # Victory effects
+                    for event in attacker.on_victory(target):
                         turn_info['battle_events'].append({
                             'type': 'ability', 'ability_name': event.get('ability_name'), 'pokemon_name': event.get('pokemon_name'),
                             'message': event.get('message'), 'target': 'player' if is_p else 'opponent', 'timestamp': len(turn_info['battle_events'])
                         })
                     
+                    # Global faint triggers
                     for p in [self.player_pokemon, self.opponent_pokemon]:
                         if p and p.current_hp > 0:
                             for event in p.on_any_faint():
@@ -446,45 +636,65 @@ class Game:
                                     'type': 'ability', 'ability_name': event.get('ability_name'), 'pokemon_name': event.get('pokemon_name'),
                                     'message': event.get('message'), 'target': 'player' if p == self.player_pokemon else 'opponent', 'timestamp': len(turn_info['battle_events'])
                                 })
-                    self.battle_over = True
+                    
+                    # Check if team is fully defeated
+                    is_over, winner = self.check_battle_over()
+                    if is_over:
+                        self.battle_over = True
+                        turn_info['winner'] = winner
             
-            if fainted_mon:
-                mon, is_p = fainted_mon
-                turn_info['battle_events'].append({'type': 'faint', 'pokemon_name': mon.name, 'is_player': is_p, 'timestamp': len(turn_info['battle_events'])})
+                    turn_info['battle_events'].append({
+                        'type': 'faint', 'pokemon_name': target.name, 'is_player': is_target_player, 
+                        'timestamp': len(turn_info['battle_events']),
+                        'player_hp': self.player_pokemon.current_hp,
+                        'opponent_hp': self.opponent_pokemon.current_hp
+                    })
+
+                    # If it was the opponent who fainted and battle is NOT over, switch them in
+                    if not is_target_player and not self.battle_over:
+                        new_idx = self.ai.select_switch(self.opponent_team, self.player_pokemon)
+                        if new_idx is not None:
+                            switch_events = self.switch_pokemon(False, new_idx)
+                            turn_info['battle_events'].extend(switch_events)
+                    
+                    # End turn processing after a faint
+                    break
         except Exception as e:
             print(f"Error during turn: {e}")
         
         # Process turn-end effects for both Pokemon
         if not self.battle_over:
-            player_end_messages = self.player_pokemon.process_turn_end_effects()
-            for msg in player_end_messages:
-                if msg:
-                    turn_info['battle_events'].append({
-                        'type': 'status',
-                        'message': msg,
-                        'target': 'player',
-                        'pokemon_hp': self.player_pokemon.current_hp,
-                        'player_hp': self.player_pokemon.current_hp,
-                        'opponent_hp': self.opponent_pokemon.current_hp,
-                        'player_max_hp': self.player_pokemon.max_hp,
-                        'opponent_max_hp': self.opponent_pokemon.max_hp,
-                        'status_effects': self.player_pokemon.get_status_display(),
-                        'timestamp': len(turn_info['battle_events'])
-                    })
+            if self.player_pokemon.current_hp > 0:
+                player_end_messages = self.player_pokemon.process_turn_end_effects()
+                for msg in player_end_messages:
+                    if msg:
+                        turn_info['battle_events'].append({
+                            'type': 'status',
+                            'message': msg,
+                            'target': 'player',
+                            'pokemon_hp': self.player_pokemon.current_hp,
+                            'player_hp': self.player_pokemon.current_hp,
+                            'opponent_hp': self.opponent_pokemon.current_hp,
+                            'player_max_hp': self.player_pokemon.max_hp,
+                            'opponent_max_hp': self.opponent_pokemon.max_hp,
+                            'status_effects': self.player_pokemon.get_status_display(),
+                            'timestamp': len(turn_info['battle_events'])
+                        })
             
-            opponent_end_messages = self.opponent_pokemon.process_turn_end_effects()
-            for msg in opponent_end_messages:
-                if msg:
-                    turn_info['battle_events'].append({
-                        'type': 'status',
-                        'message': msg,
-                        'target': 'opponent',
-                        'pokemon_hp': self.opponent_pokemon.current_hp,
-                        'timestamp': len(turn_info['battle_events'])
-                    })
+            if self.opponent_pokemon.current_hp > 0:
+                opponent_end_messages = self.opponent_pokemon.process_turn_end_effects()
+                for msg in opponent_end_messages:
+                    if msg:
+                        turn_info['battle_events'].append({
+                            'type': 'status',
+                            'message': msg,
+                            'target': 'opponent',
+                            'pokemon_hp': self.opponent_pokemon.current_hp,
+                            'timestamp': len(turn_info['battle_events'])
+                        })
             
             # Item turn-end effects (e.g. Leftovers)
-            if self.player_pokemon.item_obj:
+            if self.player_pokemon.item_obj and self.player_pokemon.current_hp > 0:
                 player_item_msgs = self.player_pokemon.item_obj.on_residual(self.player_pokemon)
                 for msg in player_item_msgs:
                     turn_info['battle_events'].append({
@@ -500,7 +710,7 @@ class Game:
                         'timestamp': len(turn_info['battle_events'])
                     })
             
-            if self.opponent_pokemon.item_obj:
+            if self.opponent_pokemon.item_obj and self.opponent_pokemon.current_hp > 0:
                 opponent_item_msgs = self.opponent_pokemon.item_obj.on_residual(self.opponent_pokemon)
                 for msg in opponent_item_msgs:
                     turn_info['battle_events'].append({
@@ -513,17 +723,31 @@ class Game:
                     })
             
             # Check if either Pokemon fainted from turn-end effects
-            if self.player_pokemon.current_hp <= 0 and not self.battle_over:
-                self.battle_over = True
+            if self.player_pokemon.current_hp <= 0 and not self.battle_over and not any(e.get('type') == 'faint' and e.get('is_player') for e in turn_info['battle_events']):
+                is_over, winner = self.check_battle_over()
+                if is_over:
+                    self.battle_over = True
+                    turn_info['winner'] = winner
+                
                 turn_info['battle_events'].append({
                     'type': 'faint',
                     'pokemon_name': self.player_pokemon.name,
                     'is_player': True,
                     'timestamp': len(turn_info['battle_events'])
                 })
-                print(f"DEBUG: {self.player_pokemon.name} fainted from status effects!")
-            elif self.opponent_pokemon.current_hp <= 0 and not self.battle_over:
-                self.battle_over = True
+            
+            if self.opponent_pokemon.current_hp <= 0 and not self.battle_over:
+                is_over, winner = self.check_battle_over()
+                if is_over:
+                    self.battle_over = True
+                    turn_info['winner'] = winner
+                else:
+                    # AI automatically switches
+                    new_idx = self.ai.select_switch(self.opponent_team, self.player_pokemon)
+                    if new_idx is not None:
+                        switch_events = self.switch_pokemon(False, new_idx)
+                        turn_info['battle_events'].extend(switch_events)
+
                 turn_info['battle_events'].append({
                     'type': 'faint',
                     'pokemon_name': self.opponent_pokemon.name,
@@ -563,7 +787,17 @@ class Game:
                                     'timestamp': len(turn_info['battle_events'])
                                 })
                                 if p.current_hp <= 0:
-                                    self.battle_over = True
+                                    is_over, winner = self.check_battle_over()
+                                    if is_over:
+                                        self.battle_over = True
+                                        turn_info['winner'] = winner
+                                    elif p == self.opponent_pokemon:
+                                        # AI automatically switches
+                                        new_idx = self.ai.select_switch(self.opponent_team, self.player_pokemon)
+                                        if new_idx is not None:
+                                            switch_events = self.switch_pokemon(False, new_idx)
+                                            turn_info['battle_events'].extend(switch_events)
+
                                     turn_info['battle_events'].append({
                                         'type': 'faint', 'pokemon_name': p.name, 
                                         'is_player': p == self.player_pokemon, 'timestamp': len(turn_info['battle_events'])
@@ -695,8 +929,11 @@ class Game:
         return self.player_pokemon.is_fainted() or self.opponent_pokemon.is_fainted()
 
     def get_battle_result(self):
-        if self.player_pokemon.is_fainted():
-            return f"Your {self.player_pokemon.name.capitalize()} fainted! Opponent's {self.opponent_pokemon.name.capitalize()} wins!"
-        elif self.opponent_pokemon.is_fainted():
-            return f"Opponent's {self.opponent_pokemon.name.capitalize()} fainted! Your {self.player_pokemon.name.capitalize()} wins!"
-        return "The battle is ongoing."
+        player_lost = all(p.is_fainted() for p in self.player_team)
+        opponent_lost = all(p.is_fainted() for p in self.opponent_team)
+        
+        if player_lost:
+            return "Opponent wins the battle!"
+        elif opponent_lost:
+            return "Player wins the battle!"
+        return "Battle ongoing"

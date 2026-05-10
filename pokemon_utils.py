@@ -213,7 +213,20 @@ POKEAPI_NAME_MAP = {
     'eiscuenoice': 'eiscue-noice',
     'morpekohangry': 'morpeko-hangry',
     'basculinwhitestriped': 'basculin-white-striped',
-    'basculinbluestriped': 'basculin-blue-striped'
+    'basculinbluestriped': 'basculin-blue-striped',
+    'gastrodon': 'gastrodon',
+    'gastrodoneast': 'gastrodon-east',
+    'gastrodonwest': 'gastrodon-west',
+    'jellicent': 'jellicent-male',
+    'jellicentmale': 'jellicent-male',
+    'jellicentfemale': 'jellicent-female',
+    'basculin': 'basculin-red-striped',
+    'basculinredstriped': 'basculin-red-striped',
+    'basculinbluestriped': 'basculin-blue-striped',
+    'basculinwhitestriped': 'basculin-white-striped',
+    'zygarde10': 'zygarde-10',
+    'zygarde10%': 'zygarde-10',
+    'zygardecomplete': 'zygarde-complete'
 }
 
 # Mapping of Pokemon forms to their mandatory items

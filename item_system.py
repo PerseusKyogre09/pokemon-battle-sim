@@ -48,7 +48,7 @@ class Item:
             final_damage = int(final_damage * 1.5)
         elif self.id == 'lifeorb':
             final_damage = int(final_damage * 1.3)
-        elif self.id == 'expertbelt' and move.effectiveness > 1:
+        elif self.id == 'expertbelt' and getattr(move, 'effectiveness', 1.0) > 1:
             final_damage = int(final_damage * 1.2)
         elif self.id == 'muscleband' and move.category == 'physical':
             final_damage = int(final_damage * 1.1)
@@ -90,7 +90,7 @@ class Item:
             multiplier = self._parse_chain_modify(logic)
             if multiplier != 1.0:
                 # Check for super-effective reduction (Solid Rock pattern)
-                if "typeMod > 0" in logic and move.effectiveness > 1:
+                if "typeMod > 0" in logic and getattr(move, 'effectiveness', 1.0) > 1:
                     final_damage = int(final_damage * multiplier)
                 else:
                     final_damage = int(final_damage * multiplier)

@@ -87,6 +87,9 @@ class Pokemon:
         if '\'' in name: return '\''.join(p.capitalize() for p in name.split('\''))
         return name.capitalize() if name.islower() or name.isupper() else name
 
+    def is_fainted(self):
+        return self.current_hp <= 0
+
     def take_damage(self, damage, from_move=False):
         if damage >= self.current_hp:
             if 'endure' in self.volatile_statuses:
@@ -201,6 +204,7 @@ class Pokemon:
                 for t, e in self.status_effects.items()]
     
     def process_turn_start_effects(self) -> list:
+        if self.current_hp <= 0: return []
         msgs = []
         for e in list(self.status_effects.values()):
             msgs.extend(e.process_turn_start(self))
@@ -208,6 +212,7 @@ class Pokemon:
         return msgs
     
     def process_turn_end_effects(self) -> list:
+        if self.current_hp <= 0: return []
         msgs = []
         for e in list(self.status_effects.values()):
             msgs.extend(e.process_turn_end(self))

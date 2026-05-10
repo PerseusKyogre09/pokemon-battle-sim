@@ -37,15 +37,16 @@ class Move:
         self.stat_modifications, self.targets_self = self._parse_stat_modifications()
         self.is_recoil_move, self.recoil_ratio = self._parse_recoil_data()
         
-        self.fixed_damage = self.data.get('damage')
-        self.self_switch = self.data.get('selfSwitch')
-        self.volatile_status = self.data.get('volatileStatus')
-        self.stalling_move = self.data.get('stallingMove', False)
-        self.target = self.data.get('target', 'normal')
-        self.flags = self.data.get('flags', {})
-        self.ohko = self.data.get('ohko', False)
-        self.defensive_category = self.data.get('defensiveCategory')
-        self.use_target_offensive = self.data.get('useTargetOffensive', False)
+        data_dict = self.data or {}
+        self.fixed_damage = data_dict.get('damage')
+        self.self_switch = data_dict.get('selfSwitch')
+        self.volatile_status = data_dict.get('volatileStatus')
+        self.stalling_move = data_dict.get('stallingMove', False)
+        self.target = data_dict.get('target', 'normal')
+        self.flags = data_dict.get('flags', {})
+        self.ohko = data_dict.get('ohko', False)
+        self.defensive_category = data_dict.get('defensiveCategory')
+        self.use_target_offensive = data_dict.get('useTargetOffensive', False)
 
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""

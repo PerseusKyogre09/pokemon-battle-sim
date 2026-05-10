@@ -19,6 +19,9 @@ export default function Home() {
   const [opponentSearch, setOpponentSearch] = useState('');
   const [isRandomOpponent, setIsRandomOpponent] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [battleMode, setBattleMode] = useState<'1v1' | '6v6'>('1v1');
+  const [previewTeam, setPreviewTeam] = useState<any[]>([]);
+  const [fetchingTeam, setFetchingTeam] = useState(false);
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,12 +146,36 @@ export default function Home() {
     }
   };
 
+  const fetchRandomTeam = async () => {
+    setFetchingTeam(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/random-team`);
+      const data = await res.json();
+      if (data.success) setPreviewTeam(data.team);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFetchingTeam(false);
+    }
+  };
+
+  useEffect(() => {
+    if (battleMode === '6v6' && previewTeam.length === 0) {
+      fetchRandomTeam();
+    }
+  }, [battleMode, previewTeam.length]);
+
   const handleStartBattle = async () => {
-    if (!selectedPokemon) return;
+    if (battleMode === '1v1' && !selectedPokemon) return;
     setLoading(true);
     try {
       const opponentParam = isRandomOpponent ? 'random' : selectedOpponent;
-      const battleState = await startBattle(selectedPokemon.name, availableSets[currentSetIndex], opponentParam);
+      let battleState;
+      if (battleMode === '6v6') {
+        battleState = await startBattle('', null, 'random', previewTeam);
+      } else {
+        battleState = await startBattle(selectedPokemon.name, availableSets[currentSetIndex], opponentParam);
+      }
       localStorage.setItem('initialBattleState', JSON.stringify(battleState));
       router.push('/battle');
     } catch (err) {
@@ -196,62 +223,149 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="w-full max-w-lg relative mb-20" ref={searchRef}>
-          <div className="relative group gba-panel-shadow">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="ENTER POKÉMON NAME..."
-              className="w-full px-8 py-6 bg-gray-900/80 border-4 border-[#475569] text-xs md:text-sm focus:outline-none focus:border-yellow-500 transition-all placeholder:text-gray-700 font-retro tracking-widest text-white"
-            />
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center space-x-4">
-              {loading ? (
-                <img src="/images/pokeball.png" alt="Loading" className="w-8 h-8 animate-spin-slow" />
-              ) : (
-                <img src="/images/pokeball.gif" alt="" className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
-              )}
-            </div>
+        <div className="w-full max-w-2xl relative mb-20" ref={searchRef}>
+          {/* Battle Mode Toggle - RESTYLED FOR VISIBILITY */}
+          <div className="flex bg-gray-900/90 rounded-2xl p-1.5 border-4 border-gray-800 mb-12 mx-auto w-fit shadow-2xl relative z-50 animate-in fade-in slide-in-from-top-4 duration-700">
+            <button
+              onClick={() => setBattleMode('1v1')}
+              className={`px-8 py-3 text-[9px] md:text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 flex items-center space-x-3 ${battleMode === '1v1' ? 'bg-yellow-500 text-gray-900 shadow-[0_0_20px_rgba(234,179,8,0.4)] font-bold' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+            >
+              <div className={`w-2 h-2 rounded-full ${battleMode === '1v1' ? 'bg-gray-900' : 'bg-gray-700'}`} />
+              <span>1v1 Battle</span>
+            </button>
+            <button
+              onClick={() => setBattleMode('6v6')}
+              className={`px-8 py-3 text-[9px] md:text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 flex items-center space-x-3 ${battleMode === '6v6' ? 'bg-yellow-500 text-gray-900 shadow-[0_0_20px_rgba(234,179,8,0.4)] font-bold' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+            >
+              <div className={`w-2 h-2 rounded-full ${battleMode === '6v6' ? 'bg-gray-900' : 'bg-gray-700'}`} />
+              <span>6v6 Random</span>
+            </button>
           </div>
 
-          {(suggestions.length > 0 || isSearching) && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border-4 border-gray-800 overflow-hidden shadow-2xl z-40 animate-in fade-in slide-in-from-top-2">
-              {isSearching ? (
-                <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
-                  Searching...
+          {battleMode === '1v1' ? (
+            <div className="max-w-lg mx-auto">
+              <div className="relative group gba-panel-shadow">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="ENTER POKÉMON NAME..."
+                  className="w-full px-8 py-6 bg-gray-900/80 border-4 border-[#475569] text-xs md:text-sm focus:outline-none focus:border-yellow-500 transition-all placeholder:text-gray-700 font-retro tracking-widest text-white"
+                />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center space-x-4">
+                  {loading ? (
+                    <img src="/images/pokeball.png" alt="Loading" className="w-8 h-8 animate-spin-slow" />
+                  ) : (
+                    <img src="/images/pokeball.gif" alt="" className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  )}
                 </div>
-              ) : suggestions.length > 0 ? (
-                suggestions.map((p) => (
-                  <button
-                    key={p.name}
-                    onClick={() => selectPokemon(p.name)}
-                    className="w-full text-left px-4 py-3 hover:bg-yellow-500 hover:text-gray-900 transition-colors capitalize font-retro text-[9px] border-b-2 border-gray-800 last:border-0 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-bold text-[10px] mb-0.5">{p.display_name || p.name}</div>
-                        <div className="text-gray-400 group-hover:text-gray-700 text-[8px] space-x-2">
-                          <span>Ability: {p.ability || 'Unknown'}</span>
-                        </div>
-                        {p.moveset && (
-                          <div className="text-gray-500 group-hover:text-gray-700 text-[8px] mt-1 truncate">
-                            Moves: {p.moveset.join(', ')}
-                          </div>
-                        )}
-                      </div>
+              </div>
+
+              {(suggestions.length > 0 || isSearching) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border-4 border-gray-800 overflow-hidden shadow-2xl z-40 animate-in fade-in slide-in-from-top-2">
+                  {isSearching ? (
+                    <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
+                      Searching...
                     </div>
-                  </button>
-                ))
-              ) : (
-                <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
-                  No battle-ready Pok&eacute;mon found
+                  ) : suggestions.length > 0 ? (
+                    suggestions.map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => selectPokemon(p.name)}
+                        className="w-full text-left px-4 py-3 hover:bg-yellow-500 hover:text-gray-900 transition-colors capitalize font-retro text-[9px] border-b-2 border-gray-800 last:border-0 group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-bold text-[10px] mb-0.5">{p.display_name || p.name}</div>
+                            <div className="text-gray-400 group-hover:text-gray-700 text-[8px] space-x-2">
+                              <span>Ability: {p.ability || 'Unknown'}</span>
+                            </div>
+                            {p.moveset && (
+                              <div className="text-gray-500 group-hover:text-gray-700 text-[8px] mt-1 truncate">
+                                Moves: {p.moveset.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-6 py-4 text-center text-gray-400 text-xs font-retro uppercase">
+                      No battle-ready Pok&eacute;mon found
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-gray-900/50 backdrop-blur-md p-8 md:p-10 rounded-[2.5rem] border-4 border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] mb-8 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+                  <div className="text-left">
+                    <h3 className="text-2xl md:text-4xl font-bold text-white mb-2 uppercase tracking-[0.1em]">6v6 RANDOMIZED</h3>
+                    <p className="text-gray-400 text-[9px] md:text-[10px] uppercase tracking-[0.3em] leading-relaxed opacity-80">
+                      Deploy a procedurally generated team against an unpredictable adversary.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={fetchRandomTeam}
+                    disabled={fetchingTeam}
+                    className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-[8px] uppercase tracking-widest transition-all flex items-center space-x-2"
+                  >
+                    <svg className={`w-3 h-3 ${fetchingTeam ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>{fetchingTeam ? 'Shuffling...' : 'Reshuffle Team'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 mb-4">
+                  {fetchingTeam ? (
+                    Array(6).fill(0).map((_, i) => (
+                      <div key={i} className="aspect-square bg-white/5 rounded-2xl border-2 border-dashed border-white/10 animate-pulse flex items-center justify-center">
+                         <div className="w-8 h-8 bg-white/5 rounded-full" />
+                      </div>
+                    ))
+                  ) : (
+                    previewTeam.map((p, i) => (
+                      <div key={i} className="bg-black/40 rounded-2xl border-2 border-white/5 p-2 hover:border-yellow-500/30 transition-all group/mon">
+                        <div className="aspect-square mb-2 flex items-center justify-center relative">
+                          <img src={p.sprite_url} alt={p.name} className="w-12 h-12 md:w-16 md:h-16 object-contain group-hover/mon:scale-110 transition-transform" />
+                        </div>
+                        <div className="text-[7px] md:text-[8px] font-bold uppercase truncate text-gray-400 group-hover/mon:text-yellow-500">{p.name}</div>
+                        <div className="flex gap-1 mt-1 justify-center">
+                           {p.types.map((t: string) => (
+                             <div key={t} className={`w-1 h-1 rounded-full type-${t}`} />
+                           ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              
+              <button
+                onClick={handleStartBattle}
+                disabled={loading || fetchingTeam}
+                className="w-full max-w-lg mx-auto py-6 md:py-8 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 text-gray-900 font-retro text-xs md:text-base border-4 border-yellow-600 transition-all shadow-[0_0_40px_rgba(234,179,8,0.2)] hover:shadow-[0_0_60px_rgba(234,179,8,0.4)] active:scale-[0.98] flex items-center justify-center space-x-6 group"
+                style={{ clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)' }}
+              >
+                <span className="tracking-[0.3em] font-bold group-hover:scale-110 transition-transform">{loading ? 'SYNCING ARENA...' : 'LAUNCH 6V6 BATTLE'}</span>
+                {!loading && (
+                  <div className="relative">
+                    <svg className="w-6 h-6 md:w-8 md:h-8 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </button>
             </div>
           )}
         </div>
 
-        {selectedPokemon && (
+        {selectedPokemon && battleMode === '1v1' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-16 w-full max-w-[95vw] 2xl:max-w-[1600px] animate-in fade-in zoom-in-95 duration-500">
             {/* LEFT COLUMN: PLAYER SETUP */}
             <div className="flex flex-col space-y-6 md:space-y-8">

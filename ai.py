@@ -37,6 +37,30 @@ class BattleAI:
         selected_move_name, selected_move, _ = random.choice(best_moves)
         return selected_move_name, selected_move
 
+    def select_switch(self, team, player_pokemon):
+        """Select a pokemon to switch in from the team."""
+        available = [p for p in team if not p.is_fainted()]
+        if not available:
+            return None
+        
+        # Simple heuristic: pick the one with the best type advantage or just random
+        # For now, let's just pick the one with the best effectiveness against player_pokemon
+        best_score = -1
+        best_mon = None
+        
+        for p in available:
+            score = 0
+            # Check type advantage
+            for p_type in p.types:
+                for player_type in player_pokemon.types:
+                    score += data_loader.get_type_effectiveness(p_type, player_type)
+            
+            if score > best_score:
+                best_score = score
+                best_mon = p
+                
+        return team.index(best_mon) if best_mon else None
+
     def score_move(self, move, attacker, defender, weather):
         score = 0
         
