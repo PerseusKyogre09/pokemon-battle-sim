@@ -456,7 +456,7 @@
     "type": "Water"
   },
   "bubblebeam": {
-    "template": "beam",
+    "template": "projectile",
     "hits": 1,
     "type": "Water"
   },
@@ -2058,7 +2058,7 @@
     "type": "Water"
   },
   "hydropump": {
-    "template": "beam",
+    "template": "projectile",
     "hits": 1,
     "type": "Water"
   },

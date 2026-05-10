@@ -51,6 +51,7 @@ export default function BattlePage() {
   
   const playerSpriteRef = useRef<HTMLDivElement>(null);
   const opponentSpriteRef = useRef<HTMLDivElement>(null);
+  const arenaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedState = localStorage.getItem('initialBattleState');
@@ -217,18 +218,21 @@ export default function BattlePage() {
           const attackerEl = isAttackerPlayer ? playerSpriteRef.current : opponentSpriteRef.current;
           const defenderEl = isAttackerPlayer ? opponentSpriteRef.current : playerSpriteRef.current;
 
-          if (attackerEl && defenderEl) {
-            const anim = resolveMoveAnimation(eventObj.move, '', eventObj.category || 'physical');
+          const isMiss = eventObj.status_message?.toLowerCase().includes('missed');
+
+          if (attackerEl && defenderEl && !isMiss) {
+            const anim = resolveMoveAnimation(eventObj.move, '', eventObj.category || 'physical', arenaRef.current || undefined);
             await anim(attackerEl, defenderEl, isAttackerPlayer);
           } else {
+            // If it missed or targets are missing, just show a quick attack bounce
             if (isAttackerPlayer) {
               setPlayerAnim(prev => ({ ...prev, attacking: true }));
-              setTimeout(() => setPlayerAnim(prev => ({ ...prev, attacking: false })), 300);
+              setTimeout(() => setPlayerAnim(prev => ({ ...prev, attacking: false })), 200);
             } else {
               setOpponentAnim(prev => ({ ...prev, attacking: true }));
-              setTimeout(() => setOpponentAnim(prev => ({ ...prev, attacking: false })), 300);
+              setTimeout(() => setOpponentAnim(prev => ({ ...prev, attacking: false })), 200);
             }
-            await new Promise(resolve => setTimeout(resolve, 400));
+            await new Promise(resolve => setTimeout(resolve, 300));
           }
           if (eventObj.damage > 0 || eventObj.substitute_damage > 0) hitSoundRef.current?.play();
           if (eventObj.status_message) setEvents(prev => [...prev, eventObj.status_message]);
@@ -355,7 +359,7 @@ export default function BattlePage() {
 
       <main className="flex-1 flex flex-col md:flex-row md:container md:mx-auto md:max-w-6xl 2xl:max-w-[1600px] h-screen md:overflow-hidden p-2 md:p-6 2xl:p-12 gap-4 md:gap-8 overflow-y-auto">
         <div className="flex-[3] flex flex-col gap-4 2xl:gap-8 h-auto md:h-full">
-          <div className="relative h-[300px] md:flex-[4] md:min-h-[450px] 2xl:min-h-[650px] bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 2xl:border-8 border-[#475569] rounded-xl 2xl:rounded-3xl overflow-hidden gba-panel-shadow shrink-0 transition-all duration-700">
+          <div ref={arenaRef} className="relative h-[300px] md:flex-[4] md:min-h-[450px] 2xl:min-h-[650px] bg-gray-950 bg-[url('/images/battle-background.jpeg')] bg-cover bg-center border-4 2xl:border-8 border-[#475569] rounded-xl 2xl:rounded-3xl overflow-hidden gba-panel-shadow shrink-0 transition-all duration-700">
             <div className="absolute inset-0 bg-black/10" />
             <WeatherOverlay weather={weather} />
             <Pokeball type="player" visible={pokeballState.player} />
