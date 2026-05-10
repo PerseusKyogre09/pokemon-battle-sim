@@ -21,21 +21,25 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           
-          # Create a clean orphan branch for HF deployment
+          # Create a temporary directory to hold the deployment files
+          mkdir deploy_dir
+          cp -r backend/* deploy_dir/
+          cp README.md deploy_dir/
+          
+          # Switch to the orphan branch
           git checkout --orphan hf-deploy
           
-          # Remove all files from the current tracking
-          git rm -rf --cached . 
+          # Physically remove everything in the repo
+          git rm -rf .
           
-          # Copy backend files to root
-          cp -r backend/* .
-          cp README.md .
+          # Move files from the temp directory to the root
+          mv deploy_dir/* .
+          rmdir deploy_dir
           
           # Add all files to the new branch
           git add .
           
           git commit -m "Deploy to Hugging Face Spaces"
           
-          # Force push to HF Space (replace with your repo path if different)
-          # The user's repo path was seen in sync_to_hf.yml as PerseusKyogre/Pokemon-Battle-Sim
+          # Force push to HF Space
           git push --force "https://PerseusKyogre:$HF_TOKEN@huggingface.co/spaces/PerseusKyogre/Pokemon-Battle-Sim" hf-deploy:main
