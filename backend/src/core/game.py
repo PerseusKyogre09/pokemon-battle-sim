@@ -508,6 +508,8 @@ class Game:
             
             turn_info['battle_events'].append({
                 'type': 'move', 'attacker_name': attacker.name, 'defender_name': defender.name, 'move': move_name,
+                'category': move.category,
+                'move_type': move.type,
                 'damage': actual_dmg, 'substitute_damage': sub_dmg, 'is_player': is_player_attacking,
                 'attacker_hp': attacker.current_hp, 'defender_hp': defender.current_hp,
                 'player_hp': self.player_pokemon.current_hp, 'opponent_hp': self.opponent_pokemon.current_hp,

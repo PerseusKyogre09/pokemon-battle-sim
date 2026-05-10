@@ -1,0 +1,4770 @@
+{
+  "10000000voltthunderbolt": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "absorb": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "accelerock": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "acid": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "acidarmor": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "aciddownpour": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "acidspray": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "acrobatics": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "acupressure": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "aerialace": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "aeroblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "afteryou": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "agility": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "aircutter": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "airslash": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "alloutpummeling": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "alluringvoice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "allyswitch": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "amnesia": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "anchorshot": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "ancientpower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "appleacid": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "aquacutter": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "aquajet": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "aquaring": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "aquastep": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "aquatail": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "armorcannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "armthrust": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Fighting"
+  },
+  "aromatherapy": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "aromaticmist": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "assist": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "assurance": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "astonish": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "astralbarrage": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "attackorder": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "attract": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "aurasphere": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "aurawheel": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "aurorabeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "auroraveil": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "autotomize": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "avalanche": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "axekick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "babydolleyes": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "baddybad": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "banefulbunker": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "barbbarrage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "barrage": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "barrier": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "batonpass": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "beakblast": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "beatup": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "behemothbash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "behemothblade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "belch": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "bellydrum": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bestow": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bide": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bind": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bite": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "bitterblade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "bittermalice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "blackholeeclipse": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "blastburn": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "blazekick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "blazingtorque": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "bleakwindstorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "blizzard": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "block": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bloodmoon": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bloomdoom": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "blueflare": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "bodypress": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "bodyslam": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "boltbeak": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "boltstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "boneclub": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "bonemerang": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Ground"
+  },
+  "bonerush": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Ground"
+  },
+  "boomburst": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "bounce": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "bouncybubble": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "branchpoke": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "bravebird": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "breakingswipe": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "breakneckblitz": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "brickbreak": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "brine": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "brutalswing": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "bubble": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "bubblebeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Water"
+  },
+  "bugbite": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "bugbuzz": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "bulkup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "bulldoze": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "bulletpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "bulletseed": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Grass"
+  },
+  "burningbulwark": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "burningjealousy": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "burnup": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "buzzybuzz": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "calmmind": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "camouflage": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "captivate": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "catastropika": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "ceaselessedge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "celebrate": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "charge": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "chargebeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "charm": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "chatter": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "chillingwater": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "chillyreception": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "chipaway": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "chloroblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "circlethrow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "clamp": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "clangingscales": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "clangoroussoul": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "clangoroussoulblaze": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "clearsmog": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "closecombat": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "coaching": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "coil": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "collisioncourse": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "combattorque": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "cometpunch": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "comeuppance": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "confide": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "confuseray": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "confusion": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "constrict": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "continentalcrush": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "conversion": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "conversion2": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "copycat": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "coreenforcer": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "corkscrewcrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "corrosivegas": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "cosmicpower": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "cottonguard": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "cottonspore": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "counter": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "courtchange": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "covet": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "crabhammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "craftyshield": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "crosschop": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "crosspoison": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "crunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "crushclaw": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "crushgrip": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "curse": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "cut": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "darkestlariat": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "darkpulse": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "darkvoid": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "dazzlinggleam": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "decorate": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "defendorder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "defensecurl": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "defog": {
+    "template": "status",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "destinybond": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "detect": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "devastatingdrake": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "diamondstorm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "dig": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "disable": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "disarmingvoice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "discharge": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "direclaw": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "dive": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "dizzypunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "doodle": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "doomdesire": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "doubleedge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "doublehit": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Normal"
+  },
+  "doubleironbash": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Steel"
+  },
+  "doublekick": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "doubleshock": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "doubleslap": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "doubleteam": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "dracometeor": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonascent": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "dragonbreath": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragoncheer": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonclaw": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragondance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragondarts": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Dragon"
+  },
+  "dragonenergy": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonhammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonpulse": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonrage": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragonrush": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dragontail": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "drainingkiss": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "drainpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "dreameater": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "drillpeck": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "drillrun": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "drumbeating": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "dualchop": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Dragon"
+  },
+  "dualwingbeat": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Flying"
+  },
+  "dynamaxcannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "dynamicpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "earthpower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "earthquake": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "echoedvoice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "eerieimpulse": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "eeriespell": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "eggbomb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "electricterrain": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "electrify": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "electroball": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "electrodrift": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "electroshot": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "electroweb": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "embargo": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "ember": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "encore": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "endeavor": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "endure": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "energyball": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "entrainment": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "eruption": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "esperwing": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "eternabeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "expandingforce": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "explosion": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "extrasensory": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "extremeevoboost": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "extremespeed": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "facade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "fairylock": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "fairywind": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "fakeout": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "faketears": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "falsesurrender": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "falseswipe": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "featherdance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "feint": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "feintattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "fellstinger": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "ficklebeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "fierydance": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "fierywrath": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "filletaway": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "finalgambit": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "fireblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firefang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firelash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firepledge": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firepunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firespin": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "firstimpression": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "fishiousrend": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "fissure": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "flail": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "flameburst": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "flamecharge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "flamewheel": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "flamethrower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "flareblitz": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "flash": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "flashcannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "flatter": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "fleurcannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "fling": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "flipturn": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "floatyfall": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "floralhealing": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "flowershield": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "flowertrick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "fly": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "flyingpress": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "focusblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "focusenergy": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "focuspunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "followme": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "forcepalm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "foresight": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "forestscurse": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "foulplay": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "freezedry": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "freezeshock": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "freezingglare": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "freezyfrost": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "frenzyplant": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "frostbreath": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "frustration": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "furyattack": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "furycutter": {
+    "template": "multiHit",
+    "hits": 4,
+    "type": "Bug"
+  },
+  "furyswipes": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "fusionbolt": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "fusionflare": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "futuresight": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "gastroacid": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "geargrind": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Steel"
+  },
+  "gearup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "genesissupernova": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "geomancy": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "gigadrain": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gigaimpact": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "gigatonhammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "gigavolthavoc": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "glaciallance": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "glaciate": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "glaiverush": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "glare": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "glitzyglow": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "gmaxbefuddle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "gmaxcannonade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "gmaxcentiferno": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "gmaxchistrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "gmaxcuddle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "gmaxdepletion": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "gmaxdrumsolo": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gmaxfinale": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "gmaxfireball": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "gmaxfoamburst": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "gmaxgoldrush": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "gmaxgravitas": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "gmaxhydrosnipe": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "gmaxmalodor": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "gmaxmeltdown": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "gmaxoneblow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "gmaxrapidflow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "gmaxreplenish": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "gmaxresonance": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "gmaxsandblast": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "gmaxsmite": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "gmaxsnooze": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "gmaxsteelsurge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "gmaxstonesurge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "gmaxstunshock": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "gmaxsweetness": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gmaxtartness": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gmaxterror": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "gmaxvinelash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gmaxvolcalith": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "gmaxvoltcrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "gmaxwildfire": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "gmaxwindrage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "grassknot": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "grasspledge": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "grasswhistle": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "grassyglide": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "grassyterrain": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gravapple": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "gravity": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "growl": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "growth": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "grudge": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "guardianofalola": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "guardsplit": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "guardswap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "guillotine": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "gunkshot": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "gust": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "gyroball": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "hail": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "hammerarm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "happyhour": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "harden": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hardpress": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "haze": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "headbutt": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "headcharge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "headlongrush": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "headsmash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "healbell": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "healblock": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "healingwish": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "healorder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "healpulse": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "heartstamp": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "heartswap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "heatcrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "heatwave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "heavyslam": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "helpinghand": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hex": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "hiddenpower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hiddenpowerbug": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "hiddenpowerdark": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "hiddenpowerdragon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "hiddenpowerelectric": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "hiddenpowerfighting": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "hiddenpowerfire": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "hiddenpowerflying": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "hiddenpowerghost": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "hiddenpowergrass": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "hiddenpowerground": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "hiddenpowerice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "hiddenpowerpoison": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "hiddenpowerpsychic": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "hiddenpowerrock": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "hiddenpowersteel": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "hiddenpowerwater": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "highhorsepower": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "highjumpkick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "holdback": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "holdhands": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "honeclaws": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "hornattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "horndrill": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hornleech": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "howl": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hurricane": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "hydrocannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Water"
+  },
+  "hydropump": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Water"
+  },
+  "hydrosteam": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "hydrovortex": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "hyperbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hyperdrill": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hyperfang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hyperspacefury": {
+    "template": "multiHit",
+    "hits": 4,
+    "type": "Dark"
+  },
+  "hyperspacehole": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "hypervoice": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "hypnosis": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "iceball": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "icebeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "iceburn": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "icefang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "icehammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "icepunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "iceshard": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "icespinner": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "iciclecrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "iciclespear": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Ice"
+  },
+  "icywind": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "imprison": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "incinerate": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "infernalparade": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "inferno": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "infernooverdrive": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "infestation": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "ingrain": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "instruct": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "iondeluge": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "irondefense": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "ironhead": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "irontail": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "ivycudgel": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "jawlock": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "jetpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "judgment": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "jumpkick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "junglehealing": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "karatechop": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "kinesis": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "kingsshield": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "knockoff": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "kowtowcleave": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "landswrath": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "laserfocus": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "lashout": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "lastresort": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "lastrespects": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "lavaplume": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "leafage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "leafblade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "leafstorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "leaftornado": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "leechlife": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "leechseed": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "leer": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "letssnuggleforever": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "lick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "lifedew": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "lightofruin": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "lightscreen": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "lightthatburnsthesky": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "liquidation": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "lockon": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "lovelykiss": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "lowkick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "lowsweep": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "luckychant": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "luminacrash": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "lunarblessing": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "lunardance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "lunge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "lusterpurge": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "machpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "magicalleaf": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "magicaltorque": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "magiccoat": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "magicpowder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "magicroom": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "magmastorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "magnetbomb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "magneticflux": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "magnetrise": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "magnitude": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "makeitrain": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "maliciousmoonsault": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "malignantchain": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "matblock": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "matchagotcha": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "maxairstream": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "maxdarkness": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "maxflare": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "maxflutterby": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "maxgeyser": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "maxguard": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "maxhailstorm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "maxknuckle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "maxlightning": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "maxmindstorm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "maxooze": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "maxovergrowth": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "maxphantasm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "maxquake": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "maxrockfall": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "maxstarfall": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "maxsteelspike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "maxstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "maxwyrmwind": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "meanlook": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "meditate": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "mefirst": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "megadrain": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "megahorn": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "megakick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "megapunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "memento": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "menacingmoonrazemaelstrom": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "metalburst": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "metalclaw": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "metalsound": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "meteorassault": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "meteorbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "meteormash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "metronome": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "mightycleave": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "milkdrink": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "mimic": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "mindblown": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "mindreader": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "minimize": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "miracleeye": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "mirrorcoat": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "mirrormove": {
+    "template": "status",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "mirrorshot": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "mist": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "mistball": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "mistyexplosion": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "mistyterrain": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "moonblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "moongeistbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "moonlight": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "morningsun": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "mortalspin": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "mountaingale": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "mudbomb": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "mudshot": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "mudslap": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "mudsport": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "muddywater": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "multiattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "mysticalfire": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "mysticalpower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "nastyplot": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "naturalgift": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "naturepower": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "naturesmadness": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "needlearm": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "neverendingnightmare": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "nightdaze": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "nightmare": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "nightshade": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "nightslash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "nobleroar": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "noretreat": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "noxioustorque": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "nuzzle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "oblivionwing": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "obstruct": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "oceanicoperetta": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "octazooka": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "octolock": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "odorsleuth": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "ominouswind": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "orderup": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "originpulse": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Water"
+  },
+  "outrage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "overdrive": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "overheat": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "painsplit": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "paraboliccharge": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "partingshot": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "payback": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "payday": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "peck": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "perishsong": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "petalblizzard": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "petaldance": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "phantomforce": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "photongeyser": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "pikapapow": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "pinmissile": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Bug"
+  },
+  "plasmafists": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "playnice": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "playrough": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "pluck": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "poisonfang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "poisongas": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "poisonjab": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "poisonpowder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "poisonsting": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "poisontail": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "pollenpuff": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "poltergeist": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "populationbomb": {
+    "template": "multiHit",
+    "hits": 10,
+    "type": "Normal"
+  },
+  "pounce": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "pound": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "powder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "powdersnow": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "powergem": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "powershift": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "powersplit": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "powerswap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "powertrick": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "powertrip": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "poweruppunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "powerwhip": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "precipiceblades": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "present": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "prismaticlaser": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "protect": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "psybeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psyblade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "psychic": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychicfangs": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychicnoise": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychicterrain": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychoboost": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychocut": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psychoshift": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psyshieldbash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psyshock": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psystrike": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "psywave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "pulverizingpancake": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "punishment": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "purify": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "pursuit": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "pyroball": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "quash": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "quickattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "quickguard": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "quiverdance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "rage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "ragefist": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "ragepowder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "ragingbull": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "ragingfury": {
+    "template": "multiHit",
+    "hits": 4,
+    "type": "Fire"
+  },
+  "raindance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "rapidspin": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "razorleaf": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "razorshell": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "razorwind": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "recover": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "recycle": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "reflect": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "reflecttype": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "refresh": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "relicsong": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "rest": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "retaliate": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "return": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "revelationdance": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "revenge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "reversal": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "revivalblessing": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "risingvoltage": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "roar": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "roaroftime": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "rockblast": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Rock"
+  },
+  "rockclimb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "rockpolish": {
+    "template": "status",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "rockslide": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "rocksmash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "rockthrow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "rocktomb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "rockwrecker": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "roleplay": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "rollingkick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "rollout": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "roost": {
+    "template": "status",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "rototiller": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "round": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "ruination": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "sacredfire": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "sacredsword": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "safeguard": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "saltcure": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "sandattack": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "sandsearstorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "sandstorm": {
+    "template": "status",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "sandtomb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "sappyseed": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "savagespinout": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "scald": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "scaleshot": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Dragon"
+  },
+  "scaryface": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "scorchingsands": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "scratch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "screech": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "searingshot": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "searingsunrazesmash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "secretpower": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "secretsword": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "seedbomb": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "seedflare": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "seismictoss": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "selfdestruct": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "shadowball": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "shadowbone": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "shadowclaw": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "shadowforce": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "shadowpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "shadowsneak": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "sharpen": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "shatteredpsyche": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "shedtail": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sheercold": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "shellsidearm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "shellsmash": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "shelltrap": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "shelter": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "shiftgear": {
+    "template": "status",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "shockwave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "shoreup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "signalbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "silktrap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "silverwind": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "simplebeam": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sing": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sinisterarrowraid": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "sizzlyslide": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "sketch": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "skillswap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "skittersmack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "skullbash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "skyattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "skydrop": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "skyuppercut": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "slackoff": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "slam": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "slash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sleeppowder": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "sleeptalk": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sludge": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "sludgebomb": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "sludgewave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "smackdown": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "smartstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "smellingsalts": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "smog": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "smokescreen": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "snaptrap": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "snarl": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "snatch": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "snipeshot": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "snore": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "snowscape": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "soak": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "softboiled": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "solarbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "solarblade": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "sonicboom": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "soulstealing7starstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "spacialrend": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "spark": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "sparklingaria": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "sparklyswirl": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "spectralthief": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "speedswap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "spicyextract": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "spiderweb": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "spikecannon": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "spikes": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "spikyshield": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "spinout": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "spiritbreak": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "spiritshackle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "spitup": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "spite": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "splash": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "splinteredstormshards": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "splishysplash": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "spore": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "spotlight": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "springtidestorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "stealthrock": {
+    "template": "status",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "steameruption": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "steamroller": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "steelbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "steelroller": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "steelwing": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "stickyweb": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "stockpile": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "stokedsparksurfer": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "stomp": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "stompingtantrum": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "stoneaxe": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "stoneedge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "storedpower": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "stormthrow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "strangesteam": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "strength": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "strengthsap": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "stringshot": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "struggle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "strugglebug": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "stuffcheeks": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "stunspore": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "submission": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "substitute": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "subzeroslammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ice"
+  },
+  "suckerpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "sunnyday": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "sunsteelstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "supercellslam": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "superfang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "superpower": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "supersonic": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "supersonicskystrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "surf": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "surgingstrikes": {
+    "template": "multiHit",
+    "hits": 3,
+    "type": "Water"
+  },
+  "swagger": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "swallow": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "sweetkiss": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "sweetscent": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "swift": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "switcheroo": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "swordsdance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "synchronoise": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "synthesis": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "syrupbomb": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "tachyoncutter": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Steel"
+  },
+  "tackle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "tailglow": {
+    "template": "status",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "tailslap": {
+    "template": "multiHit",
+    "hits": 5,
+    "type": "Normal"
+  },
+  "tailwhip": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "tailwind": {
+    "template": "status",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "takedown": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "takeheart": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "tarshot": {
+    "template": "status",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "taunt": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "tearfullook": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "teatime": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "technoblast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "tectonicrage": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "teeterdance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "telekinesis": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "teleport": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "temperflare": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "terablast": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "terastarstorm": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "terrainpulse": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "thief": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "thousandarrows": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "thousandwaves": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ground"
+  },
+  "thrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "throatchop": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "thunder": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thunderbolt": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thundercage": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thunderclap": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thunderfang": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thunderouskick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "thunderpunch": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thundershock": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "thunderwave": {
+    "template": "status",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "tickle": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "tidyup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "topsyturvy": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "torchsong": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "torment": {
+    "template": "status",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "toxic": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "toxicspikes": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "toxicthread": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "trailblaze": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "transform": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "triattack": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "trick": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "trickortreat": {
+    "template": "status",
+    "hits": 1,
+    "type": "Ghost"
+  },
+  "trickroom": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "triplearrows": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "tripleaxel": {
+    "template": "multiHit",
+    "hits": 3,
+    "type": "Ice"
+  },
+  "tripledive": {
+    "template": "multiHit",
+    "hits": 3,
+    "type": "Water"
+  },
+  "triplekick": {
+    "template": "multiHit",
+    "hits": 3,
+    "type": "Fighting",
+    "strikeAsset": "/images/particles/fight/kick.png"
+  },
+  "tropkick": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "trumpcard": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "twinbeam": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "twineedle": {
+    "template": "multiHit",
+    "hits": 2,
+    "type": "Bug"
+  },
+  "twinkletackle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fairy"
+  },
+  "twister": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Dragon"
+  },
+  "uturn": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "upperhand": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "uproar": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "vacuumwave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "vcreate": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "veeveevolley": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "venomdrench": {
+    "template": "status",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "venoshock": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Poison"
+  },
+  "victorydance": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "vinewhip": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "visegrip": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "vitalthrow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "voltswitch": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "volttackle": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "wakeupslap": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Fighting"
+  },
+  "waterfall": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "watergun": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "waterpledge": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "waterpulse": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Water"
+  },
+  "watershuriken": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "watersport": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "waterspout": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "wavecrash": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Water"
+  },
+  "weatherball": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "whirlpool": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Water"
+  },
+  "whirlwind": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "wickedblow": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "wickedtorque": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Dark"
+  },
+  "wideguard": {
+    "template": "status",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "wildboltstorm": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "wildcharge": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "willowisp": {
+    "template": "status",
+    "hits": 1,
+    "type": "Fire"
+  },
+  "wingattack": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Flying"
+  },
+  "wish": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "withdraw": {
+    "template": "status",
+    "hits": 1,
+    "type": "Water"
+  },
+  "wonderroom": {
+    "template": "status",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "woodhammer": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "workup": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "worryseed": {
+    "template": "status",
+    "hits": 1,
+    "type": "Grass"
+  },
+  "wrap": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "wringout": {
+    "template": "projectile",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "xscissor": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Bug"
+  },
+  "yawn": {
+    "template": "status",
+    "hits": 1,
+    "type": "Normal"
+  },
+  "zapcannon": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "zenheadbutt": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Psychic"
+  },
+  "zingzap": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "zippyzap": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Electric"
+  },
+  "paleowave": {
+    "template": "beam",
+    "hits": 1,
+    "type": "Rock"
+  },
+  "shadowstrike": {
+    "template": "physical",
+    "hits": 1,
+    "type": "Ghost"
+  }
+}

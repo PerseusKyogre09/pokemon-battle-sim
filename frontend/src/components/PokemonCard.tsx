@@ -50,11 +50,11 @@ const statusFilters: Record<string, string> = {
   freeze: 'drop-shadow(0 0 12px rgba(102, 204, 255, 0.9)) brightness(1.2)',
 };
 
-const PokemonCard: React.FC<PokemonCardProps> = ({ 
+const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({ 
   name, sprite, currentHp, maxHp, level, types = [], status_effects = [],
   isOpponent, isVisible = true, isAttacking, isShaking, isFainted, showStatus = true,
   layout = 'full', flip = false, hasSubstitute = false
-}) => {
+}, ref) => {
   const renderSprite = () => {
     const majorStatus = status_effects.find(s => s.is_major);
     const filter = majorStatus ? statusFilters[majorStatus.type] : '';
@@ -62,11 +62,10 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     const subSprite = isOpponent ? '/images/substitute/sub_front.png' : '/images/substitute/sub_back.png';
     
     return (
-      <div className={`relative group transition-all duration-500 flex flex-col items-center
+      <div 
+        ref={ref}
+        className={`relative group flex flex-col items-center
         ${isVisible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}
-        ${isAttacking ? (isOpponent ? '-translate-x-12 translate-y-12' : 'translate-x-12 -translate-y-12') : ''}
-        ${isShaking ? 'animate-shake' : ''}
-        ${isFainted ? 'animate-faint translate-y-40 opacity-0' : ''}
       `}>
         {/* GBA Battle Pod (Dark) */}
         <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
@@ -185,6 +184,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       {renderStatus()}
     </div>
   );
-};
+});
+
+PokemonCard.displayName = 'PokemonCard';
 
 export default PokemonCard;
