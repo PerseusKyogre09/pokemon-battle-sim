@@ -112,7 +112,7 @@ async def pokemon_cry(pokemon_name: str):
         identifier = str(pokemon_id) if pokemon_id else api_name
         
         url = f'https://pokeapi.co/api/v2/pokemon/{identifier}'
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             pokemon_data = response.json()
             cry_url = None
@@ -126,7 +126,7 @@ async def pokemon_cry(pokemon_name: str):
                     cry_url = f"https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/{pokemon_id}.ogg"
             
             if cry_url:
-                cry_response = requests.get(cry_url)
+                cry_response = requests.get(cry_url, timeout=5)
                 if cry_response.status_code == 200:
                     return Response(content=cry_response.content, media_type='audio/ogg')
         
@@ -211,7 +211,7 @@ def get_pokemon_data(pokemon_name):
     identifier = str(pokemon_id) if pokemon_id else api_name
 
     url = f'https://pokeapi.co/api/v2/pokemon/{identifier}'
-    response = requests.get(url)
+    response = requests.get(url, timeout=5)
     
     if response.status_code == 200:
         return response.json()
@@ -224,7 +224,7 @@ def get_pokemon_data(pokemon_name):
     ]
     for p_name in patterns:
         try:
-            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}')
+            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}', timeout=5)
             if res.status_code == 200:
                 return res.json()
         except:
@@ -234,7 +234,7 @@ def get_pokemon_data(pokemon_name):
     if '-' in api_name:
         base_name = api_name.split('-')[0]
         try:
-            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{base_name}')
+            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{base_name}', timeout=5)
             if res.status_code == 200:
                 return res.json()
         except:
@@ -397,9 +397,10 @@ async def start_game(request: Request):
             pass
         elif player_team_raw == 'random':
             player_team_raw = []
-            for _ in range(6):
+            while len(player_team_raw) < 6:
                 name = get_random_battle_ready_pokemon()
-                player_team_raw.append({'name': name})
+                if not any(p['name'].lower() == name.lower() for p in player_team_raw):
+                    player_team_raw.append({'name': name})
         elif not player_team_raw:
             # Fallback to single pokemon
             p_name = data.get('pokemon', 'pikachu').lower()
@@ -531,8 +532,15 @@ async def start_game(request: Request):
 async def get_random_team():
     try:
         team = []
-        for _ in range(6):
+        max_attempts = 20
+        attempts = 0
+        while len(team) < 6 and attempts < max_attempts:
+            attempts += 1
             name = get_random_battle_ready_pokemon()
+            # Ensure uniqueness
+            if any(p['name'].lower() == name.lower() for p in team):
+                continue
+                
             p_data = get_pokemon_data(name)
             
             p_sets = get_all_pokemon_sets(name)

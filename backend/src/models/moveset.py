@@ -41,11 +41,12 @@ def get_battle_ready_pokemon_list() -> List[str]:
     in the battle-ready formats (excluding Little Cup).
     """
     try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
+        # Get the backend root directory (3 levels up from this file)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        file_path = os.path.join(base_dir, 'data', 'gen8_stats_sets.json')
         
         if not os.path.exists(file_path):
-            return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos"]
+            return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos", "Pikachu", "Snorlax", "Lucario"]
             
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -63,7 +64,7 @@ def get_battle_ready_pokemon_list() -> List[str]:
         return sorted(list(battle_ready_names))
     except Exception as e:
         print(f"Error building battle-ready list: {e}")
-        return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos"]
+        return ["Charizard", "Garchomp", "Dragonite", "Mewtwo", "Zapdos", "Pikachu", "Snorlax", "Lucario"]
 
 def get_random_battle_ready_pokemon() -> str:
     """Returns a random fully evolved, battle-ready Pokémon name."""
@@ -94,8 +95,9 @@ def get_all_pokemon_sets(pokemon_name: str, debug: bool = True) -> Optional[dict
     try:
         normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())
         
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
+        # Get the backend root directory (3 levels up from this file)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        file_path = os.path.join(base_dir, 'data', 'gen8_stats_sets.json')
         
         if not os.path.exists(file_path):
             return None
@@ -218,16 +220,16 @@ def fetch_sets_direct(pokemon_name: str, format_name: str, debug: bool = True) -
         if debug:
             print(f"  Loading data for format: {format_name}")
         
-        # Get the directory of the current script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, 'gen8_stats_sets.json')
+        # Get the backend root directory (3 levels up from this file)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        file_path = os.path.join(base_dir, 'data', 'gen8_stats_sets.json')
         
         if debug:
             print(f"  Loading JSON file from: {file_path}")
             
         if not os.path.exists(file_path):
             if debug:
-                print("  Error: gen8_stats_sets.json not found!")
+                print(f"  Error: gen8_stats_sets.json not found at {file_path}!")
             return None
             
         with open(file_path, 'r', encoding='utf-8') as f:
