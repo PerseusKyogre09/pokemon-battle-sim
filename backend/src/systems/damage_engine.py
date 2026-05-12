@@ -19,6 +19,9 @@ WEATHER_TO_SMOGON = {
     "sandstorm": "Sand",
     "hail": "Snow",
     "snow": "Snow",
+    "primordialsea": "Primordial Sea",
+    "desolateland": "Desolate Land",
+    "deltastream": "Delta Stream",
     "none": None,
 }
 
@@ -84,8 +87,16 @@ def smogon_damage_for_move(attacker, defender, move, field: Dict[str, Any] | Non
         return None
 
     field = field or {}
+    gen = field.get("gen", 9)
+    
+    # Mega Evolution is not standard in Gen 9, use Gen 7 for Megas to ensure support
+    attacker_name = getattr(attacker, "name", "").lower()
+    defender_name = getattr(defender, "name", "").lower()
+    if "-mega" in attacker_name or "-mega" in defender_name:
+        gen = 7
+
     payload = {
-        "gen": field.get("gen", 9),
+        "gen": gen,
         "attacker": _pokemon_payload(attacker),
         "defender": _pokemon_payload(defender),
         "move": {"name": getattr(move, "name", "")},

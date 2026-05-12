@@ -80,10 +80,191 @@ class Game:
         self.weather = 'none'
         self.weather_duration = 0
         self.pending_player_self_switch = False
+        self.player_has_mega = False
+        self.opponent_has_mega = False
         self.hooks = HookRegistry()
         register_builtin_hooks(self.hooks)
         self.priority_resolver = PriorityResolver()
         self.ai = BattleAI()
+        
+    def set_weather(self, new_weather: str, duration: int = 5):
+        STRONG_WEATHERS = ['primordialsea', 'desolateland', 'deltastream']
+        
+        # If current weather is strong, only another strong weather (from a slower pokemon) can overwrite it
+        if self.weather in STRONG_WEATHERS and new_weather not in STRONG_WEATHERS:
+            return False
+            
+        self.weather = new_weather
+        self.weather_duration = duration
+        return True
+
+    def check_primal_weather_end(self):
+        """Primal weathers end if the source pokemon is no longer active."""
+        STRONG_TO_ABILITY = {
+            'primordialsea': 'primordialsea',
+            'desolateland': 'desolateland',
+            'deltastream': 'deltastream'
+        }
+        
+        if self.weather not in STRONG_TO_ABILITY:
+            return
+            
+        target_ability = STRONG_TO_ABILITY[self.weather]
+        source_present = False
+        for p in [self.player_pokemon, self.opponent_pokemon]:
+            if p and p.current_hp > 0 and p.ability and p.ability.id == target_ability:
+                source_present = True
+                break
+        
+        if not source_present:
+            self.weather = 'none'
+            self.weather_duration = 0
+            return True
+        return False
+
+    def can_mega_evolve(self, is_player: bool) -> bool:
+        has_mega = self.player_has_mega if is_player else self.opponent_has_mega
+        if has_mega:
+            return False
+        
+        pokemon = self.player_pokemon if is_player else self.opponent_pokemon
+        if not pokemon or pokemon.is_fainted() or 'mega' in pokemon.name.lower():
+            return False
+            
+        from ..utils.pokemon_utils import MEGA_STONES, PRIMAL_ORBS
+        
+        # Rayquaza special case (Dragon Ascent)
+        pokemon_name = pokemon.name.lower().strip()
+        if "rayquaza" in pokemon_name:
+            # Check for Dragon Ascent move
+            for m in pokemon.moves.values():
+                m_id = m.id.lower().replace(" ", "").replace("-", "")
+                m_name = m.name.lower().replace(" ", "").replace("-", "")
+                if m_id == "dragonascent" or m_name == "dragonascent":
+                    return True
+        
+        # Check if the pokemon's item is a valid mega stone
+        from ..utils.pokemon_utils import MEGA_STONES
+        item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
+        
+        if item_id in MEGA_STONES:
+            target_form = MEGA_STONES[item_id]
+            base_species = target_form.split('-mega')[0]
+            if pokemon.name.lower() == base_species:
+                return True
+        return False
+
+    def can_primal_revert(self, is_player: bool) -> bool:
+        pokemon = self.player_pokemon if is_player else self.opponent_pokemon
+        if not pokemon or pokemon.is_fainted() or 'primal' in pokemon.name.lower():
+            return False
+        
+        from ..utils.pokemon_utils import PRIMAL_ORBS
+        item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
+        
+        if item_id in PRIMAL_ORBS:
+            target_form = PRIMAL_ORBS[item_id]
+            base_species = target_form.split('-primal')[0]
+            if pokemon.name.lower() == base_species:
+                return True
+        return False
+
+    def perform_mega_evolution(self, is_player: bool, turn_info: dict):
+        pokemon = self.player_pokemon if is_player else self.opponent_pokemon
+        if not pokemon:
+            return
+            
+        from ..utils.pokemon_utils import MEGA_STONES, PRIMAL_ORBS
+        from ..utils.pokemon_api import get_forme_data
+        
+        target_form = None
+        # Rayquaza special case
+        if "rayquaza" in pokemon.name.lower():
+            target_form = "rayquaza-mega"
+            mega_message = f"{self._get_pokemon_name(pokemon)}'s fervent wish has been granted!"
+        else:
+            item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
+            if item_id in MEGA_STONES:
+                target_form = MEGA_STONES[item_id]
+                mega_message = f"{self._get_pokemon_name(pokemon)}'s {pokemon.item} is reacting to the Key Stone!"
+        
+        if target_form:
+            side = 'back' if is_player else 'front'
+            forme_data = get_forme_data(target_form, side=side)
+            
+            if forme_data:
+                pokemon.forme_change(
+                    new_name=forme_data['name'],
+                    new_types=forme_data['types'],
+                    new_sprite=forme_data['sprite_url'],
+                    new_stats=forme_data['stats'],
+                    new_cry=forme_data['cry_url'],
+                    new_ability=forme_data.get('ability', '')
+                )
+                
+                if is_player:
+                    self.player_has_mega = True
+                else:
+                    self.opponent_has_mega = True
+                    
+                turn_info['battle_events'].append({
+                    "type": "mega_evolution",
+                    "pokemon_name": self._get_pokemon_name(pokemon),
+                    "message": mega_message,
+                    "target": "player" if is_player else "opponent",
+                    "is_player": is_player,
+                    "new_sprite": pokemon.sprite_url,
+                    "new_name": pokemon.name,
+                    "timestamp": len(turn_info['battle_events'])
+                })
+                
+                # Trigger ability on Mega Evolution (e.g., Drought, Intimidate)
+                opponent = self.opponent_pokemon if is_player else self.player_pokemon
+                ability_events = pokemon.on_switch_in(opponent)
+                if ability_events:
+                    turn_info['battle_events'].extend(ability_events); [self.set_weather(e['set_weather'], 999) for e in ability_events if 'set_weather' in e]; [self.set_terrain(e['set_terrain'], 5) for e in ability_events if 'set_terrain' in e]
+
+    def perform_primal_reversion(self, is_player: bool, turn_info: dict):
+        pokemon = self.player_pokemon if is_player else self.opponent_pokemon
+        if not pokemon:
+            return
+            
+        from ..utils.pokemon_utils import PRIMAL_ORBS
+        from ..utils.pokemon_api import get_forme_data
+        
+        item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
+        if item_id in PRIMAL_ORBS:
+            target_form = PRIMAL_ORBS[item_id]
+            side = 'back' if is_player else 'front'
+            forme_data = get_forme_data(target_form, side=side)
+            
+            if forme_data:
+                pokemon.forme_change(
+                    new_name=forme_data['name'],
+                    new_types=forme_data['types'],
+                    new_sprite=forme_data['sprite_url'],
+                    new_stats=forme_data['stats'],
+                    new_cry=forme_data['cry_url'],
+                    new_ability=forme_data.get('ability', '')
+                )
+                
+                turn_info['battle_events'].append({
+                    "type": "mega_evolution", # Use same type for animation
+                    "pokemon_name": self._get_pokemon_name(pokemon),
+                    "message": f"{self._get_pokemon_name(pokemon)}'s {pokemon.item} is reacting to the transformation!",
+                    "target": "player" if is_player else "opponent",
+                    "is_player": is_player,
+                    "new_sprite": pokemon.sprite_url,
+                    "new_name": pokemon.name,
+                    "is_primal": True,
+                    "timestamp": len(turn_info['battle_events'])
+                })
+                
+                # Trigger ability on Primal Reversion
+                opponent = self.opponent_pokemon if is_player else self.player_pokemon
+                ability_events = pokemon.on_switch_in(opponent)
+                if ability_events:
+                    turn_info['battle_events'].extend(ability_events); [self.set_weather(e['set_weather'], 999) for e in ability_events if 'set_weather' in e]; [self.set_terrain(e['set_terrain'], 5) for e in ability_events if 'set_terrain' in e]
 
     def _get_pokemon_name(self, pokemon):
         if not pokemon: return "Unknown"
@@ -209,7 +390,7 @@ class Game:
         dmg = context.actual_damage
         
         if weather_to_set:
-            self.weather = weather_to_set
+            self.set_weather(weather_to_set)
             self.weather_duration = 5
             w_name = weather_to_set.replace('day', ' sunlight').replace('dance', '').replace('hail', 'snow')
             turn_info['battle_events'].append({'type': 'status', 'message': f"The weather changed to {w_name}!", 'set_weather': weather_to_set, 'timestamp': len(turn_info['battle_events'])})
@@ -306,7 +487,14 @@ class Game:
         if old_pokemon: old_pokemon.volatile_statuses = set()
         if is_player: self.player_pokemon = new_pokemon
         else: self.opponent_pokemon = new_pokemon
+        
+        # Check if primal weather should end
+        ended = self.check_primal_weather_end()
+        
         events = []
+        if ended:
+            events.append({'type': 'status', 'message': "The mysterious weather dissipated!", 'timestamp': 0})
+            
         old_display = self._get_pokemon_name(old_pokemon) if old_pokemon else "Pokemon"
         new_display = self._get_pokemon_name(new_pokemon)
         
@@ -359,6 +547,10 @@ class Game:
                     self.battle_over, turn_info['winner'] = True, winner
                     return True
                 
+                # Check if primal weather should end
+                if self.check_primal_weather_end():
+                    turn_info['battle_events'].append({'type': 'status', 'message': "The mysterious weather dissipated!", 'timestamp': len(turn_info['battle_events'])})
+
                 if not is_player: # Opponent fainted
                     new_idx = self.ai.select_switch(self.opponent_team, self.player_pokemon)
                     if new_idx is not None:
@@ -374,13 +566,20 @@ class Game:
         
         return faint_occurred
 
-    def process_turn(self, move_name=None, switch_index=None):
+    def process_turn(self, move_name=None, switch_index=None, mega=False):
         if self.battle_over: return {}
         if switch_index is not None:
             turn_info = {'player_move': 'Switch', 'battle_events': []}
             turn_info['battle_events'].extend(self.switch_pokemon(True, switch_index))
             return turn_info
         turn_info = {'player_move': move_name, 'initial_player_hp': self.player_pokemon.current_hp, 'initial_opponent_hp': self.opponent_pokemon.current_hp, 'player_damage': 0, 'opponent_damage': 0, 'battle_events': []}
+        
+        if mega and self.can_mega_evolve(True):
+            self.perform_mega_evolution(True, turn_info)
+            
+        if self.can_mega_evolve(False):
+            self.perform_mega_evolution(False, turn_info)
+            
         before_turn_context = BattleContext(game=self, phase='beforeTurn')
         self.hooks.run('beforeTurn', before_turn_context)
         turn_info['battle_events'].extend(before_turn_context.events)

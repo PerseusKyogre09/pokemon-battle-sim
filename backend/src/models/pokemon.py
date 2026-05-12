@@ -343,7 +343,7 @@ class Pokemon:
             'stat_stages': self.stat_stages, 'substitute_hp': self.substitute_hp
         }
 
-    def forme_change(self, new_name: str, new_types: List[str], new_sprite: str, new_stats: Dict[str, int], new_cry: str = ""):
+    def forme_change(self, new_name: str, new_types: List[str], new_sprite: str, new_stats: Dict[str, int], new_cry: str = "", new_ability: str = ""):
         """Change the Pokemon's form mid-battle while maintaining HP percentage."""
         old_hp_percent = self.current_hp / self.max_hp if self.max_hp > 0 else 1.0
         
@@ -353,6 +353,12 @@ class Pokemon:
         self.sprite_url = new_sprite
         if new_cry:
             self.cry_url = new_cry
+            
+        if new_ability:
+            from ..systems.ability_system import create_ability
+            new_ab_instance = create_ability(new_ability)
+            if new_ab_instance:
+                self.ability = new_ab_instance
             
         # Update base stats and recalculate
         self.base_stats = new_stats

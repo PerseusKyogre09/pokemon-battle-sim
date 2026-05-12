@@ -414,7 +414,8 @@ async def start_game(request: Request):
                 "types": game_instance.player_pokemon.types,
                 "level": game_instance.player_pokemon.level,
                 "status_effects": game_instance.player_pokemon.get_status_display(),
-                "substitute_hp": game_instance.player_pokemon.substitute_hp
+                "substitute_hp": game_instance.player_pokemon.substitute_hp,
+                "can_mega_evolve": game_instance.can_mega_evolve(True)
             },
             "opponent_pokemon": {
                 "name": game_instance.opponent_pokemon.name,
@@ -502,8 +503,9 @@ async def move(request: Request):
     data = await request.json()
     move_name = data.get('move')
     switch_index = data.get('switch_index')
+    mega = data.get('mega', False)
     
-    turn_info = game_instance.process_turn(move_name=move_name, switch_index=switch_index)
+    turn_info = game_instance.process_turn(move_name=move_name, switch_index=switch_index, mega=mega)
     
     if 'action_order' in turn_info:
         del turn_info['action_order']
@@ -519,7 +521,8 @@ async def move(request: Request):
             "types": game_instance.player_pokemon.types,
             "level": game_instance.player_pokemon.level,
             "status_effects": game_instance.player_pokemon.get_status_display(),
-            "substitute_hp": game_instance.player_pokemon.substitute_hp
+            "substitute_hp": game_instance.player_pokemon.substitute_hp,
+            "can_mega_evolve": game_instance.can_mega_evolve(True)
         },
         "opponent_pokemon": {
             "name": game_instance.opponent_pokemon.name,

@@ -53,6 +53,7 @@ logs/
 
 # Test folder
 test/
+scratch/
 
 # Runtime data
 pids

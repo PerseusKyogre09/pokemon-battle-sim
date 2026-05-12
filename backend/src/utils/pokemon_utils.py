@@ -274,6 +274,62 @@ ITEM_LOCKED_FORMS = {
     'arceus-water': 'Splash Plate'
 }
 
+PRIMAL_ORBS = {
+    "blueorb": "kyogre-primal",
+    "redorb": "groudon-primal"
+}
+
+MEGA_STONES = {
+    "charizarditex": "charizard-mega-x",
+    "charizarditey": "charizard-mega-y",
+    "venusaurite": "venusaur-mega",
+    "blastoisinite": "blastoise-mega",
+    "alakazite": "alakazam-mega",
+    "gengarite": "gengar-mega",
+    "kangaskhanite": "kangaskhan-mega",
+    "pinsirite": "pinsir-mega",
+    "gyaradosite": "gyarados-mega",
+    "aerodactylite": "aerodactyl-mega",
+    "mewtwonitex": "mewtwo-mega-x",
+    "mewtwonitey": "mewtwo-mega-y",
+    "ampharosite": "ampharos-mega",
+    "scizorite": "scizor-mega",
+    "heracrossite": "heracross-mega",
+    "houndoominite": "houndoom-mega",
+    "tyranitarite": "tyranitar-mega",
+    "sceptilite": "sceptile-mega",
+    "blazikenite": "blaziken-mega",
+    "swampertite": "swampert-mega",
+    "gardevoirite": "gardevoir-mega",
+    "sableyeite": "sableye-mega",
+    "mawileite": "mawile-mega",
+    "lucarionite": "lucario-mega",
+    "aggronite": "aggron-mega",
+    "medichamite": "medicham-mega",
+    "manectite": "manectric-mega",
+    "sharpedonite": "sharpedo-mega",
+    "cameruptite": "camerupt-mega",
+    "altarianite": "altaria-mega",
+    "banettite": "banette-mega",
+    "absolite": "absol-mega",
+    "glalitite": "glalie-mega",
+    "salamencite": "salamence-mega",
+    "metagrossite": "metagross-mega",
+    "latiasite": "latias-mega",
+    "latiosite": "latios-mega",
+    "lopunnite": "lopunny-mega",
+    "garchompite": "garchomp-mega",
+    "lucarionite": "lucario-mega",
+    "abomasite": "abomasnow-mega",
+    "galladite": "gallade-mega",
+    "audinite": "audino-mega",
+    "diancite": "diancie-mega",
+    "beedrillite": "beedrill-mega",
+    "pidgeotite": "pidgeot-mega",
+    "slowbronite": "slowbro-mega",
+    "steelixite": "steelix-mega"
+}
+
 def get_mandatory_item(pokemon_name: str) -> Optional[str]:
     """Returns the mandatory item for a given Pokemon form, if any."""
     normalized = pokemon_name.lower().replace(' ', '').replace('_', '-')

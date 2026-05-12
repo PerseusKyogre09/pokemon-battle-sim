@@ -168,12 +168,12 @@ export const startBattle = async (pokemonName: string, selectedSet?: any, oppone
   }
 };
 
-export const executeMove = async (moveName?: string, switchIndex?: number): Promise<any> => {
+export const executeMove = async (moveName?: string, switchIndex?: number, mega?: boolean): Promise<any> => {
   try {
     const response = await fetch(`${API_BASE_URL}/move`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ move: moveName, switch_index: switchIndex }),
+      body: JSON.stringify({ move: moveName, switch_index: switchIndex, mega: mega }),
     });
     return await safeJson(response);
   } catch (e) {

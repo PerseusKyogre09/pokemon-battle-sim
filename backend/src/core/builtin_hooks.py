@@ -436,8 +436,7 @@ def ability_on_switch_in(context: BattleContext) -> None:
     ability_msgs = pokemon.on_switch_in(opponent)
     for msg in ability_msgs:
         if "set_weather" in msg:
-            context.game.weather = msg["set_weather"]
-            context.game.weather_duration = 5
+            context.game.set_weather(msg["set_weather"], 5)
         
         is_p = pokemon.is_player
         normalized_msg = {
@@ -642,8 +641,22 @@ def relic_song_on_hit(context: BattleContext) -> None:
             "new_name": attacker.name
         })
 
+def primal_reversion_on_switch_in(context: BattleContext) -> None:
+    game = context.game
+    attacker = context.attacker # The pokemon switching in
+    if not attacker:
+        return
+        
+    is_player = attacker == game.player_pokemon
+    if game.can_primal_revert(is_player):
+        # We need to simulate the turn_info to collect events
+        temp_turn_info = {'battle_events': []}
+        game.perform_primal_reversion(is_player, temp_turn_info)
+        context.events.extend(temp_turn_info['battle_events'])
+
 def register_builtin_hooks(registry) -> None:
     registry.register("switchIn", entry_hazards_on_switch_in)
+    registry.register("switchIn", primal_reversion_on_switch_in)
     registry.register("switchIn", ability_on_switch_in)
     registry.register("switchIn", check_all_forme_changes)
     registry.register("faint", ability_on_faint)

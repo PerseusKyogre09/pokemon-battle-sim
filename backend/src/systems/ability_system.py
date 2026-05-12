@@ -41,11 +41,6 @@ class Ability:
         self.config = ABILITIES_CONFIG.get(self.id, {})
         self.name = self.config.get("name", name)
         self.description = self.config.get("desc", "No effect.")
-        if not self.config:
-            print(f"DEBUG: Ability {name} (ID: {self.id}) not found in config!")
-        else:
-            print(f"DEBUG: Loaded Ability {self.name} (ID: {self.id})")
-            
         # State for specific abilities
         self.state = {}
         if self.id == 'slowstart':
@@ -143,15 +138,20 @@ class Ability:
                 return True
             return False
 
-        # 6. Specific moves
-        match = re.search(r"move\.id === '([^']+)'", logic_str)
+        # Pattern: move.flags['pulse']
+        match = re.search(r"move\.flags\[['\"](\w+)['\"]\]", logic_str)
         if match:
-            target_move = match.group(1).lower()
-            if move and move.name.lower().replace(" ", "").replace("-", "") == target_move:
+            flag = match.group(1).lower()
+            if move and hasattr(move, 'flags') and move.flags.get(flag):
                 return True
             return False
 
-        # If no obvious condition, assume it applies
+        # If no obvious condition, assume it applies only if it's a simple logic string
+        # If it contains complex JS patterns we don't recognize, it's safer to return False
+        # than to always return True (which was causing over-damage)
+        if "(" in logic_str or "{" in logic_str or "===" in logic_str:
+            return False
+            
         return True
 
     def _extract_popups(self, logic_str: str, pokemon) -> List[Dict[str, Any]]:

@@ -25,9 +25,13 @@ from .pokemon_utils import POKEAPI_NAME_MAP
 
 def get_best_sprite(data, side='front', shiny=False):
     # data['name'] is usually the PokeAPI name (e.g., "wishiwashi-solo" or "bulbasaur")
-    name = data['name'].lower()
+    name = data.get('name', '').lower()
     
     # 1. Base species that Showdown expects WITHOUT hyphens
+    
+    # Format megas for showdown (e.g. charizard-mega-y -> charizard-megay)
+    if '-mega-' in name:
+        name = name.replace('-mega-x', '-megax').replace('-mega-y', '-megay')
     FLATTEN_BASE = [
         'ho-oh', 'porygon-z', 'jangmo-o', 'hakamo-o', 'kommo-o', 
         'sirfetch’d', 'farfetch’d', 'sirfetchd', 'farfetchd',
@@ -158,12 +162,17 @@ def get_forme_data(species_name: str, side='front', shiny=False):
     if not data:
         return None
         
+    primary_ability = next((a['ability']['name'].replace('-', '').lower() for a in data.get('abilities', []) if not a.get('is_hidden')), '')
+    if not primary_ability and data.get('abilities'):
+        primary_ability = data['abilities'][0]['ability']['name'].replace('-', '').lower()
+        
     return {
         'name': data['name'],
         'types': [t['type']['name'] for t in data['types']],
         'sprite_url': get_best_sprite(data, side=side, shiny=shiny),
         'cry_url': data.get('cries', {}).get('latest', ''),
-        'stats': {s['stat']['name'].replace('-', '_'): s['base_stat'] for s in data['stats']}
+        'stats': {s['stat']['name'].replace('-', '_'): s['base_stat'] for s in data['stats']},
+        'ability': primary_ability
     }
 
 def to_display_name(name: str) -> str:

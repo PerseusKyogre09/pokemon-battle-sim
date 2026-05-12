@@ -42,11 +42,13 @@ export default function BattlePage() {
   const [audioReady, setAudioReady] = useState(false);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [showSwitchMenu, setShowSwitchMenu] = useState(false);
+  const [isMegaEvolving, setIsMegaEvolving] = useState(false);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hitSoundRef = useRef<HTMLAudioElement | null>(null);
   const pokeballSoundRef = useRef<HTMLAudioElement | null>(null);
+  const megaEvoSoundRef = useRef<HTMLAudioElement | null>(null);
   const abilityPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const playerSpriteRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export default function BattlePage() {
     }
 
     return () => {
-      [audioRef, hitSoundRef, pokeballSoundRef].forEach(ref => {
+      [audioRef, hitSoundRef, pokeballSoundRef, megaEvoSoundRef].forEach(ref => {
         if (ref.current) {
           ref.current.pause();
           ref.current.currentTime = 0;
@@ -87,10 +89,11 @@ export default function BattlePage() {
 
   const setupAudio = async () => {
     try {
-      const [battleMusicUrl, hitSoundUrl, pokeballSoundUrl] = await Promise.all([
+      const [battleMusicUrl, hitSoundUrl, pokeballSoundUrl, megaEvoUrl] = await Promise.all([
         getAudioUrl('battle-music.mp3'),
         getAudioUrl('hit-sound.mp3'),
-        getAudioUrl('pokeball-throw.mp3')
+        getAudioUrl('pokeball-throw.mp3'),
+        getAudioUrl('Mega Evolution FX.ogg')
       ]);
 
       audioRef.current = new Audio(battleMusicUrl);
@@ -103,8 +106,12 @@ export default function BattlePage() {
       
       pokeballSoundRef.current = new Audio(pokeballSoundUrl);
       pokeballSoundRef.current.preload = 'auto';
+
+      megaEvoSoundRef.current = new Audio(megaEvoUrl);
+      megaEvoSoundRef.current.preload = 'auto';
+      megaEvoSoundRef.current.volume = 0.6;
       
-      (window as any).__activeAudios = [audioRef.current, hitSoundRef.current, pokeballSoundRef.current];
+      (window as any).__activeAudios = [audioRef.current, hitSoundRef.current, pokeballSoundRef.current, megaEvoSoundRef.current];
       setAudioReady(true);
     } catch (err) {
       setAudioReady(true);
@@ -204,12 +211,13 @@ export default function BattlePage() {
     setIsProcessing(true);
     
     try {
-      const result: TurnResult | any = moveName ? await executeMove(moveName) : await executeMove(undefined, switchIndex);
+      const result: TurnResult | any = moveName ? await executeMove(moveName, undefined, isMegaEvolving) : await executeMove(undefined, switchIndex);
       if (!result || !result.turn_info) {
         setIsProcessing(false);
         return;
       }
       setShowSwitchMenu(false);
+      setIsMegaEvolving(false);
 
       for (const eventObj of (result.turn_info.battle_events as any[])) {
         if (eventObj.type === 'move') {
@@ -322,6 +330,83 @@ export default function BattlePage() {
           await new Promise(resolve => setTimeout(resolve, 600));
           setEvents(prev => [...prev, eventObj.message]);
           await new Promise(resolve => setTimeout(resolve, 1800));
+        } else if (eventObj.type === 'mega_evolution') {
+          setEvents(prev => [...prev, eventObj.message]);
+          
+          const isPlayer = eventObj.is_player === true;
+          const targetEl = isPlayer ? playerSpriteRef.current : opponentSpriteRef.current;
+          
+          if (targetEl && targetEl.parentElement) {
+            megaEvoSoundRef.current?.play().catch(() => {});
+            
+            const shell = document.createElement('div');
+            shell.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] md:w-[250px] md:h-[250px] rounded-full bg-gradient-to-tr from-purple-500 via-pink-400 to-white mix-blend-screen opacity-0 shadow-[0_0_50px_rgba(255,255,255,0.8)] pointer-events-none z-[60]";
+            targetEl.parentElement.appendChild(shell);
+            
+            // Pixelated low-res effect: scale down image significantly then scale back up with pixelated rendering
+            const img = targetEl.querySelector('img');
+            if (img) {
+              img.style.transition = 'none'; // Disable CSS transitions to allow GSAP to take control
+              img.style.imageRendering = 'pixelated';
+              gsap.to(img, { scale: 0.1, duration: 0.4, ease: "power2.in" });
+              gsap.to(img, { scale: 1.5, duration: 0.4, delay: 0.4, ease: "power2.out" });
+            }
+            
+            gsap.to(targetEl, { filter: 'blur(2px) brightness(2.5) contrast(1.5)', duration: 0.6 });
+            gsap.to(shell, { opacity: 0.9, scale: 1.2, duration: 0.8, ease: "power2.inOut", yoyo: true, repeat: 1 });
+            
+            await new Promise(resolve => setTimeout(resolve, 1400));
+            
+            setShowFlash(true);
+            setTimeout(() => setShowFlash(false), 200);
+            
+            const side = isPlayer ? 'player_pokemon' : 'opponent_pokemon';
+            setBattleState(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                [side]: {
+                  ...prev[side],
+                  ...(eventObj.new_sprite ? { sprite: eventObj.new_sprite } : {}),
+                  ...(eventObj.new_name ? { name: eventObj.new_name } : {})
+                }
+              };
+            });
+            
+            shell.remove();
+            const finalImg = targetEl.querySelector('img');
+            if (finalImg) {
+              finalImg.style.imageRendering = 'auto'; // Reset to default for crisp look
+              finalImg.style.transition = ''; // Restore CSS transitions
+              gsap.set(finalImg, { clearProps: "scale" }); // Clear GSAP scale
+            }
+            gsap.to(targetEl, { clearProps: "filter", duration: 0.2 });
+            
+            const megaSymbol = document.createElement('img');
+            megaSymbol.src = "/images/mega.png";
+            megaSymbol.className = "absolute top-[-40px] left-1/2 -translate-x-1/2 w-12 h-12 md:w-20 md:h-20 opacity-0 z-[70] drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] pointer-events-none";
+            targetEl.parentElement.appendChild(megaSymbol);
+            
+            gsap.to(megaSymbol, { opacity: 1, scale: 1.2, rotation: 360, duration: 0.6, ease: "back.out(1.7)" });
+            gsap.to(megaSymbol, { opacity: 0, y: -50, scale: 0.5, duration: 0.5, delay: 1.2, ease: "power2.in" });
+            
+            setTimeout(() => megaSymbol.remove(), 2000);
+            await new Promise(resolve => setTimeout(resolve, 1200));
+          } else {
+             const side = isPlayer ? 'player_pokemon' : 'opponent_pokemon';
+             setBattleState(prev => {
+               if (!prev) return prev;
+               return {
+                 ...prev,
+                 [side]: {
+                   ...prev[side],
+                   ...(eventObj.new_sprite ? { sprite: eventObj.new_sprite } : {}),
+                   ...(eventObj.new_name ? { name: eventObj.new_name } : {})
+                 }
+               };
+             });
+             await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         } else if (eventObj.type === 'pending_switch') {
           if (eventObj.message) setEvents(prev => [...prev, eventObj.message]);
           if (eventObj.target === 'player') {
@@ -433,7 +518,21 @@ export default function BattlePage() {
               <PokemonCard ref={playerSpriteRef} name={battleState.player_pokemon.name} sprite={battleState.player_pokemon.sprite} currentHp={battleState.player_pokemon.current_hp} maxHp={battleState.player_pokemon.max_hp} level={100} types={battleState.player_pokemon.types} status_effects={battleState.player_pokemon.status_effects} isVisible={playerAnim.visible} isShaking={playerAnim.shaking} isAttacking={playerAnim.attacking} isFainted={playerAnim.fainted} layout="sprite-only" flip={false} hasSubstitute={(battleState.player_pokemon.substitute_hp ?? 0) > 0} />
             </div>
             <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 scale-75 md:scale-100 2xl:scale-[1.4] origin-bottom-right transition-all duration-500">
-              <PokemonCard name={battleState.player_pokemon.name} sprite={battleState.player_pokemon.sprite} currentHp={battleState.player_pokemon.current_hp} maxHp={battleState.player_pokemon.max_hp} level={100} types={battleState.player_pokemon.types} status_effects={battleState.player_pokemon.status_effects} showStatus={playerAnim.status} layout="status-only" hasSubstitute={(battleState.player_pokemon.substitute_hp ?? 0) > 0} />
+              <PokemonCard 
+                name={battleState.player_pokemon.name} 
+                sprite={battleState.player_pokemon.sprite} 
+                currentHp={battleState.player_pokemon.current_hp} 
+                maxHp={battleState.player_pokemon.max_hp} 
+                level={100} 
+                types={battleState.player_pokemon.types} 
+                status_effects={battleState.player_pokemon.status_effects} 
+                showStatus={playerAnim.status} 
+                layout="status-only" 
+                hasSubstitute={(battleState.player_pokemon.substitute_hp ?? 0) > 0} 
+                canMegaEvolve={(battleState.player_pokemon as any).can_mega_evolve && battleStage === 'active'}
+                isMegaEvolving={isMegaEvolving}
+                onToggleMegaEvolution={() => !isProcessing && setIsMegaEvolving(!isMegaEvolving)}
+              />
             </div>
           </div>
 
@@ -483,7 +582,7 @@ export default function BattlePage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex border-t-4 border-[#0f172a]">
+                  <div className="flex flex-1 border-t-4 border-[#0f172a]">
                     <button onClick={() => setShowSwitchMenu(true)} disabled={isProcessing || battleStage !== 'active'} className="flex-1 h-12 md:h-20 text-[10px] md:text-[14px] uppercase text-blue-400 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-blue-400/10 tracking-[0.2em] border-r-4 border-[#0f172a]">POKEMON</button>
                     <button onClick={() => setShowForfeitModal(true)} className="flex-1 h-12 md:h-20 text-[10px] md:text-[14px] uppercase text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2 group hover:bg-white/5 tracking-[0.2em]">RUN</button>
                   </div>

@@ -763,11 +763,21 @@ class Move:
             effectiveness = 1.0
             
             for target_type in defending_types:
-                effectiveness *= data_loader.get_type_effectiveness(move_type, target_type)
+                eff = data_loader.get_type_effectiveness(move_type, target_type)
+                # Delta Stream: Super-effective moves against Flying become neutral (1x)
+                if weather == 'deltastream' and target_type == 'flying' and eff > 1:
+                    eff = 1.0
+                effectiveness *= eff
                 
             effectiveness = round(effectiveness, 2)
             self.effectiveness = effectiveness
             is_critical = self._get_critical_hit(defending_pokemon)
+            
+            # Primal Weather Suppression
+            if weather == 'primordialsea' and move_type == 'fire':
+                return 0, 0, "The Fire-type move fizzled out in the heavy rain!", None, weather_to_set
+            if weather == 'desolateland' and move_type == 'water':
+                return 0, 0, "The Water-type move evaporated in the harsh sunlight!", None, weather_to_set
             
             # Determine attack and defense stats based on move category
             defending_types_lower = [t.lower() for t in defending_pokemon.types]
@@ -846,16 +856,15 @@ class Move:
                 damage = ((2 * level / 5 + 2) * actual_base_power * attack_stat / defense_stat) / 50 + 2
                 damage = int(damage)
 
-                # Apply effectiveness
                 damage = int(damage * effectiveness)
                 
                 # Apply weather multipliers
-                if weather == 'raindance':
+                if weather in ['raindance', 'primordialsea']:
                     if move_type == 'water':
                         damage = int(damage * 1.5)
                     elif move_type == 'fire':
                         damage = int(damage * 0.5)
-                elif weather == 'sunnyday':
+                elif weather in ['sunnyday', 'desolateland']:
                     if move_type == 'fire':
                         damage = int(damage * 1.5)
                     elif move_type == 'water':
@@ -930,7 +939,6 @@ class Move:
         
         # Determine number of hits
         hit_count = self._determine_hit_count()
-        print(f"DEBUG: {self.name} will hit {hit_count} times")
         
         # Get the move type in lowercase for comparison
         move_type = self.type.lower()
@@ -949,16 +957,16 @@ class Move:
         for target_type in defending_types:
             type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
             effectiveness_breakdown[target_type] = type_effectiveness
-            effectiveness *= type_effectiveness
+        
+        for t in defending_types:
+            eff = data_loader.get_type_effectiveness(move_type, t)
+            # Delta Stream: Super-effective moves against Flying become neutral (1x)
+            if weather == 'deltastream' and t == 'flying' and eff > 1:
+                eff = 1.0
+            effectiveness *= eff
         
         effectiveness = round(effectiveness, 2)
         self.effectiveness = effectiveness
-        
-        # Debug logging
-        print(f"DEBUG: {attacking_pokemon.name}'s {self.name} ({move_type}) vs {defending_pokemon.name} ({', '.join(defending_types)}):")
-        for t, eff in effectiveness_breakdown.items():
-            print(f"  - Against {t}: {eff}x")
-        print(f"  Total effectiveness: {effectiveness}x")
         
         if effectiveness == 0:
             return 0, 0, "It had no effect...", None, None
@@ -982,7 +990,7 @@ class Move:
         for hit_num in range(1, hit_count + 1):
             # Check accuracy for each hit
             if not self._check_accuracy(attacking_pokemon, defending_pokemon):
-                print(f"DEBUG: Hit {hit_num} missed!")
+                accuracy = self.accuracy
                 continue
 
             is_critical = self._get_critical_hit(defending_pokemon)

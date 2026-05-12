@@ -42,7 +42,7 @@ class DataLoader:
                 if move_key.lower() != clean_name:
                      self.moves_data[clean_name] = move_data
                 
-            print(f"=== LOADED {len(self.moves_data)} MOVES FROM moves.json ===")
+            pass
             
         except FileNotFoundError:
             print("Warning: moves.json file not found")
@@ -89,7 +89,6 @@ class DataLoader:
                         print(f"Warning: Failed to parse move description for {move_key}: {e}")
                         continue
                 
-                print(f"\n=== LOADED {len(self.moves_desc_data)} MOVE DESCRIPTIONS ===")
                 
         except FileNotFoundError:
             print("Warning: moves_desc.json file not found")
@@ -133,7 +132,7 @@ class DataLoader:
             with open(abilities_path, 'r', encoding='utf-8') as f:
                 self.abilities_data = json.load(f)
             
-            print(f"=== LOADED {len(self.abilities_data)} ABILITIES FROM abilities_logic.json ===")
+            pass
             
         except FileNotFoundError:
             print("Warning: abilities_logic.json file not found")
@@ -147,7 +146,7 @@ class DataLoader:
             with open(items_path, 'r', encoding='utf-8') as f:
                 self.items_data = json.load(f)
             
-            print(f"=== LOADED {len(self.items_data)} ITEMS FROM items_logic.json ===")
+            pass
             
         except FileNotFoundError:
             print("Warning: items_logic.json file not found")

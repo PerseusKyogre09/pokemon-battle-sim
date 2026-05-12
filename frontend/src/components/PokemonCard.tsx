@@ -22,6 +22,9 @@ interface PokemonCardProps {
   layout?: 'sprite-only' | 'status-only' | 'full';
   flip?: boolean;
   hasSubstitute?: boolean;
+  canMegaEvolve?: boolean;
+  isMegaEvolving?: boolean;
+  onToggleMegaEvolution?: () => void;
   onClick?: () => void;
 }
 
@@ -55,7 +58,8 @@ const statusFilters: Record<string, string> = {
 const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({ 
   name, sprite, currentHp, maxHp, level, types = [], status_effects = [],
   isOpponent, isVisible = true, isAttacking, isShaking, isFainted, showStatus = true,
-  layout = 'full', flip = false, hasSubstitute = false, onClick
+  layout = 'full', flip = false, hasSubstitute = false, 
+  canMegaEvolve, isMegaEvolving, onToggleMegaEvolution, onClick
 }, ref) => {
   useEffect(() => {
     if (isVisible && !isFainted && ref && typeof ref !== 'function' && ref.current) {
@@ -132,13 +136,39 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
 
   const renderStatus = () => {
     return (
-      <div className={`w-64 gba-box gba-panel-shadow relative transition-all duration-500 overflow-hidden
-        ${showStatus ? 'translate-x-0 opacity-100' : (isOpponent ? '-translate-x-20' : 'translate-x-20') + ' opacity-0'}
-      `}
-      style={{ 
-        borderRadius: isOpponent ? '0 0 0 16px' : '16px 0 0 0',
-        borderWidth: isOpponent ? '2px 0 4px 4px' : '4px 4px 2px 0'
-      }}>
+      <div className={`flex items-stretch transition-all duration-500 ${showStatus ? 'translate-x-0 opacity-100' : (isOpponent ? '-translate-x-20' : 'translate-x-20') + ' opacity-0'}`}>
+        {canMegaEvolve && !isOpponent && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); if (onToggleMegaEvolution) onToggleMegaEvolution(); }} 
+            className={`relative flex items-center justify-center px-1.5 md:px-2 rounded-l-xl border-y-4 border-l-4 border-r-0 transition-all overflow-hidden group z-20 ${isMegaEvolving ? 'bg-gradient-to-b from-purple-600 to-blue-600 border-purple-400' : 'bg-[#1e293b] border-[#475569] hover:bg-[#334155]'}`}
+            style={{ 
+              boxShadow: isMegaEvolving 
+                ? 'inset 2px 2px 0px rgba(255,255,255,0.2), inset 0px -2px 0px rgba(0,0,0,0.4), -4px 4px 12px rgba(139, 92, 246, 0.4)' 
+                : 'inset 2px 2px 0px #334155, inset 0px -2px 0px #0f172a, -4px 4px 8px rgba(0,0,0,0.3)',
+              marginRight: '-4px' // Merge with the status box
+            }}
+            title="Toggle Mega Evolution"
+          >
+            <div className={`absolute inset-0 bg-white/10 mix-blend-overlay opacity-0 ${isMegaEvolving ? 'opacity-100 animate-pulse' : 'group-hover:opacity-50'}`} />
+            <div className="flex flex-col items-center gap-2 md:gap-3 relative z-10 py-2">
+              <img src="/images/pokeball.png" alt="Mega" className={`w-3 h-3 md:w-4 md:h-4 ${isMegaEvolving ? 'animate-spin drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'opacity-40 grayscale'}`} style={{ filter: isMegaEvolving ? 'hue-rotate(90deg)' : '' }} />
+              <span className={`text-[7px] md:text-[9px] font-bold uppercase tracking-[0.3em] ${isMegaEvolving ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-purple-400/50'}`} style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                MEGA
+              </span>
+            </div>
+          </button>
+        )}
+        <div className={`w-64 gba-box gba-panel-shadow relative overflow-hidden z-10`}
+        style={{ 
+          borderRadius: isOpponent ? '0 0 0 16px' : (canMegaEvolve ? '0 16px 0 0' : '16px 0 0 0'),
+          borderWidth: isOpponent ? '2px 0 4px 4px' : '4px 4px 2px 4px',
+          borderLeftWidth: (!isOpponent && canMegaEvolve) ? '0px' : undefined,
+          boxShadow: isOpponent 
+            ? 'inset 2px 2px 0px #334155, inset -2px -2px 0px #0f172a' 
+            : (canMegaEvolve 
+              ? 'inset 0px 2px 0px #334155, inset -2px -2px 0px #0f172a' 
+              : 'inset 2px 2px 0px #334155, inset -2px -2px 0px #0f172a')
+        }}>
       <div className="flex justify-between items-center mb-1 border-b-2 border-white/10 pb-1">
         <div className="flex items-center gap-2 max-w-[75%]">
           <h3 
@@ -178,6 +208,7 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
           </div>
         </div>
       )}
+    </div>
     </div>
     );
   };
