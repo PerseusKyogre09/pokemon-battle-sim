@@ -41,12 +41,8 @@ class Item:
     def modify_damage_dealt(self, pokemon, opponent, move, damage: int) -> int:
         final_damage = damage
         
-        # Choice Band / Specs / Scarf (Scarf is speed, handled in modify_stat)
-        if self.id == 'choiceband' and move.category == 'physical':
-            final_damage = int(final_damage * 1.5)
-        elif self.id == 'choicespecs' and move.category == 'special':
-            final_damage = int(final_damage * 1.5)
-        elif self.id == 'lifeorb':
+        # Choice Band / Specs / Scarf are stat modifiers, not final damage modifiers.
+        if self.id == 'lifeorb':
             final_damage = int(final_damage * 1.3)
         elif self.id == 'expertbelt' and getattr(move, 'effectiveness', 1.0) > 1:
             final_damage = int(final_damage * 1.2)

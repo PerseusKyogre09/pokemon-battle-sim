@@ -47,6 +47,7 @@ class Move:
         self.ohko = data_dict.get('ohko', False)
         self.defensive_category = data_dict.get('defensiveCategory')
         self.use_target_offensive = data_dict.get('useTargetOffensive', False)
+        self.effectiveness = 1.0
 
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
@@ -92,6 +93,66 @@ class Move:
             return False
 
         return True
+
+    def _get_damage_stat(self, pokemon, stat_name: str, is_critical: bool, role: str) -> int:
+        base = pokemon.base_stats.get(stat_name, 10)
+        level = getattr(pokemon, 'level', 100)
+        mapping = {'attack': 'atk', 'defense': 'def', 'special_attack': 'spa', 'special_defense': 'spd'}
+        key = mapping.get(stat_name, stat_name)
+        iv = pokemon.ivs.get(key, 31)
+        ev = pokemon.evs.get(key, 0)
+
+        stat = int(((2 * base + iv + int(ev / 4)) * level) / 100) + 5
+        natures = {
+            'Adamant': ('attack', 'special_attack'), 'Bold': ('defense', 'attack'),
+            'Brave': ('attack', 'speed'), 'Calm': ('special_defense', 'attack'),
+            'Careful': ('special_defense', 'special_attack'), 'Gentle': ('special_defense', 'defense'),
+            'Hasty': ('speed', 'defense'), 'Impish': ('defense', 'special_attack'),
+            'Jolly': ('speed', 'special_attack'), 'Lax': ('defense', 'special_defense'),
+            'Lonely': ('attack', 'defense'), 'Mild': ('special_attack', 'defense'),
+            'Modest': ('special_attack', 'attack'), 'Naive': ('speed', 'special_defense'),
+            'Naughty': ('attack', 'special_defense'), 'Quiet': ('special_attack', 'speed'),
+            'Rash': ('special_attack', 'special_defense'), 'Relaxed': ('defense', 'speed'),
+            'Sassy': ('special_defense', 'speed'), 'Timid': ('speed', 'attack')
+        }
+        plus, minus = natures.get(pokemon.nature, (None, None))
+        if plus == stat_name:
+            stat = int(stat * 1.1)
+        elif minus == stat_name:
+            stat = int(stat * 0.9)
+
+        stage = pokemon.stat_stages.get(stat_name, 0)
+        if is_critical and role == 'attacker' and stage < 0:
+            stage = 0
+        elif is_critical and role == 'defender' and stage > 0:
+            stage = 0
+
+        stat = int(stat * pokemon.get_stat_stage_multiplier(stage))
+        if hasattr(pokemon, 'ability'):
+            stat = pokemon.ability.modify_stat(pokemon, stat_name, stat)
+        if pokemon.item_obj:
+            stat = pokemon.item_obj.modify_stat(pokemon, stat_name, stat)
+        return max(1, stat)
+
+    def _get_critical_hit(self, defending_pokemon=None) -> bool:
+        if defending_pokemon and hasattr(defending_pokemon, 'ability') and defending_pokemon.ability.id in ['battlearmor', 'shellarmor']:
+            return False
+        crit_ratio = self.data.get('critRatio', 1)
+        will_crit = self.data.get('willCrit', False)
+        crit_chances = {1: 1/16, 2: 1/8, 3: 1/2, 4: 1.0}
+        crit_chance = crit_chances.get(crit_ratio, 1.0) if crit_ratio in crit_chances else (1.0 if crit_ratio > 4 else 1/16)
+        return will_crit or random.random() < crit_chance
+
+    def _get_burn_multiplier(self, attacking_pokemon) -> float:
+        if self.category != 'physical':
+            return 1.0
+        if self.id == 'facade':
+            return 1.0
+        if not attacking_pokemon or not getattr(attacking_pokemon, 'major_status', None) == 'burn':
+            return 1.0
+        if hasattr(attacking_pokemon, 'ability') and attacking_pokemon.ability.id == 'guts':
+            return 1.0
+        return 0.5
     
     def _parse_healing_data(self) -> Tuple[bool, Optional[List[int]], Optional[List[int]]]:
         if not self.data:
@@ -514,7 +575,11 @@ class Move:
                 if self.heal_amount is not None:
                     messages.append(f"{user.name} recovered {actual_heal} HP!")
                 elif self.drain_ratio is not None:
-                    messages.append(f"{user.name} drained {actual_heal} HP from {target.name if target else 'the target'}!")
+                    if actual_heal > 0:
+                        messages.append(f"{user.name} recovered {actual_heal} HP!")
+                        messages.append(f"{target.name if target else 'The target'}'s energy was drained!")
+                    else:
+                        messages.append(f"{target.name if target else 'The target'}'s energy was drained!")
                 else:
                     messages.append(f"{user.name} recovered {actual_heal} HP!")
             
@@ -693,6 +758,8 @@ class Move:
                 effectiveness *= data_loader.get_type_effectiveness(move_type, target_type)
                 
             effectiveness = round(effectiveness, 2)
+            self.effectiveness = effectiveness
+            is_critical = self._get_critical_hit(defending_pokemon)
             
             # Determine attack and defense stats based on move category
             defending_types_lower = [t.lower() for t in defending_pokemon.types]
@@ -700,31 +767,31 @@ class Move:
             # Determine which offensive stat to use
             if self.use_target_offensive:
                 # Foul Play: Use target's attack stat
-                attack_stat = getattr(defending_pokemon, 'attack', 1)
+                attack_stat = self._get_damage_stat(defending_pokemon, 'attack', is_critical, 'attacker')
                 attack_name = "Target's Attack"
             elif self.category == 'physical':
-                attack_stat = getattr(attacking_pokemon, 'attack', 1)
+                attack_stat = self._get_damage_stat(attacking_pokemon, 'attack', is_critical, 'attacker')
                 attack_name = 'Attack'
             else: # 'special'
-                attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
+                attack_stat = self._get_damage_stat(attacking_pokemon, 'special_attack', is_critical, 'attacker')
                 attack_name = 'Special Attack'
                 
             # Determine which defensive stat to use
             effective_defensive_category = self.defensive_category.lower() if self.defensive_category else self.category
             
             if effective_defensive_category == 'physical':
-                defense_stat = getattr(defending_pokemon, 'defense', 1)
+                defense_stat = self._get_damage_stat(defending_pokemon, 'defense', is_critical, 'defender')
                 # Gen 9 Snow (replaces Hail): +50% Defense for Ice types
                 if weather == 'hail' and 'ice' in defending_types_lower:
                     defense_stat = int(defense_stat * 1.5)
                 defense_name = 'Defense'
             else: # 'special'
-                defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+                defense_stat = self._get_damage_stat(defending_pokemon, 'special_defense', is_critical, 'defender')
                 # Sandstorm: +50% Special Defense for Rock types
                 if weather == 'sandstorm' and 'rock' in defending_types_lower:
                     defense_stat = int(defense_stat * 1.5)
                 defense_name = 'Special Defense'
-            level = 100
+            level = getattr(attacking_pokemon, 'level', 100)
             move_name_lower = self.name.lower()
             
             # Apply base damage formula if no fixed damage
@@ -735,9 +802,17 @@ class Move:
                     damage = level
                 else:
                     damage = 40 # Fallback for unknown fixed damage strings
+                if effectiveness == 0:
+                    effectiveness_message = "It had no effect..."
+                    return 0, 0, effectiveness_message, None, weather_to_set
+                base_damage = damage
             elif self.ohko:
+                if effectiveness == 0:
+                    effectiveness_message = "It had no effect..."
+                    return 0, 0, effectiveness_message, None, weather_to_set
                 damage = defending_pokemon.current_hp
                 effectiveness_message = "It's a one-hit KO!"
+                base_damage = damage
             else:
                 # Check for special move logic in JSON generically
                 actual_base_power = base_damage
@@ -751,66 +826,64 @@ class Move:
 
                 damage = ((2 * level / 5 + 2) * actual_base_power * attack_stat / defense_stat) / 50 + 2
                 damage = int(damage)
-            
-            # Apply effectiveness
-            damage = int(damage * effectiveness)
-            
-            # Apply weather multipliers
-            if weather == 'raindance':
-                if move_type == 'water':
+
+                # Apply effectiveness
+                damage = int(damage * effectiveness)
+                
+                # Apply weather multipliers
+                if weather == 'raindance':
+                    if move_type == 'water':
+                        damage = int(damage * 1.5)
+                    elif move_type == 'fire':
+                        damage = int(damage * 0.5)
+                elif weather == 'sunnyday':
+                    if move_type == 'fire':
+                        damage = int(damage * 1.5)
+                    elif move_type == 'water':
+                        damage = int(damage * 0.5)
+                elif weather == 'hail': # Gen 9 Snow
+                    if move_type == 'ice':
+                        damage = int(damage * 1.5)
+                
+                if effectiveness == 0:
+                    effectiveness_message = "It had no effect..."
+                    return 0, 0, effectiveness_message, None, weather_to_set
+                elif effectiveness < 1:
+                    effectiveness_message = "It's not very effective..."
+                elif effectiveness > 1:
+                    effectiveness_message = "It's super effective!"
+                
+                # Apply STAB (Same Type Attack Bonus) - 1.5x (or 2x with Adaptability)
+                if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
+                    attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
+                    if move_type in attacker_types:
+                        stab_multiplier = 1.5
+                        if hasattr(attacking_pokemon, 'ability'):
+                            stab_multiplier = attacking_pokemon.ability.get_stab_multiplier()
+                        damage = int(damage * stab_multiplier)
+                
+                if is_critical:
                     damage = int(damage * 1.5)
-                elif move_type == 'fire':
-                    damage = int(damage * 0.5)
-            elif weather == 'sunnyday':
-                if move_type == 'fire':
-                    damage = int(damage * 1.5)
-                elif move_type == 'water':
-                    damage = int(damage * 0.5)
-            elif weather == 'hail': # Gen 9 Snow
-                if move_type == 'ice':
-                    damage = int(damage * 1.5)
-            
-            if effectiveness == 0:
-                effectiveness_message = "It had no effect..."
-                return 0, 0, effectiveness_message, None, weather_to_set
-            elif effectiveness < 1:
-                effectiveness_message = "It's not very effective..."
-            elif effectiveness > 1:
-                effectiveness_message = "It's super effective!"
-            
-            # Apply STAB (Same Type Attack Bonus) - 1.5x (or 2x with Adaptability)
-            if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
-                attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
-                if move_type in attacker_types:
-                    stab_multiplier = 1.5
-                    if hasattr(attacking_pokemon, 'ability'):
-                        stab_multiplier = attacking_pokemon.ability.get_stab_multiplier()
-                    damage = int(damage * stab_multiplier)
-            
-            # Check for critical hit
-            crit_ratio = self.data.get('critRatio', 1)
-            will_crit = self.data.get('willCrit', False)
-            
-            crit_chances = {1: 1/16, 2: 1/8, 3: 1/2, 4: 1.0}
-            crit_chance = crit_chances.get(crit_ratio, 1.0) if crit_ratio in crit_chances else (1.0 if crit_ratio > 4 else 1/16)
-            
-            is_critical = will_crit or random.random() < crit_chance
-            
-            if is_critical:
-                damage = int(damage * 1.5)
-                if effectiveness_message:
-                    effectiveness_message = "A critical hit! " + effectiveness_message
-                else:
-                    effectiveness_message = "A critical hit!"
-            
-            damage_multiplier = random.uniform(0.85, 1.0)
-            damage = max(1, int(damage * damage_multiplier))
-            
-            # Apply ability damage modifiers (e.g. Blaze, Technician)
-            if hasattr(attacking_pokemon, 'ability'):
-                damage = attacking_pokemon.ability.modify_damage_dealt(attacking_pokemon, defending_pokemon, self, damage)
-            
-            base_damage = damage
+                    if effectiveness_message:
+                        effectiveness_message = "A critical hit! " + effectiveness_message
+                    else:
+                        effectiveness_message = "A critical hit!"
+                
+                damage = int(damage * random.randint(85, 100) / 100)
+                damage = max(1, int(damage * self._get_burn_multiplier(attacking_pokemon)))
+                
+                # Apply ability damage modifiers (e.g. Blaze, Technician)
+                if hasattr(attacking_pokemon, 'ability'):
+                    damage = attacking_pokemon.ability.modify_damage_dealt(attacking_pokemon, defending_pokemon, self, damage)
+                
+                base_damage = damage
+
+            has_substitute = getattr(defending_pokemon, 'substitute_hp', 0) > 0
+            bypasses_substitute = self.flags.get('sound') or (hasattr(attacking_pokemon, 'ability') and attacking_pokemon.ability.id == 'infiltrator')
+            if base_damage > 0 and has_substitute and not bypasses_substitute:
+                substitute_damage = min(base_damage, defending_pokemon.substitute_hp)
+                defending_pokemon.substitute_hp -= substitute_damage
+                return 0, substitute_damage, effectiveness_message, None, weather_to_set
         
         # Apply status effects after damage calculation
         # Apply secondary effects, self effects, healing, and recoil
@@ -827,10 +900,15 @@ class Move:
             self_messages = self._apply_self_effects(attacking_pokemon, defending_pokemon)
             
             # Healing/Drain effects
-            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, base_damage)
+            # Cap healing and recoil by target's actual HP to match standard mechanics
+            actual_damage_dealt = base_damage
+            if defending_pokemon and hasattr(defending_pokemon, 'current_hp'):
+                actual_damage_dealt = min(base_damage, defending_pokemon.current_hp)
+            
+            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, actual_damage_dealt)
             
             # Recoil effects
-            recoil_messages = self._apply_recoil_effects(attacking_pokemon, base_damage)
+            recoil_messages = self._apply_recoil_effects(attacking_pokemon, actual_damage_dealt)
         
         # Apply legacy status effects for status moves
         status_messages = []
@@ -879,6 +957,7 @@ class Move:
             effectiveness *= type_effectiveness
         
         effectiveness = round(effectiveness, 2)
+        self.effectiveness = effectiveness
         
         # Debug logging
         print(f"DEBUG: {attacking_pokemon.name}'s {self.name} ({move_type}) vs {defending_pokemon.name} ({', '.join(defending_types)}):")
@@ -891,16 +970,16 @@ class Move:
         
         # Determine attack and defense stats based on move category
         if self.category == 'physical':
-            attack_stat = getattr(attacking_pokemon, 'attack', 1)
-            defense_stat = getattr(defending_pokemon, 'defense', 1)
+            attack_stat_name = 'attack'
+            defense_stat_name = 'defense'
         else:  # 'special'
-            attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
-            defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+            attack_stat_name = 'special_attack'
+            defense_stat_name = 'special_defense'
         
         # Calculate damage for each hit, accounting for Substitute
         total_poke_damage = 0
         total_sub_damage = 0
-        level = 100
+        level = getattr(attacking_pokemon, 'level', 100)
         
         has_substitute = getattr(defending_pokemon, 'substitute_hp', 0) > 0
         bypasses_substitute = self.flags.get('sound') or (hasattr(attacking_pokemon, 'ability') and attacking_pokemon.ability.id == 'infiltrator')
@@ -910,6 +989,10 @@ class Move:
             if not self._check_accuracy(attacking_pokemon, defending_pokemon):
                 print(f"DEBUG: Hit {hit_num} missed!")
                 continue
+
+            is_critical = self._get_critical_hit(defending_pokemon)
+            attack_stat = self._get_damage_stat(attacking_pokemon, attack_stat_name, is_critical, 'attacker')
+            defense_stat = self._get_damage_stat(defending_pokemon, defense_stat_name, is_critical, 'defender')
             
             # Calculate base damage for this hit
             hit_damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
@@ -920,14 +1003,19 @@ class Move:
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
-                    hit_damage = int(hit_damage * 1.5)
+                    stab_multiplier = attacking_pokemon.ability.get_stab_multiplier() if hasattr(attacking_pokemon, 'ability') else 1.5
+                    hit_damage = int(hit_damage * stab_multiplier)
             
             # Critical
-            if random.random() < 1/16: # Simplified for multi-hit
+            if is_critical:
                 hit_damage = int(hit_damage * 1.5)
             
             # Variation
-            hit_damage = max(1, int(hit_damage * random.uniform(0.85, 1.0)))
+            hit_damage = int(hit_damage * random.randint(85, 100) / 100)
+            hit_damage = max(1, int(hit_damage * self._get_burn_multiplier(attacking_pokemon)))
+
+            if hasattr(attacking_pokemon, 'ability'):
+                hit_damage = attacking_pokemon.ability.modify_damage_dealt(attacking_pokemon, defending_pokemon, self, hit_damage)
             
             # Apply to substitute if active
             if has_substitute and not bypasses_substitute and defending_pokemon.substitute_hp > 0:
@@ -1003,21 +1091,22 @@ class Move:
             type_effectiveness = data_loader.get_type_effectiveness(move_type, target_type)
             effectiveness *= type_effectiveness
         effectiveness = round(effectiveness, 2)
+        self.effectiveness = effectiveness
         
         if effectiveness == 0:
             return []
         
         # Determine attack and defense stats
         if self.category == 'physical':
-            attack_stat = getattr(attacking_pokemon, 'attack', 1)
-            defense_stat = getattr(defending_pokemon, 'defense', 1)
+            attack_stat_name = 'attack'
+            defense_stat_name = 'defense'
         else:
-            attack_stat = getattr(attacking_pokemon, 'special_attack', 1)
-            defense_stat = getattr(defending_pokemon, 'special_defense', 1)
+            attack_stat_name = 'special_attack'
+            defense_stat_name = 'special_defense'
         
         # Calculate each hit
         hits = []
-        level = 100
+        level = getattr(attacking_pokemon, 'level', 100)
         
         for hit_num in range(1, hit_count + 1):
             # Check accuracy for each hit
@@ -1029,6 +1118,10 @@ class Move:
                     'critical': False
                 })
                 continue
+
+            is_critical = self._get_critical_hit(defending_pokemon)
+            attack_stat = self._get_damage_stat(attacking_pokemon, attack_stat_name, is_critical, 'attacker')
+            defense_stat = self._get_damage_stat(defending_pokemon, defense_stat_name, is_critical, 'defender')
             
             # Calculate base damage for this hit
             damage = ((2 * level / 5 + 2) * self.power * attack_stat / defense_stat) / 50 + 2
@@ -1041,18 +1134,15 @@ class Move:
             if hasattr(attacking_pokemon, 'types') and attacking_pokemon.types:
                 attacker_types = [t.lower() if isinstance(t, str) else str(t).lower() for t in attacking_pokemon.types]
                 if move_type in attacker_types:
-                    damage = int(damage * 1.5)
-            
-            # Check for critical hit
-            crit_chance = 1/16
-            is_critical = random.random() < crit_chance
+                    stab_multiplier = attacking_pokemon.ability.get_stab_multiplier() if hasattr(attacking_pokemon, 'ability') else 1.5
+                    damage = int(damage * stab_multiplier)
             
             if is_critical:
                 damage = int(damage * 1.5)
             
             # Apply random damage variation
-            damage_multiplier = random.uniform(0.85, 1.0)
-            damage = max(1, int(damage * damage_multiplier))
+            damage = int(damage * random.randint(85, 100) / 100)
+            damage = max(1, int(damage * self._get_burn_multiplier(attacking_pokemon)))
             
             hits.append({
                 'hit_number': hit_num,
