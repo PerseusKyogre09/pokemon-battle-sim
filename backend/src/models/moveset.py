@@ -289,16 +289,18 @@ def fetch_sets_direct(pokemon_name: str, format_name: str, debug: bool = True) -
         elif pokemon_name in stats_data:
             pokemon_key = pokemon_name
         else:
-            # Try case-insensitive match
+            # Try case-insensitive and normalized match
             for key in stats_data.keys():
-                if key.lower() == pokemon_name.lower():
+                normalized_key = key.lower().replace('-', '').replace(' ', '')
+                normalized_search = pokemon_name.lower().replace('-', '').replace(' ', '')
+                if normalized_key == normalized_search:
                     pokemon_key = key
                     break
             
-            # If still not found, try partial match (must start with the name to avoid Alola moves on Kanto)
+            # If still not found, try partial match (must start with the name)
             if pokemon_key is None:
                 for key in stats_data.keys():
-                    if key.lower().startswith(pokemon_name.lower()):
+                    if key.lower().replace('-', '').startswith(pokemon_name.lower().replace('-', '')):
                         pokemon_key = key
                         break
         

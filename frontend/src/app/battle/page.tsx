@@ -259,7 +259,10 @@ export default function BattlePage() {
             await new Promise(resolve => setTimeout(resolve, 600));
             if (eventObj.new_pokemon_name && result.player_team) {
               const newMon = result.player_team.find((p: any) => p.name === eventObj.new_pokemon_name);
-              if (newMon) setBattleState(prev => prev ? { ...prev, player_pokemon: { ...newMon, current_hp: eventObj.player_hp ?? newMon.current_hp } } : null);
+              if (newMon) {
+                setBattleState(prev => prev ? { ...prev, player_pokemon: { ...newMon, current_hp: eventObj.player_hp ?? newMon.current_hp } } : null);
+                if (newMon.cry_url) playDynamicAudio(newMon.cry_url);
+              }
             }
             setPokeballState({ player: false, opponent: false });
             setShowFlash(true);
@@ -275,7 +278,10 @@ export default function BattlePage() {
             await new Promise(resolve => setTimeout(resolve, 600));
             if (eventObj.new_pokemon_name && result.opponent_team) {
               const newMon = result.opponent_team.find((p: any) => p.name === eventObj.new_pokemon_name);
-              if (newMon) setBattleState(prev => prev ? { ...prev, opponent_pokemon: { ...newMon, current_hp: eventObj.opponent_hp ?? newMon.current_hp } } : null);
+              if (newMon) {
+                setBattleState(prev => prev ? { ...prev, opponent_pokemon: { ...newMon, current_hp: eventObj.opponent_hp ?? newMon.current_hp } } : null);
+                if (newMon.cry_url) playDynamicAudio(newMon.cry_url);
+              }
             }
             setPokeballState({ player: false, opponent: false });
             setShowFlash(true);
@@ -297,9 +303,30 @@ export default function BattlePage() {
           }
         } else if (eventObj.type === 'ability') {
           showAbilityPopup({ name: eventObj.ability_name, pokemon: eventObj.pokemon_name, isPlayer: eventObj.is_player === true });
+          
+          // Handle mid-animation form changes (e.g. Stance Change, Hunger Switch)
+          if (eventObj.new_sprite || eventObj.new_name) {
+            const side = eventObj.target === 'player' ? 'player_pokemon' : 'opponent_pokemon';
+            setBattleState(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                [side]: {
+                  ...prev[side],
+                  ...(eventObj.new_sprite ? { sprite: eventObj.new_sprite } : {}),
+                  ...(eventObj.new_name ? { name: eventObj.new_name } : {})
+                }
+              };
+            });
+          }
           await new Promise(resolve => setTimeout(resolve, 600));
           setEvents(prev => [...prev, eventObj.message]);
           await new Promise(resolve => setTimeout(resolve, 1800));
+        } else if (eventObj.type === 'pending_switch') {
+          if (eventObj.message) setEvents(prev => [...prev, eventObj.message]);
+          if (eventObj.target === 'player') {
+            setTimeout(() => setShowSwitchMenu(true), 500);
+          }
         } else if (eventObj.message) {
           setEvents(prev => [...prev, eventObj.message]);
         }
@@ -328,8 +355,6 @@ export default function BattlePage() {
       if (result.is_game_over) {
         setGameOver(result.battle_result);
         setBattleStage('gameover');
-      } else if (result.player_pokemon && result.player_pokemon.current_hp <= 0) {
-        setTimeout(() => setShowSwitchMenu(true), 500);
       }
     } catch (err) {
       console.error(err);

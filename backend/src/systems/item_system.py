@@ -105,8 +105,8 @@ class Item:
                 results.append({
                     "type": "item",
                     "item_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name} restored a little HP using its {self.name}!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()} restored a little HP using its {self.name}!",
                     "is_player": is_p
                 })
         elif self.id == 'blacksludge' and pokemon.current_hp > 0:
@@ -114,19 +114,19 @@ class Item:
                 heal_amt = pokemon.max_hp // 16
                 if pokemon.current_hp < pokemon.max_hp:
                     pokemon.heal(heal_amt)
-                    results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name} restored a little HP using its {self.name}!", "is_player": is_p})
+                    results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()} restored a little HP using its {self.name}!", "is_player": is_p})
             else:
                 damage = pokemon.max_hp // 8
                 pokemon.take_damage(damage)
-                results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name} was hurt by its {self.name}!", "is_player": is_p})
+                results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()} was hurt by its {self.name}!", "is_player": is_p})
         
         # Flame Orb / Toxic Orb
         elif self.id == 'flameorb' and not pokemon.major_status:
             msg = pokemon.apply_status_effect('brn')
-            if msg: results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} burned it!", "is_player": is_p})
+            if msg: results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()}'s {self.name} burned it!", "is_player": is_p})
         elif self.id == 'toxicorb' and not pokemon.major_status:
             msg = pokemon.apply_status_effect('tox')
-            if msg: results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} badly poisoned it!", "is_player": is_p})
+            if msg: results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()}'s {self.name} badly poisoned it!", "is_player": is_p})
             
         return results
 
@@ -141,8 +141,8 @@ class Item:
             results.append({
                 "type": "item",
                 "item_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name} was hurt by its Life Orb!",
+                "pokemon_name": pokemon.get_display_name(),
+                "message": f"{pokemon.get_display_name()} was hurt by its Life Orb!",
                 "is_player": is_p
             })
             
@@ -158,8 +158,8 @@ class Item:
             results.append({
                 "type": "item",
                 "item_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name} hung on using its Focus Sash!",
+                "pokemon_name": pokemon.get_display_name(),
+                "message": f"{pokemon.get_display_name()} hung on using its Focus Sash!",
                 "is_player": is_p
             })
             pokemon.item = None # Consume it
@@ -168,7 +168,7 @@ class Item:
         # Berries (Healing) - Must be alive to eat a berry
         elif self.id == 'sitrusberry' and 0 < pokemon.current_hp <= pokemon.max_hp // 2:
             pokemon.heal(pokemon.max_hp // 4)
-            results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name} ate its {self.name} and restored HP!", "is_player": is_p})
+            results.append({"type": "item", "item_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()} ate its {self.name} and restored HP!", "is_player": is_p})
             pokemon.item = None
             pokemon.item_obj = None
             

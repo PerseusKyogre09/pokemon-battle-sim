@@ -76,11 +76,9 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
         ${isOpponent ? 'flex-col-reverse' : ''}
         transition-all duration-700 ease-out`}
       >
-        {/* GBA Battle Pod (Dark) */}
-        <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80`} />
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[100%] blur-[2px] border-4 border-[#2d3a2d] bg-[#1a2e1a] shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)] -z-0 opacity-80" />
         
         <div className="relative w-36 h-36 md:w-56 md:h-56 z-10 flex items-center justify-center">
-          {/* Base Sprite */}
           <img 
             src={sprite} 
             alt={name} 
@@ -92,7 +90,6 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
             style={{ filter: filter || undefined }}
           />
           
-          {/* Substitute Sprite */}
           <img 
             src={subSprite} 
             alt="Substitute" 
@@ -104,7 +101,6 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
           />
         </div>
         
-        {/* Status Sparkles/Effects Overlay */}
         {majorStatus?.type === 'paralysis' && (
           <div className="absolute inset-0 z-20 animate-pulse pointer-events-none mix-blend-screen opacity-40">
              <div className="w-full h-full bg-yellow-400/30 rounded-full blur-xl" />
@@ -183,7 +179,7 @@ const PokemonCard = React.forwardRef<HTMLDivElement, PokemonCardProps>(({
         </div>
       )}
     </div>
-  );
+    );
   };
 
   if (layout === 'sprite-only') return <div ref={ref} onClick={onClick}>{renderSprite()}</div>;

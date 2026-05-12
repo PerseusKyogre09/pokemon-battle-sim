@@ -29,6 +29,13 @@ def make_pokemon(name, types, level=100, item="", ability="noability"):
 
 
 class DamageCalculationTests(unittest.TestCase):
+    def setUp(self):
+        self.smogon_patch = patch("backend.src.models.move.smogon_damage_for_move", return_value=None)
+        self.smogon_patch.start()
+
+    def tearDown(self):
+        self.smogon_patch.stop()
+
     @patch("backend.src.models.move.random.randint", return_value=100)
     @patch("backend.src.models.move.random.random", return_value=1.0)
     def test_damage_uses_attacker_level(self, _random, _randint):

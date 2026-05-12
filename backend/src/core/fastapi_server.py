@@ -141,106 +141,7 @@ async def pokemon_cry(pokemon_name: str):
             return FileResponse(fallback_path)
         raise HTTPException(status_code=500, detail=str(e))
 
-def get_best_sprite(data, side='front', shiny=False):
-    name = data['name'].lower()
-    
-    # Showdown often uses lowercased, hyphenated names for forms.
-    pokemon_name = name.replace(' ', '').replace('-', '')
-    
-    OVERRIDES = {
-        'ho-oh': 'hooh',
-        'porygon-z': 'porygonz',
-        'jangmo-o': 'jangmoo',
-        'hakamo-o': 'hakamoo',
-        'kommo-o': 'kommoo',
-        'sirfetch’d': 'sirfetchd',
-        'farfetch’d': 'farfetchd',
-        'mr.-mime': 'mrmime',
-        'mr.-rime': 'mrrime',
-        'mime-jr.': 'mimejr'
-    }
-    
-    if '-' in name:
-        parts = name.split('-')
-        if any(f in name for f in ['alola', 'galar', 'hisui', 'paldea', 'mega', 'primal', 'origin', 'therian', 'crowned', 'eternamax', 'ultra', 'dusk', 'dawn']):
-            pokemon_name = name.replace(' ', '') # Keep the hyphen for forms
-    
-    if pokemon_name in OVERRIDES:
-        pokemon_name = OVERRIDES[pokemon_name]
-
-    prefix = ""
-    back_suffix = "-back" if side == 'back' else ""
-    shiny_suffix = "-shiny" if shiny else ""
-
-    url_pixel_ani = f"https://play.pokemonshowdown.com/sprites/gen5ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
-    
-    url_pixel_static = f"https://play.pokemonshowdown.com/sprites/gen5{back_suffix}{shiny_suffix}/{pokemon_name}.png"
-    
-    url_3d_ani = f"https://play.pokemonshowdown.com/sprites/ani{back_suffix}{shiny_suffix}/{pokemon_name}.gif"
-    
-    return url_pixel_static # Always return static gen 5 first as requested
-
-def to_display_name(name: str) -> str:
-    # Special cases
-    if name.lower() == 'urshifu-single-strike': return 'Urshifu-Single-Strike'
-    if name.lower() == 'urshifu': return 'Urshifu-Single-Strike'
-    if name.lower() == 'giratina-altered': return 'Giratina-Altered'
-    if name.lower() == 'giratina': return 'Giratina-Altered'
-    
-    # General rule: capitalize parts
-    parts = re.split(r'[- ]', name)
-    return '-'.join(p.capitalize() for p in parts)
-
-@lru_cache(maxsize=1000)
-def get_pokemon_data(pokemon_name):
-    # 1. Try normalizing to map (e.g. "Giratina Origin" -> "giratinaorigin" -> "giratina-origin")
-    normalized_name = re.sub(r'[^a-z0-9]', '', pokemon_name.lower())
-    api_name = POKEAPI_NAME_MAP.get(normalized_name, None)
-    
-    # 2. If not in map, but input has hyphens, it might already be a PokeAPI name (e.g. "stunfisk-galar")
-    if not api_name:
-        # Strip special chars like % and then check if it looks like a PokeAPI name
-        cleaned_name = pokemon_name.lower().replace('%', '').strip()
-        if '-' in cleaned_name:
-            api_name = cleaned_name
-        else:
-            api_name = normalized_name
-
-    # 3. Check for ID in our map (ID is more reliable)
-    pokemon_id = POKEMON_ID_MAP.get(api_name) or POKEMON_ID_MAP.get(normalized_name)
-    identifier = str(pokemon_id) if pokemon_id else api_name
-
-    url = f'https://pokeapi.co/api/v2/pokemon/{identifier}'
-    response = requests.get(url, timeout=5)
-    
-    if response.status_code == 200:
-        return response.json()
-    
-    # Try common form patterns if direct hit fails
-    patterns = [
-        f"{api_name}-galar", f"{api_name}-alola", f"{api_name}-hisui", 
-        f"{api_name}-origin", f"{api_name}-altered", f"{api_name}-single-strike",
-        f"{api_name}-amped", f"{api_name}-low-key"
-    ]
-    for p_name in patterns:
-        try:
-            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{p_name}', timeout=5)
-            if res.status_code == 200:
-                return res.json()
-        except:
-            continue
-            
-    # Final fallback: try stripping everything after the first hyphen (e.g. silvally-fairy -> silvally)
-    if '-' in api_name:
-        base_name = api_name.split('-')[0]
-        try:
-            res = requests.get(f'https://pokeapi.co/api/v2/pokemon/{base_name}', timeout=5)
-            if res.status_code == 200:
-                return res.json()
-        except:
-            pass
-                 
-    raise HTTPException(status_code=404, detail=f'Pokémon {pokemon_name} (API: {api_name}) not found!')
+from ..utils.pokemon_api import get_best_sprite, get_pokemon_data, to_display_name
 
 def get_pokemon_moves(pokemon_data):
     pokemon_name = pokemon_data['name'].lower()
@@ -435,6 +336,8 @@ async def start_game(request: Request):
         player_team_processed = []
         for p in player_team_raw:
             p_data = get_pokemon_data(p['name'])
+            if not p_data:
+                continue # Skip if no data
             moves = [{'name': m} for m in p.get('moves', [])]
             if not moves:
                 moves = get_pokemon_moves(p_data)
@@ -446,6 +349,7 @@ async def start_game(request: Request):
                 'sprite_url': get_best_sprite(p_data, side='back', shiny=p.get('shiny', False)),
                 'stats': p_data['stats'],
                 'moves': moves,
+                'cry_url': p_data.get('cries', {}).get('latest', ''),
                 'ability': p.get('ability') or p_data.get('abilities', [{}])[0].get('ability', {}).get('name', 'noability'),
                 'item': p.get('item') or mandatory or ''
             }
@@ -454,6 +358,8 @@ async def start_game(request: Request):
         opponent_team_processed = []
         for o in opponent_team_raw:
             o_data = get_pokemon_data(o['name'])
+            if not o_data:
+                continue # Skip if no data
             o_name = o['name'].lower()
             
             o_moves = []
@@ -487,6 +393,7 @@ async def start_game(request: Request):
                 'sprite_url': get_best_sprite(o_data, side='front', shiny=False),
                 'stats': o_data['stats'],
                 'moves': o_moves,
+                'cry_url': o_data.get('cries', {}).get('latest', ''),
                 **o_config
             }
             opponent_team_processed.append(config)
@@ -503,6 +410,7 @@ async def start_game(request: Request):
                 "current_hp": game_instance.player_pokemon.current_hp,
                 "max_hp": game_instance.player_pokemon.max_hp,
                 "sprite": game_instance.player_pokemon.sprite_url,
+                "cry_url": game_instance.player_pokemon.cry_url,
                 "types": game_instance.player_pokemon.types,
                 "level": game_instance.player_pokemon.level,
                 "status_effects": game_instance.player_pokemon.get_status_display(),
@@ -513,6 +421,7 @@ async def start_game(request: Request):
                 "current_hp": game_instance.opponent_pokemon.current_hp,
                 "max_hp": game_instance.opponent_pokemon.max_hp,
                 "sprite": game_instance.opponent_pokemon.sprite_url,
+                "cry_url": game_instance.opponent_pokemon.cry_url,
                 "types": game_instance.opponent_pokemon.types,
                 "level": game_instance.opponent_pokemon.level,
                 "status_effects": game_instance.opponent_pokemon.get_status_display(),
@@ -521,7 +430,7 @@ async def start_game(request: Request):
             "player_moves": [m.to_dict() for m in game_instance.player_pokemon.moves.values()],
             "player_team": [p.to_dict() for p in game_instance.player_team],
             "opponent_team": [p.to_dict() for p in game_instance.opponent_team],
-            "initial_events": initial_events
+            "start_events": initial_events
         }
     except Exception as e:
         import traceback
@@ -606,6 +515,7 @@ async def move(request: Request):
             "current_hp": game_instance.player_pokemon.current_hp,
             "max_hp": game_instance.player_pokemon.max_hp,
             "sprite": game_instance.player_pokemon.sprite_url,
+            "cry_url": game_instance.player_pokemon.cry_url,
             "types": game_instance.player_pokemon.types,
             "level": game_instance.player_pokemon.level,
             "status_effects": game_instance.player_pokemon.get_status_display(),
@@ -616,6 +526,7 @@ async def move(request: Request):
             "current_hp": game_instance.opponent_pokemon.current_hp,
             "max_hp": game_instance.opponent_pokemon.max_hp,
             "sprite": game_instance.opponent_pokemon.sprite_url,
+            "cry_url": game_instance.opponent_pokemon.cry_url,
             "types": game_instance.opponent_pokemon.types,
             "level": game_instance.opponent_pokemon.level,
             "status_effects": game_instance.opponent_pokemon.get_status_display(),
@@ -625,6 +536,7 @@ async def move(request: Request):
         "player_team": [p.to_dict() for p in game_instance.player_team],
         "opponent_team": [p.to_dict() for p in game_instance.opponent_team],
         "turn_info": turn_info,
+        "pending_player_switch": game_instance.pending_player_self_switch,
         "is_game_over": game_instance.battle_over,
         "battle_result": game_instance.get_battle_result() if game_instance.battle_over else None
     }

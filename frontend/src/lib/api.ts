@@ -86,6 +86,7 @@ export interface TurnResult {
     battle_events: any[];
     weather?: string;
   };
+  pending_player_switch?: boolean;
   is_game_over: boolean;
   battle_result: string | null;
 }
@@ -226,4 +227,3 @@ export const validateTeam = async (team: Array<{ name: string; item?: string }>)
     };
   }
 };
-

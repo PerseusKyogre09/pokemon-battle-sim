@@ -107,3 +107,4 @@ music/
 
 # Node modules
 /node_modules/
+/backend/node_modules/

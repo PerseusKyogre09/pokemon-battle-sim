@@ -1,0 +1,11 @@
+{
+  "name": "pokemon-backend-oracles",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "smogon:damage": "node tools/smogon_damage_oracle.cjs"
+  },
+  "dependencies": {
+    "@smogon/calc": "^0.11.0"
+  }
+}

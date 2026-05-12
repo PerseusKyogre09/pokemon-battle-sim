@@ -176,8 +176,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": template.format(user=pokemon.name, ability=ability_name),
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": template.format(user=pokemon.get_display_name(), ability=ability_name),
                     "is_player": is_p
                 })
         
@@ -266,7 +266,7 @@ class Ability:
                 if hasattr(opponent, "defense") and hasattr(opponent, "special_defense"):
                     stat = "attack" if opponent.defense < opponent.special_defense else "special_attack"
                     msg = pokemon.modify_stat_stage(stat, 1)
-                    if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s Download boosted its {stat.replace('_', ' ').title()}!", "is_player": is_p})
+                    if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()}'s Download boosted its {stat.replace('_', ' ').title()}!", "is_player": is_p})
             else:
                 # Fallback for any remaining mechanics
                 pass
@@ -276,8 +276,8 @@ class Ability:
             results.append({
                 "type": "ability",
                 "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name} can't get it going!",
+                "pokemon_name": pokemon.get_display_name(),
+                "message": f"{pokemon.get_display_name()} can't get it going!",
                 "is_player": is_p
             })
         elif self.id == 'defeatist':
@@ -286,8 +286,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s Defeatist activated! Its Attack and Sp. Atk were halved!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s Defeatist activated! Its Attack and Sp. Atk were halved!",
                     "is_player": is_p
                 })
                 self.state['activated'] = True
@@ -304,7 +304,7 @@ class Ability:
             
             # Weather/Terrain
             if "setWeather" in logic or "setTerrain" in logic:
-                res = {"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f"{pokemon.name}'s {self.name} changed the field!", "is_player": is_p}
+                res = {"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f"{pokemon.get_display_name()}'s {self.name} changed the field!", "is_player": is_p}
                 
                 # Extract the weather/terrain name if possible
                 w_match = re.search(r"setWeather\('([^']+)'\)", logic)
@@ -321,7 +321,7 @@ class Ability:
                 for s_name, stages in boosts.items():
                     if hasattr(target, "modify_stat_stage"):
                         msg = target.modify_stat_stage(s_name, stages)
-                        if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": msg if isinstance(msg, str) else f"{pokemon.name}'s {self.name} activated!", "is_player": is_p})
+                        if msg: results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": msg if isinstance(msg, str) else f"{pokemon.get_display_name()}'s {self.name} activated!", "is_player": is_p})
 
         # Process effect list
         for effect in self.config.get("on_switch_in", []):
@@ -331,8 +331,8 @@ class Ability:
                     if hasattr(target, "modify_stat_stage"):
                         msg = target.modify_stat_stage(s_name, stages)
                         if msg:
-                            f_msg = effect.get("message", msg).format(user=pokemon.name, target=target.name)
-                            results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.name, "message": f_msg, "is_player": is_p})
+                            f_msg = effect.get("message", msg).format(user=pokemon.get_display_name(), target=target.get_display_name())
+                            results.append({"type": "ability", "ability_name": self.name, "pokemon_name": pokemon.get_display_name(), "message": f_msg, "is_player": is_p})
         
         return results
 
@@ -347,8 +347,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s Speed Boost increased its Speed!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s Speed Boost increased its Speed!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         elif self.id == "losteye":
@@ -357,8 +357,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s Lost Eye lowered its Accuracy!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s Lost Eye lowered its Accuracy!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         elif self.id == "powerspotboost":
@@ -367,8 +367,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s ability boosted its Special Attack!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s ability boosted its Special Attack!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         elif self.id == "contrariness":
@@ -378,8 +378,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s Contrariness flipped the stat changes!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s Contrariness flipped the stat changes!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         
@@ -390,8 +390,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name}'s {self.name} activated!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()}'s {self.name} activated!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         
@@ -402,8 +402,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name} finally got its act together!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()} finally got its act together!",
                     "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                 })
         
@@ -418,8 +418,8 @@ class Ability:
             results.append({
                 "type": "ability",
                 "ability_name": self.name,
-                "pokemon_name": pokemon.name,
-                "message": f"{pokemon.name}'s Aftermath hurt {opponent.name}!",
+                "pokemon_name": pokemon.get_display_name(),
+                "message": f"{pokemon.get_display_name()}'s Aftermath hurt {opponent.get_display_name()}!",
                 "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
             })
         return results
@@ -445,8 +445,8 @@ class Ability:
                             results.append({
                                 "type": "ability",
                                 "ability_name": self.name,
-                                "pokemon_name": pokemon.name,
-                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "pokemon_name": pokemon.get_display_name(),
+                                "message": f"{pokemon.get_display_name()}'s {self.name} boosted its {stat_name}!",
                                 "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                             })
                 return results
@@ -463,8 +463,8 @@ class Ability:
                             results.append({
                                 "type": "ability",
                                 "ability_name": self.name,
-                                "pokemon_name": pokemon.name,
-                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "pokemon_name": pokemon.get_display_name(),
+                                "message": f"{pokemon.get_display_name()}'s {self.name} boosted its {stat_name}!",
                                 "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                             })
                             
@@ -485,8 +485,8 @@ class Ability:
                             results.append({
                                 "type": "ability",
                                 "ability_name": self.name,
-                                "pokemon_name": pokemon.name,
-                                "message": f"{pokemon.name}'s {self.name} boosted its {stat_name}!",
+                                "pokemon_name": pokemon.get_display_name(),
+                                "message": f"{pokemon.get_display_name()}'s {self.name} boosted its {stat_name}!",
                                 "is_player": hasattr(pokemon, "is_player") and pokemon.is_player
                             })
                             
@@ -525,6 +525,11 @@ class Ability:
             # Heals from Water type moves instead of taking damage
             if hasattr(move, 'type') and move.type.lower() == 'water':
                 return 0
+            if hasattr(move, 'type') and move.type.lower() == 'fire':
+                final_damage = int(final_damage * 1.25)
+        elif self.id == "heatproof":
+            if hasattr(move, 'type') and move.type.lower() == 'fire':
+                final_damage = int(final_damage * 0.5)
         elif self.id == "flashfire":
             # Absorbs Fire type moves
             if hasattr(move, 'type') and move.type.lower() == 'fire':
@@ -658,13 +663,7 @@ class Ability:
             'sapsipper': ['grass'],
             'lightningrod': ['electric'],
             'motordrive': ['electric'],
-            'magnetpull': [],  # No immunity, just attracts steel
-            'static': [],  # No immunity, just chance to paralyze
             'immunity': ['poison'],
-            'comatose': [],  # No type immunity, just sleep immunity
-            'waterveil': ['fire'],
-            'heatproof': ['fire'],
-            'thickfat': ['fire', 'ice'],
             'wonderguard': [],  # Only takes super-effective damage
             'goodasgold': ['item-based'],
         }
@@ -810,7 +809,7 @@ class Ability:
         if self.id == 'truant':
             if self.state.get('skip'):
                 self.state['skip'] = False
-                return False, f"{pokemon.name} is loafing around!"
+                return False, f"{pokemon.get_display_name()} is loafing around!"
             self.state['skip'] = True
         return True, ""
 
@@ -829,8 +828,8 @@ class Ability:
                     results.append({
                         "type": "ability",
                         "ability_name": self.name,
-                        "pokemon_name": pokemon.name,
-                        "message": f"{pokemon.name}'s {self.name} activated! Its Attack and Sp. Atk were halved!",
+                        "pokemon_name": pokemon.get_display_name(),
+                        "message": f"{pokemon.get_display_name()}'s {self.name} activated! Its Attack and Sp. Atk were halved!",
                         "is_player": is_p
                     })
                     self.state['activated'] = True
@@ -842,8 +841,8 @@ class Ability:
                 results.append({
                     "type": "ability",
                     "ability_name": self.name,
-                    "pokemon_name": pokemon.name,
-                    "message": f"{pokemon.name} endured the hit with Sturdy!",
+                    "pokemon_name": pokemon.get_display_name(),
+                    "message": f"{pokemon.get_display_name()} endured the hit with Sturdy!",
                     "is_player": is_p
                 })
         

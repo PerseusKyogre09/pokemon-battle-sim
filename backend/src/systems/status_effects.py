@@ -55,27 +55,25 @@ class StatusEffect:
         # Check for specific failure reasons and return appropriate messages
         if hasattr(pokemon, 'status_effects') and self.status_type in pokemon.status_effects:
             # Pokemon already has this specific status
-            message_template = self.config.get('messages', {}).get('fail_already_has', "{pokemon} already has {status}!")
-            return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name.lower())
+            return message_template.format(pokemon=pokemon.get_display_name(), status=self.name.lower())
         
         if self.is_major and hasattr(pokemon, 'major_status') and pokemon.major_status:
             # Pokemon already has a major status condition
-            message_template = self.config.get('messages', {}).get('fail_major_status', "{pokemon} already has a major status condition!")
-            return message_template.format(pokemon=pokemon.name.capitalize())
+            return message_template.format(pokemon=pokemon.get_display_name())
         
         # Check for ability-based immunities
         if hasattr(pokemon, 'ability'):
             ability_id = pokemon.ability.id
             if self.status_type == StatusType.PARALYSIS.value and ability_id == 'limber':
-                return f"{pokemon.name}'s Limber prevents paralysis!"
+                return f"{pokemon.get_display_name()}'s Limber prevents paralysis!"
             if self.status_type in [StatusType.POISON.value, StatusType.TOXIC.value] and ability_id == 'immunity':
-                return f"{pokemon.name}'s Immunity prevents poisoning!"
+                return f"{pokemon.get_display_name()}'s Immunity prevents poisoning!"
             if self.status_type == StatusType.SLEEP.value and ability_id in ['insomnia', 'vitalspirit']:
-                return f"{pokemon.name}'s {pokemon.ability.name} prevents sleep!"
+                return f"{pokemon.get_display_name()}'s {pokemon.ability.name} prevents sleep!"
             if self.status_type == StatusType.BURN.value and ability_id == 'waterveil':
-                return f"{pokemon.name}'s Water Veil prevents burns!"
+                return f"{pokemon.get_display_name()}'s Water Veil prevents burns!"
             if self.status_type == StatusType.FREEZE.value and ability_id == 'magmaarmor':
-                return f"{pokemon.name}'s Magma Armor prevents freezing!"
+                return f"{pokemon.get_display_name()}'s Magma Armor prevents freezing!"
 
         if not self.can_apply(pokemon):
             # Generic failure case
@@ -97,8 +95,7 @@ class StatusEffect:
             pokemon._add_status_change_event('status_applied', self.status_type, self.name)
             
         # Return application message
-        message_template = self.config.get('messages', {}).get('apply', "{pokemon} became {status}!")
-        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name.lower())
+        return message_template.format(pokemon=pokemon.get_display_name(), status=self.name.lower())
     
     def process_turn_start(self, pokemon) -> List[str]:
         messages = []
@@ -137,7 +134,7 @@ class StatusEffect:
             if damage > 0:
                 pokemon.current_hp = max(0, pokemon.current_hp - damage)
                 damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by {status}!")
-                messages.append(damage_message.format(pokemon=pokemon.name.capitalize(), status=self.name))
+                messages.append(damage_message.format(pokemon=pokemon.get_display_name(), status=self.name))
         
         return messages
     
@@ -151,14 +148,12 @@ class StatusEffect:
         if self.status_type == StatusType.PARALYSIS.value:
             prevention_chance = self.config.get('move_prevention_chance', 0)
             if random.random() < prevention_chance:
-                message = self.config.get('messages', {}).get('prevent_move', "{pokemon} can't move!")
-                return True, message.format(pokemon=pokemon.name.capitalize())
+                return True, message.format(pokemon=pokemon.get_display_name())
             return False, ""
         
         # Handle guaranteed move prevention (freeze, sleep)
         if self.status_type in [StatusType.FREEZE.value, StatusType.SLEEP.value]:
-            message = self.config.get('messages', {}).get('prevent_move', "{pokemon} can't move!")
-            return True, message.format(pokemon=pokemon.name.capitalize())
+            return True, message.format(pokemon=pokemon.get_display_name())
         
         return False, ""
     
@@ -184,8 +179,7 @@ class StatusEffect:
             pokemon._add_status_change_event('status_removed', self.status_type, self.name)
         
         # Return recovery message
-        message_template = self.config.get('messages', {}).get('recover', "{pokemon} recovered from {status}!")
-        return message_template.format(pokemon=pokemon.name.capitalize(), status=self.name)
+        return message_template.format(pokemon=pokemon.get_display_name(), status=self.name)
 
 
 # Status Effects Configuration Dictionary
@@ -290,8 +284,8 @@ class BurnStatusEffect(StatusEffect):
         
         if damage > 0:
             pokemon.current_hp = max(0, pokemon.current_hp - damage)
-            damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by its burn!")
-            messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
+            damage_message = self.config.get('messages', {}).get('damage', "{pokemon} was hurt by its burn!")
+            messages.append(damage_message.format(pokemon=pokemon.get_display_name()))
         
         return messages
     
@@ -317,7 +311,7 @@ class ParalysisStatusEffect(StatusEffect):
         # 25% chance to prevent move usage
         prevention_chance = 0.25
         if random.random() < prevention_chance:
-            message = "{pokemon} is paralyzed! It can't move!".format(pokemon=pokemon.name.capitalize())
+            message = "{pokemon} is paralyzed! It can't move!".format(pokemon=pokemon.get_display_name())
             return True, message
         
         return False, ""
@@ -345,7 +339,7 @@ class FreezeStatusEffect(StatusEffect):
         super().__init__(StatusType.FREEZE.value, **kwargs)
     
     def affects_move_usage(self, pokemon) -> Tuple[bool, str]:
-        message = "{pokemon} is frozen solid!".format(pokemon=pokemon.name.capitalize())
+        message = "{pokemon} is frozen solid!".format(pokemon=pokemon.get_display_name())
         return True, message
     
     def process_turn_start(self, pokemon) -> List[str]:
@@ -376,7 +370,7 @@ class FreezeStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_removed', StatusType.FREEZE.value, 'Freeze')
         
         # Return thaw message
-        return "{pokemon} thawed out!".format(pokemon=pokemon.name.capitalize())
+        return "{pokemon} thawed out!".format(pokemon=pokemon.get_display_name())
 
 
 class SleepStatusEffect(StatusEffect):
@@ -390,7 +384,7 @@ class SleepStatusEffect(StatusEffect):
         super().__init__(StatusType.SLEEP.value, **kwargs)
     
     def affects_move_usage(self, pokemon) -> Tuple[bool, str]:
-        message = "{pokemon} is fast asleep.".format(pokemon=pokemon.name.capitalize())
+        message = "{pokemon} is fast asleep.".format(pokemon=pokemon.get_display_name())
         return True, message
     
     def process_turn_start(self, pokemon) -> List[str]:
@@ -424,7 +418,7 @@ class SleepStatusEffect(StatusEffect):
             pokemon._add_status_change_event('status_removed', StatusType.SLEEP.value, 'Sleep')
         
         # Return wake up message
-        return "{pokemon} woke up!".format(pokemon=pokemon.name.capitalize())
+        return "{pokemon} woke up!".format(pokemon=pokemon.get_display_name())
 
 
 class PoisonStatusEffect(StatusEffect):
@@ -441,13 +435,13 @@ class PoisonStatusEffect(StatusEffect):
             if hasattr(pokemon, 'ability') and pokemon.ability.id == 'poisonheal':
                 if pokemon.current_hp < pokemon.max_hp:
                     pokemon.heal(damage)
-                    messages.append(f"{pokemon.name}'s Poison Heal restored its HP!")
+                    messages.append(f"{pokemon.get_display_name()}'s Poison Heal restored its HP!")
                 else:
-                    messages.append(f"{pokemon.name}'s Poison Heal keeps it healthy!")
+                    messages.append(f"{pokemon.get_display_name()}'s Poison Heal keeps it healthy!")
             else:
                 pokemon.current_hp = max(0, pokemon.current_hp - damage)
                 damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-                messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
+                messages.append(damage_message.format(pokemon=pokemon.get_display_name()))
         
         return messages
     
@@ -481,15 +475,15 @@ class ToxicStatusEffect(StatusEffect):
             damage = int(pokemon.max_hp * (1/8))
             if pokemon.current_hp < pokemon.max_hp:
                 pokemon.heal(damage)
-                messages.append(f"{pokemon.name}'s Poison Heal restored its HP!")
+                messages.append(f"{pokemon.get_display_name()}'s Poison Heal restored its HP!")
             else:
-                messages.append(f"{pokemon.name}'s Poison Heal keeps it healthy!")
+                messages.append(f"{pokemon.get_display_name()}'s Poison Heal keeps it healthy!")
         else:
             damage = int(pokemon.max_hp * (self.counter / 16))
             if damage > 0:
                 pokemon.current_hp = max(0, pokemon.current_hp - damage)
                 damage_message = self.config.get('messages', {}).get('damage', "{pokemon} is hurt by poison!")
-                messages.append(damage_message.format(pokemon=pokemon.name.capitalize()))
+                messages.append(damage_message.format(pokemon=pokemon.get_display_name()))
         
         return messages
     

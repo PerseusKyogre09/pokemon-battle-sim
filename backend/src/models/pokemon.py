@@ -9,10 +9,13 @@ import random
 class Pokemon:
     def __init__(self, name, type_, sprite_url, stats, moves=None, level=100, **kwargs):
         self.name = self._format_pokemon_name(name) if isinstance(name, str) else name
+        self.base_species_name = self.name
         self.types = [t.lower() for t in type_] if isinstance(type_, list) else [type_.lower()]
         self.type = self.types[0]
         self.sprite_url = sprite_url
+        self.cry_url = kwargs.get('cry_url', '')
         self.level = level
+        self.is_player = kwargs.get('is_player', False)
         self.ability = create_ability(kwargs.get('ability', 'noability'))
         
         self.evs = kwargs.get('evs', {s: 0 for s in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']})
@@ -28,6 +31,9 @@ class Pokemon:
         self.is_flinched = False
         self.substitute_hp = 0
         self.consecutive_stalling_moves = 0
+        self.acted_this_turn = False
+        self.active_move = None # {move: Move, turns: int}
+        self.must_recharge = False
         
         if isinstance(stats, list):
             keys = ['hp', 'attack', 'defense', 'special_attack', 'special_defense', 'speed']
@@ -70,11 +76,16 @@ class Pokemon:
         status = status.lower()
         if status == 'flinch':
             self.is_flinched = True
-            return f"{self.name} flinched!"
+            return f"{self.get_display_name()} flinched!"
         if status not in self.volatile_statuses:
             self.volatile_statuses.add(status)
-            return f"{self.name} became {status}!"
+            return f"{self.get_display_name()} became {status}!"
         return ""
+
+    def get_display_name(self):
+        if getattr(self, 'is_player', False):
+            return self.name
+        return f"The foe's {self.name}"
 
     def _format_pokemon_name(self, name):
         if not name: return name
@@ -86,6 +97,11 @@ class Pokemon:
         if '-' in name: return '-'.join(p.capitalize() for p in name.split('-'))
         if '\'' in name: return '\''.join(p.capitalize() for p in name.split('\''))
         return name.capitalize() if name.islower() or name.isupper() else name
+
+    def forme_change(self, new_name: str) -> str:
+        old_name = self.name
+        self.name = self._format_pokemon_name(new_name) if isinstance(new_name, str) else new_name
+        return f"{self.get_display_name()} changed form!"
 
     def is_fainted(self):
         return self.current_hp <= 0
@@ -221,6 +237,10 @@ class Pokemon:
         return msgs
     
     def can_use_move(self) -> tuple:
+        if self.must_recharge:
+            self.must_recharge = False
+            return False, f"{self.name} must recharge!"
+            
         if getattr(self, 'is_flinched', False):
             return False, f"{self.name} flinched!"
         for e in self.status_effects.values():
@@ -265,16 +285,23 @@ class Pokemon:
     def generate_stat_modification_message(self, stat_name, requested, actual):
         display = stat_name.replace('_', ' ')
         if actual == 0:
-            return f"{self.name}'s {display} won't go {'higher' if requested >= 0 else 'lower'}!"
+            return f"{self.get_display_name()}'s {display} won't go {'higher' if requested >= 0 else 'lower'}!"
         
         if actual > 0:
             suffixes = {1: "rose!", 2: "rose sharply!", 3: "rose drastically!"}
-            return f"{self.name}'s {display} {suffixes.get(actual, 'rose drastically!')}"
+            return f"{self.get_display_name()}'s {display} {suffixes.get(actual, 'rose drastically!')}"
         else:
             suffixes = {-1: "fell!", -2: "fell harshly!", -3: "fell severely!"}
-            return f"{self.name}'s {display} {suffixes.get(actual, 'fell severely!')}"
+            return f"{self.get_display_name()}'s {display} {suffixes.get(actual, 'fell severely!')}"
 
     def modify_stat_stage(self, stat_name, change):
+        # Normalize stat name
+        stat_map = {
+            'atk': 'attack', 'def': 'defense', 'spa': 'special_attack', 
+            'spd': 'special_defense', 'spe': 'speed', 'acc': 'accuracy', 'eva': 'evasion'
+        }
+        stat_name = stat_map.get(stat_name.lower(), stat_name.lower())
+        
         if stat_name not in self.stat_stages: return ""
         curr = self.stat_stages[stat_name]
         clamped = max(-6, min(6, curr + change))
@@ -304,7 +331,7 @@ class Pokemon:
     def to_dict(self):
         return {
             'name': self.name, 'type': self.type, 'types': self.types,
-            'sprite': self.sprite_url, 'level': self.level,
+            'sprite': self.sprite_url, 'cry_url': self.cry_url, 'level': self.level,
             'current_hp': self.current_hp, 'max_hp': self.max_hp,
             'attack': self.attack, 'defense': self.defense,
             'special_attack': self.special_attack, 'special_defense': self.special_defense,
@@ -315,6 +342,26 @@ class Pokemon:
             'status_effects': self.get_status_display(),
             'stat_stages': self.stat_stages, 'substitute_hp': self.substitute_hp
         }
+
+    def forme_change(self, new_name: str, new_types: List[str], new_sprite: str, new_stats: Dict[str, int], new_cry: str = ""):
+        """Change the Pokemon's form mid-battle while maintaining HP percentage."""
+        old_hp_percent = self.current_hp / self.max_hp if self.max_hp > 0 else 1.0
+        
+        self.name = new_name
+        self.types = new_types
+        self.type = self.types[0]
+        self.sprite_url = new_sprite
+        if new_cry:
+            self.cry_url = new_cry
+            
+        # Update base stats and recalculate
+        self.base_stats = new_stats
+        self._recalculate_stats()
+        
+        # Maintain HP percentage
+        self.current_hp = int(self.max_hp * old_hp_percent)
+        if self.current_hp <= 0 and old_hp_percent > 0:
+            self.current_hp = 1
 
     def on_switch_in(self, opponent): return self.ability.on_switch_in(self, opponent) if hasattr(self, 'ability') else []
     def on_faint(self, opponent): return self.ability.on_faint(self, opponent) if hasattr(self, 'ability') else []
@@ -329,4 +376,3 @@ class Pokemon:
             v = self.base_stats.get(s, 0) if ignore_boosts else getattr(self, s, 0)
             if v > best_v: best_v, best_s = v, s
         return {'attack': 'atk', 'defense': 'def', 'special_attack': 'spa', 'special_defense': 'spd', 'speed': 'spe'}.get(best_s, best_s)
-

@@ -1,4 +1,5 @@
 from ..utils.data_loader import data_loader
+from ..systems.damage_engine import smogon_damage_for_move
 from typing import Optional, Tuple, Dict, Any, Union, List
 import random
 import re
@@ -48,6 +49,9 @@ class Move:
         self.defensive_category = data_dict.get('defensiveCategory')
         self.use_target_offensive = data_dict.get('useTargetOffensive', False)
         self.effectiveness = 1.0
+        self.damage_source = 'python'
+        self.last_damage_range = None
+        self.last_damage_description = None
 
     def _parse_chain_modify(self, logic_str: str) -> float:
         """Extract multiplier from chainModify([num1, num2]) or chainModify(float)."""
@@ -354,6 +358,11 @@ class Move:
             
         # Base accuracy from the move
         base_accuracy = self.accuracy
+        if self.ohko and attacker and defender:
+            level_delta = getattr(attacker, 'level', 100) - getattr(defender, 'level', 100)
+            if level_delta < 0:
+                return False
+            base_accuracy = 30 + level_delta
         
         # Accuracy/Evasion stage multipliers
         acc_stage = attacker.stat_stages.get('accuracy', 0)
@@ -657,9 +666,10 @@ class Move:
             
         return self._apply_boosts(modification_target, self.stat_modifications)
 
-    def use_move(self, attacking_pokemon=None, defending_pokemon=None, weather='none') -> Tuple[int, int, str, Optional[str], Optional[str]]:
-        if not self._check_accuracy(attacking_pokemon, defending_pokemon):
-            return 0, 0, f"{attacking_pokemon.name}'s {self.name} missed!", None, None
+    def use_move(self, attacking_pokemon=None, defending_pokemon=None, weather='none', field=None) -> Tuple[int, int, str, Optional[str], Optional[str]]:
+        self.damage_source = 'python'
+        self.last_damage_range = None
+        self.last_damage_description = None
             
         if self.stalling_move:
             success_rate = 1.0 / (3.0 ** attacking_pokemon.consecutive_stalling_moves)
@@ -732,12 +742,10 @@ class Move:
         
         # Apply type effectiveness if both Pokemon are provided
         if attacking_pokemon and defending_pokemon:
-            # Check for ability immunities (e.g. Levitate, Sturdy for OHKO)
+            # Check for ability immunities (e.g. Levitate)
             if hasattr(defending_pokemon, 'ability'):
                 if defending_pokemon.ability.is_immune(self.type, self.category):
                     return 0, 0, f"It had no effect on {defending_pokemon.name}!", None, weather_to_set
-                if self.ohko and defending_pokemon.ability.id == 'sturdy':
-                    return 0, 0, f"{defending_pokemon.name} is immune to OHKO moves due to its Sturdy!", None, weather_to_set
 
             # Get the move type in lowercase for comparison
             move_type = self.type.lower()
@@ -793,26 +801,37 @@ class Move:
                 defense_name = 'Special Defense'
             level = getattr(attacking_pokemon, 'level', 100)
             move_name_lower = self.name.lower()
+            smogon_result = smogon_damage_for_move(
+                attacking_pokemon,
+                defending_pokemon,
+                self,
+                field or {'weather': weather}
+            )
             
-            # Apply base damage formula if no fixed damage
             if self.fixed_damage:
                 if isinstance(self.fixed_damage, int):
                     damage = self.fixed_damage
                 elif self.fixed_damage == 'level':
                     damage = level
                 else:
-                    damage = 40 # Fallback for unknown fixed damage strings
+                    damage = 40
                 if effectiveness == 0:
                     effectiveness_message = "It had no effect..."
                     return 0, 0, effectiveness_message, None, weather_to_set
                 base_damage = damage
-            elif self.ohko:
+            elif smogon_result:
+                base_damage = int(smogon_result["selected_damage"])
+                self.damage_source = 'smogon'
+                self.last_damage_range = [int(smogon_result["min"]), int(smogon_result["max"])]
+                self.last_damage_description = smogon_result.get("description")
+
                 if effectiveness == 0:
                     effectiveness_message = "It had no effect..."
                     return 0, 0, effectiveness_message, None, weather_to_set
-                damage = defending_pokemon.current_hp
-                effectiveness_message = "It's a one-hit KO!"
-                base_damage = damage
+                elif effectiveness < 1:
+                    effectiveness_message = "It's not very effective..."
+                elif effectiveness > 1:
+                    effectiveness_message = "It's super effective!"
             else:
                 # Check for special move logic in JSON generically
                 actual_base_power = base_damage
@@ -887,28 +906,10 @@ class Move:
         
         # Apply status effects after damage calculation
         # Apply secondary effects, self effects, healing, and recoil
-        secondary_messages = []
-        self_messages = []
-        healing_messages = []
-        recoil_messages = []
         
-        if defending_pokemon and not self.is_status_move:
-            secondary_messages = self._apply_secondary_effects(attacking_pokemon, defending_pokemon)
-            
-        if attacking_pokemon:
-            # Self-effects (stat drops/boosts on user)
-            self_messages = self._apply_self_effects(attacking_pokemon, defending_pokemon)
-            
-            # Healing/Drain effects
-            # Cap healing and recoil by target's actual HP to match standard mechanics
-            actual_damage_dealt = base_damage
-            if defending_pokemon and hasattr(defending_pokemon, 'current_hp'):
-                actual_damage_dealt = min(base_damage, defending_pokemon.current_hp)
-            
-            healing_messages = self._apply_healing_effects(attacking_pokemon, defending_pokemon, actual_damage_dealt)
-            
-            # Recoil effects
-            recoil_messages = self._apply_recoil_effects(attacking_pokemon, actual_damage_dealt)
+        
+        
+        
         
         # Apply legacy status effects for status moves
         status_messages = []
@@ -916,13 +917,7 @@ class Move:
             status_messages = self._apply_status_effects(attacking_pokemon, defending_pokemon)
         
         # Combine all messages
-        all_messages = status_messages + secondary_messages + self_messages + healing_messages + recoil_messages
-        
-        # Handle selfSwitch (U-turn, Volt Switch, etc.)
-        if self.self_switch and attacking_pokemon:
-            all_messages.append(f"{attacking_pokemon.name} switched out!")
-            # Note: The actual switching logic should be handled by the game loop
-            # But we mark it here so the frontend/engine knows.
+        all_messages = status_messages
         
         combined_message = " ".join(all_messages) if all_messages else None
         
