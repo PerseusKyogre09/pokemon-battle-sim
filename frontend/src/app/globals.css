@@ -202,23 +202,42 @@ input[type="range"].stat-slider {
 
 input[type="range"].stat-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 6px;
+  height: 10px;
   cursor: pointer;
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  border-radius: 5px;
+  border: none;
 }
 
 input[type="range"].stat-slider::-webkit-slider-thumb {
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  background: #eab308;
+  height: 18px;
+  width: 18px;
+  border-radius: 35%;
+  background: #f8fafc;
   cursor: pointer;
   -webkit-appearance: none;
-  margin-top: -5px;
-  box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
-  border: 2px solid #1e293b;
+  margin-top: -7px;
+  box-shadow: 0 0 12px rgba(248, 250, 252, 0.6), inset 0 0 4px rgba(0, 0, 0, 0.2);
+  border: none;
+}
+
+input[type="range"].stat-slider::-moz-range-track {
+  width: 100%;
+  height: 10px;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 5px;
+  border: none;
+}
+
+input[type="range"].stat-slider::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 35%;
+  background: #f8fafc;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(248, 250, 252, 0.6), inset 0 0 4px rgba(0, 0, 0, 0.2);
+  border: none;
 }
 
 /* Stat Bars */
