@@ -143,14 +143,27 @@ class Game:
                 if m_id == "dragonascent" or m_name == "dragonascent":
                     return True
         
-        # Check if the pokemon's item is a valid mega stone
         from ..utils.pokemon_utils import MEGA_STONES
         item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
         
+        # Try using data_loader first as it's more comprehensive
+        from ..utils.data_loader import data_loader
+        item_data = data_loader.get_item(item_id)
+        if item_data and 'megaStone' in item_data:
+            for base_name, mega_name in item_data['megaStone'].items():
+                # Normalize names for matching
+                norm_base = base_name.lower().replace(' ', '').replace('-', '')
+                norm_poke = pokemon.name.lower().replace(' ', '').replace('-', '')
+                if norm_poke == norm_base or norm_poke.startswith(norm_base):
+                    return True
+        
+        # Fallback to MEGA_STONES
         if item_id in MEGA_STONES:
             target_form = MEGA_STONES[item_id]
             base_species = target_form.split('-mega')[0]
-            if pokemon.name.lower() == base_species:
+            norm_poke = pokemon.name.lower().replace(' ', '').replace('-', '')
+            norm_base = base_species.lower().replace(' ', '').replace('-', '')
+            if norm_poke == norm_base or norm_poke.startswith(norm_base):
                 return True
         return False
 
@@ -184,9 +197,26 @@ class Game:
             mega_message = f"{self._get_pokemon_name(pokemon)}'s fervent wish has been granted!"
         else:
             item_id = pokemon.item.lower().replace(' ', '').replace('-', '')
-            if item_id in MEGA_STONES:
+            
+            # Try data_loader for dynamic mapping
+            from ..utils.data_loader import data_loader
+            item_data = data_loader.get_item(item_id)
+            if item_data and 'megaStone' in item_data:
+                for base_name, mega_name in item_data['megaStone'].items():
+                    norm_base = base_name.lower().replace(' ', '').replace('-', '')
+                    norm_poke = pokemon.name.lower().replace(' ', '').replace('-', '')
+                    if norm_poke == norm_base or norm_poke.startswith(norm_base):
+                        target_form = mega_name.lower().replace(' ', '-')
+                        break
+            
+            # Fallback to MEGA_STONES
+            if not target_form and item_id in MEGA_STONES:
                 target_form = MEGA_STONES[item_id]
+            
+            if target_form:
                 mega_message = f"{self._get_pokemon_name(pokemon)}'s {pokemon.item} is reacting to the Key Stone!"
+            else:
+                return # Should not happen if can_mega_evolve passed
         
         if target_form:
             side = 'back' if is_player else 'front'

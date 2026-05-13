@@ -20,9 +20,10 @@ BATTLE_READY_FORMATS = [
  
 # Forms that cannot be obtained/selected normally in a teambuilder (battle-only)
 BATTLE_ONLY_FORM_SUFFIXES = [
-    '-Mega', '-Mega-X', '-Mega-Y', 
+    '-Mega', '-Mega-X', '-Mega-Y', '-Mega-Z',
     '-Primal', 
     '-Complete', # Zygarde-Complete
+    '-Power-Construct', # Zygarde-Power-Construct
     '-Eternamax', 
     '-Ultra', # Necrozma-Ultra
     '-Zen', # Darmanitan-Zen
@@ -32,7 +33,11 @@ BATTLE_ONLY_FORM_SUFFIXES = [
     '-Gulping', '-Gorging', # Cramorant
     '-Noice', # Eiscue
     '-Hangry', # Morpeko
-    '-Busted' # Mimikyu-Busted
+    '-Busted', # Mimikyu-Busted
+    '-Gmax', # Gigantamax
+    '-Totem', # Totem Pokemon
+    '-Gliding-Build', '-Sprinting-Build', '-Swimming-Build', '-Limited-Build', # Koraidon/Miraidon
+    '-Drive-Mode', '-Aquatic-Mode', '-Glide-Mode', '-Low-Power-Mode' # Miraidon
 ]
 
 def get_battle_ready_pokemon_list() -> List[str]:

@@ -10,7 +10,7 @@ from functools import lru_cache
 from .game import Game
 from ..models.pokemon import Pokemon
 from ..utils.data_loader import data_loader
-from ..models.moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list
+from ..models.moveset import get_strategic_moveset, get_all_pokemon_sets, get_random_battle_ready_pokemon, get_battle_ready_pokemon_list, BATTLE_ONLY_FORM_SUFFIXES
 from ..utils.pokemon_utils import POKEAPI_NAME_MAP, get_mandatory_item
 import json
 import re
@@ -155,11 +155,9 @@ def get_pokemon_moves(pokemon_data):
 def get_comprehensive_pokemon_list() -> List[str]:
     # Start with Smogon list
     try:
-        from moveset import get_battle_ready_pokemon_list, BATTLE_ONLY_FORM_SUFFIXES
         names = set(get_battle_ready_pokemon_list())
     except:
         names = set()
-        BATTLE_ONLY_FORM_SUFFIXES = []
         
     # Add names from our ID map (most comprehensive)
     if 'POKEMON_ID_MAP' in globals() and POKEMON_ID_MAP:
@@ -177,7 +175,15 @@ def get_comprehensive_pokemon_list() -> List[str]:
     except Exception as e:
         print(f"Error loading PokeAPI names: {e}")
         
-    return sorted(list(names))
+    # Filter out battle-only forms
+    filtered_names = []
+    lower_suffixes = [s.lower() for s in BATTLE_ONLY_FORM_SUFFIXES]
+    for n in names:
+        if any(n.lower().endswith(s) for s in lower_suffixes):
+            continue
+        filtered_names.append(n)
+        
+    return sorted(list(set(filtered_names)))
 
 @app.get("/api/search-pokemon")
 async def search_pokemon(q: str = "", sets_only: bool = False):
@@ -201,8 +207,8 @@ async def search_pokemon(q: str = "", sets_only: bool = False):
             if sets_only and not has_sets:
                 continue
             
-            normalized = pokemon_name.lower().replace(' ', '').replace('-', '')
-            api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower())
+            normalized = pokemon_name.lower().replace(' ', '').replace('-', '').replace('.', '')
+            api_name = POKEAPI_NAME_MAP.get(normalized, pokemon_name.lower().replace(' ', '-').replace('.', ''))
             
             # Deduplicate by API name to avoid Glastrier/glastrier duplicates
             if any(r['name'] == api_name for r in results):
@@ -282,6 +288,20 @@ async def get_all_moves_list():
         from ..utils.data_loader import data_loader
         moves = sorted(list(set([m['name'] for m in data_loader.moves_data.values() if 'name' in m])))
         return {"success": True, "moves": moves}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/items")
+async def get_all_items_list():
+    try:
+        from ..utils.data_loader import data_loader
+        # items_data keys are normalized IDs, but we want the display names
+        items = []
+        for item_id, item_data in data_loader.items_data.items():
+            name = item_data.get('name')
+            if name:
+                items.append(name)
+        return {"success": True, "items": sorted(list(set(items)))}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

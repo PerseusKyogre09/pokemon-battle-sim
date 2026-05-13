@@ -43,4 +43,7 @@ python run_backend.py
 ## 🙏 Credits
 - [PokeAPI](https://pokeapi.co/) - Comprehensive Pokémon data.
 - [Pokémon Showdown](https://github.com/smogon/pokemon-showdown) - Battle logic and moveset inspiration.
+- **Custom Zygarde Sprites**: 
+  - Front Sprite: [kingofthexroad5](https://x.com/kingofthexroad5)
+  - Back Sprite: [NOROCI2](https://x.com/NOROCI2)
 - Pokémon and all related content © Nintendo, Game Freak, and The Pokémon Company.

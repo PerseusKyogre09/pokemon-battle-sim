@@ -6578,10 +6578,20 @@
     "name": "Zygardite",
     "spritenum": 568,
     "megaStone": {
-      "Zygarde-Complete": "Zygarde-Mega"
+      "Zygarde": "Zygarde-Mega",
+      "Zygarde-10": "Zygarde-Mega",
+      "Zygarde-50": "Zygarde-Mega",
+      "Zygarde-Complete": "Zygarde-Mega",
+      "Zygarde-10-Power-Construct": "Zygarde-Mega",
+      "Zygarde-50-Power-Construct": "Zygarde-Mega"
     },
     "itemUser": [
-      "Zygarde-Complete"
+      "Zygarde",
+      "Zygarde-10",
+      "Zygarde-50",
+      "Zygarde-Complete",
+      "Zygarde-10-Power-Construct",
+      "Zygarde-50-Power-Construct"
     ],
     "onTakeItem": "onTakeItem(item, source) {\n            return source.baseSpecies.baseSpecies !== 'Zygarde';\n        }",
     "num": 2584,

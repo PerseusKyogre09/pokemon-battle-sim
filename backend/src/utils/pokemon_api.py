@@ -27,6 +27,12 @@ def get_best_sprite(data, side='front', shiny=False):
     # data['name'] is usually the PokeAPI name (e.g., "wishiwashi-solo" or "bulbasaur")
     name = data.get('name', '').lower()
     
+    # Custom Overrides for Mega Zygarde (which lacks GBA sprites)
+    if 'zygarde-mega' in name:
+        if side == 'back':
+            return "https://pbs.twimg.com/media/G7U70olbIAAtYXa?format=png&name=360x360"
+        return "https://pbs.twimg.com/media/G3lRUbgXMAA3jdG?format=png&name=small"
+    
     # 1. Base species that Showdown expects WITHOUT hyphens
     
     # Format megas for showdown (e.g. charizard-mega-y -> charizard-megay)

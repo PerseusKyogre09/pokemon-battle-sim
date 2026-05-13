@@ -93,15 +93,21 @@ export default function PokemonBuilder() {
   useEffect(() => {
     const fetchCommonData = async () => {
       try {
-        const [itemsRes, speciesRes, movesRes] = await Promise.all([
-          fetch('https://pokeapi.co/api/v2/item?limit=2000').then(r => r.json()),
-          fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1000').then(r => r.json()),
-          fetch(`${API_BASE_URL}/all-moves`).then(r => r.json())
+        const [itemsRes, speciesRes, customItemsRes, movesRes] = await Promise.all([
+          fetch('https://pokeapi.co/api/v2/item?limit=2000').then(r => r.json()).catch(() => ({ results: [] })),
+          fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1000').then(r => r.json()).catch(() => ({ results: [] })),
+          fetch(`${API_BASE_URL}/items`).then(r => r.json()).catch(() => ({ items: [] })),
+          fetch(`${API_BASE_URL}/all-moves`).then(r => r.json()).catch(() => ({ success: false, moves: [] }))
         ]);
-        setAllItems(itemsRes.results.map((i: any) => i.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())));
-        setAllSpecies(speciesRes.results);
+
+        const pokeApiItems = (itemsRes.results || []).map((i: any) => i.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()));
+        const customItems = customItemsRes.items || [];
+        const mergedItems = Array.from(new Set([...pokeApiItems, ...customItems])).sort();
+
+        setAllItems(mergedItems);
+        setAllSpecies(speciesRes.results || []);
         if (movesRes.success) {
-          setAllMoves(movesRes.moves);
+          setAllMoves(movesRes.moves || []);
         }
       } catch (e) {
         console.error("Failed to fetch common data", e);
@@ -210,7 +216,12 @@ export default function PokemonBuilder() {
       const static_gen5 = gen5?.front_default;
       const fallback = data.sprites.front_default;
 
-      const spriteUrl = animated || static_gen5 || fallback || data.sprites.other['official-artwork'].front_default;
+      let spriteUrl = animated || static_gen5 || fallback || data.sprites.other['official-artwork'].front_default;
+      
+      // Custom Zygarde sprite override
+      if (data.name.toLowerCase().includes('zygarde-mega')) {
+        spriteUrl = "https://pbs.twimg.com/media/G3lRUbgXMAA3jdG?format=png&name=small";
+      }
 
       const displayName = speciesData.display_name || (data.name.charAt(0).toUpperCase() + data.name.slice(1));
 
@@ -222,7 +233,7 @@ export default function PokemonBuilder() {
         baseStats: stats,
         types: data.types.map((t: any) => t.type.name),
         sprite: spriteUrl,
-        allSprites: data.sprites,
+        allSprites: data.name.toLowerCase().includes('zygarde-mega') ? null : data.sprites,
         availableAbilities: data.abilities.map((a: any) => a.ability.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())),
         availableMoves: availableMoves,
         legalMoves: backendMoves,
@@ -240,7 +251,7 @@ export default function PokemonBuilder() {
 
   const isAbilityValid = currentMon.ability === '' || currentMon.availableAbilities.includes(currentMon.ability);
   const invalidMoves = currentMon.moves.filter(m => m && m.trim() !== '' && !currentMon.legalMoves.includes(m));
-  const isItemValid = currentMon.item === '' || allItems.includes(currentMon.item);
+  const isItemValid = currentMon.item === '' || allItems.some(item => item.toLowerCase() === currentMon.item.toLowerCase());
 
   const getValidationErrors = () => {
     const errors: { message: string, fix?: () => void, fixLabel?: string }[] = [];
@@ -570,7 +581,7 @@ export default function PokemonBuilder() {
                     placeholder="Select Item..."
                   />
                   <datalist id="items">
-                    {allItems.slice(0, 1000).map(i => <option key={i} value={i} />)}
+                    {allItems.slice(0, 3000).map(i => <option key={i} value={i} />)}
                   </datalist>
                   {!isItemValid && <p className="text-red-500 text-[7px] mt-1 uppercase tracking-widest animate-pulse">Invalid Item</p>}
                 </div>
