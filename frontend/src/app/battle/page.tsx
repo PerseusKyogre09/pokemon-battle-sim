@@ -43,6 +43,7 @@ export default function BattlePage() {
   const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [showSwitchMenu, setShowSwitchMenu] = useState(false);
   const [isMegaEvolving, setIsMegaEvolving] = useState(false);
+  const [battleMusicTracks, setBattleMusicTracks] = useState<string[]>([]);
 
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,6 +51,7 @@ export default function BattlePage() {
   const pokeballSoundRef = useRef<HTMLAudioElement | null>(null);
   const megaEvoSoundRef = useRef<HTMLAudioElement | null>(null);
   const abilityPopupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedBattleTrackRef = useRef<string | null>(null);
   
   const playerSpriteRef = useRef<HTMLDivElement>(null);
   const opponentSpriteRef = useRef<HTMLDivElement>(null);
@@ -89,8 +91,27 @@ export default function BattlePage() {
 
   const setupAudio = async () => {
     try {
+      let battleMusicTrack = selectedBattleTrackRef.current;
+
+      if (!battleMusicTrack) {
+        const baseUrl = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace(/\/api$/, '') : API_BASE_URL;
+        const response = await fetch(`${baseUrl}/api/audio/battle-tracks`);
+        const data = await response.json();
+        const tracks = Array.isArray(data.tracks) ? data.tracks.filter((track: unknown) => typeof track === 'string') : [];
+
+        setBattleMusicTracks(tracks);
+        if (!tracks.length) throw new Error('No battle music tracks found');
+
+        battleMusicTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        selectedBattleTrackRef.current = battleMusicTrack;
+      }
+
+      if (!battleMusicTrack) {
+        throw new Error('No battle music track selected');
+      }
+
       const [battleMusicUrl, hitSoundUrl, pokeballSoundUrl, megaEvoUrl] = await Promise.all([
-        getAudioUrl('battle/dppt-battle.mp3'),
+        getAudioUrl(battleMusicTrack),
         getAudioUrl('hit-sound.mp3'),
         getAudioUrl('pokeball-throw.mp3'),
         getAudioUrl('Mega Evolution FX.ogg')

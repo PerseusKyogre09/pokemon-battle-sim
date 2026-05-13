@@ -100,6 +100,31 @@ async def get_signed_url(filename: str, request: Request):
         base_url = get_public_base_url(request)
         return {"url": f"{base_url}/api/music/local/{filename}", "source": "local"}
 
+@app.get("/api/audio/battle-tracks")
+async def get_battle_tracks():
+    if not supabase:
+        return {"success": False, "tracks": []}
+
+    try:
+        entries = supabase.storage.from_(bucket_name).list("battle")
+        tracks = []
+
+        for entry in entries or []:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            if not name:
+                continue
+
+            lower_name = name.lower()
+            if not lower_name.endswith((".mp3", ".ogg", ".wav", ".m4a", ".flac")):
+                continue
+
+            tracks.append(f"battle/{name}")
+
+        return {"success": True, "tracks": sorted(tracks)}
+    except Exception as e:
+        print(f"[AUDIO] ❌ Failed to list battle tracks: {e}")
+        return {"success": False, "tracks": []}
+
 @app.get("/api/pokemon/cry/{pokemon_name}")
 async def pokemon_cry(pokemon_name: str):
     try:
