@@ -15,7 +15,7 @@ type BattleStage = 'intro-opponent' | 'intro-player' | 'active' | 'gameover';
 const getAudioUrl = async (filename: string) => {
   try {
     const baseUrl = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace(/\/api$/, '') : API_BASE_URL;
-    const response = await fetch(`${baseUrl}/api/audio/signed-url/${filename}`);
+    const response = await fetch(`${baseUrl}/api/audio/signed-url/${encodeURIComponent(filename)}`);
     const data = await response.json();
     return data.url;
   } catch (error) {
@@ -90,7 +90,7 @@ export default function BattlePage() {
   const setupAudio = async () => {
     try {
       const [battleMusicUrl, hitSoundUrl, pokeballSoundUrl, megaEvoUrl] = await Promise.all([
-        getAudioUrl('battle-music.mp3'),
+        getAudioUrl('battle/dppt-battle.mp3'),
         getAudioUrl('hit-sound.mp3'),
         getAudioUrl('pokeball-throw.mp3'),
         getAudioUrl('Mega Evolution FX.ogg')

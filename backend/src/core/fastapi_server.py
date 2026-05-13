@@ -79,7 +79,7 @@ def get_public_base_url(request: Request) -> str:
 
     return str(request.base_url).rstrip('/')
 
-@app.get("/api/audio/signed-url/{filename}")
+@app.get("/api/audio/signed-url/{filename:path}")
 async def get_signed_url(filename: str, request: Request):
     if not supabase:
         print(f"[AUDIO] ⚠️ Supabase not configured. Falling back to local: {filename}")
